@@ -94,3 +94,26 @@ Bu günlük yapılan teknik ve ürün çalışmalarını tarih sırasıyla kayde
 - `origin` hedefi `ademaymevlut-Dev/arsimio`; yerel `main` ve uzak `main` başlangıç commit'i eşleşiyor. Vercel bağlantısının bu repo ve production `main` dalını kullandığı API üzerinden doğrulandı.
 - Push öncesi 30 unit test, lint, Prisma şema doğrulaması ve diff whitespace kontrolü geçti. `.env.local`, eski Flask referans klasörü ve üretilen Prisma Client Git dışında; gönderilecek kaynaklarda sır örüntüsü taraması eşleşme bulmadı.
 - Neon Auth güvenilir origin izni bu Git yayını işleminin dışında tutuldu; girişin açık işi olarak kalır. Otomatik yayın sonucunda deployment commit eşleşmesi ve üç adresin HTTP kontrolleri ayrıca doğrulanır.
+
+## 2026-09-19 — Önbellekli Vercel build'inde Prisma Client düzeltmesi
+
+- Kullanıcının paylaştığı `22f2deb` Git deployment logunda `Can't resolve '@/generated/prisma/client'` hatası görüldü. Bağımlılık önbelleği geri yüklenmiş, install güncel bulunmuş ve `postinstall` çalışması logda yer almamıştı; build script'i yalnız `next build` çağırıyordu.
+- `package.json` içindeki build komutu `prisma generate && next build` yapıldı. `postinstall` korundu; generated client Git dışında tutulmaya devam ediyor. Yeni bağımlılık, migration, seed veya ortam değişkeni değişikliği yok.
+- Mevcut generated Prisma dizini geçici klasöre yedeklenerek client dosyasının yokluğu doğrulandı. `pnpm build` client'ı yeniden üretti; Next.js production derlemesi ve TypeScript kontrolü geçti. Lint ve diff whitespace kontrolü de geçti.
+- Yerel düzeltme doğrulandı; commit/push kullanıcının tercihine bırakıldı. Yeni Vercel deployment sonucu henüz doğrulanmadı. Neon Auth trusted-origin sorunu bu build hatasından bağımsızdır ve açık kalır.
+
+## 2026-09-19 — E-posta/username ayrımı ve parolalı giriş
+
+- Kullanıcı önceki domain/deployment diliminin çalıştığını bildirdi. Geliştirmede mail/SMS istemediğini; yalnız Süper Admin'in e-posta, bütün okul rollerinin username + parola kullanacağını kesinleştirdi.
+- Okul kullanıcı adı üyelikte `(school_id, username)` ile benzersiz tutuldu; farklı okullarda aynı ad farklı kişilere ait olabilir. Okul hesabında e-posta zorunluluğu kaldırıldı. Küresel kişi/üyelik modeli korundu: tek kullanıcının farklı okul üyelikleri tek parolayı paylaşır.
+- Node.js scrypt ile salt'lı hash, hash'i saklanan rastgele 8 saatlik DB session, host/okul/üyelik/credential sürümü kontrolleri, HttpOnly/Secure host cookie, Origin doğrulaması ve hesap/okul başına DB tabanlı giriş limiti eklendi. Giriş türü formdan değil sunucuda tenant'tan seçilir.
+- Giriş/çıkış ve ilk aktivasyon transactional audit üretir; parola, hash ve token audit'e aktarılmaz. Yetkilendirme güncel DB üyelik/permission kontrollerinde kalır.
+- İlk Süper Admin için yalnız sahibinin terminalinde gizli parola alan `pnpm auth:bootstrap` hazırlandı. Public signup kaldırıldı; `/setup` bilgi sayfasıdır. Araç yalnız ayrılmış PENDING SUPER_ADMIN'i etkinleştirir; var olan parolayı değiştirmez veya yönetici rolü vermez. Gerçek parola belirlenmedi, kullanıcı terminaline bırakıldı.
+- `20260919000200_password_auth` migration'ı SQL kısıtlarıyla incelendi, 18 rollback kontrolüyle prova edildi ve yalnız Arsimio DB'ye uygulandı. 3 yeni auth tablosuyla toplam 16 uygulama tablosu var; mevcut veriler silinmedi/reset yapılmadı. Migration durumu güncel.
+- Uygulama sonrası 17 auth DB testi ve önceki 36 çekirdek DB testi geçti; tüm test kimlikleri rollback edildi. Son incelemede iki okul, bir PENDING kullanıcı, sıfır parola hesabı/sıfır aktif session görüldü.
+- 36 birim testi, Prisma validate/generate, TypeScript, lint ve production build geçti. 14 yerel HTTP kontrolü geçti. Form türü kontrolünün 404 sayfasına yanlış uygulanması test script'inde düzeltildi; bilinmeyen hostname hâlâ reddediliyor.
+- Tarayıcıda platform e-posta formu, iki okulun username formu ve formsuz setup doğrulandı. Var olmayan test hesabıyla okul girişinin genel hata yanıtı UI'da görüldü; console error yoktu. Gerçek kullanıcıyla başarılı browser/production giriş testi yapılmadı.
+- Neon Auth SDK, eski proxy ve iki kullanılmayan yerel auth kurulum/probe script'i kaldırıldı; Git geçmişinden geri alınabilir. Dış Neon Auth servisi/şeması veya Vercel ortam değişkenleri silinmedi. Neon PostgreSQL korunuyor, başka Vercel projelerine dokunulmadı. Önceki origin engeli yeni kod yayımlandığında bağımlılık olmaktan çıkar.
+- Next.js ve React rehberleri doğrultusunda sunucuda yetki/origin kontrolü, minimal kullanıcı DTO'su ve istemciye sır taşımama sınırı korundu. Tarayıcı doğrulama rehberleriyle UI ve sunucu/DB kanıtları ayrı değerlendirildi.
+- [Parolalı giriş](./password-auth.md) eklendi; mimari, roller, veri modeli, migration, pilot ve yol haritası güncellendi. Önceki Neon Auth notları bu günlükte tarihsel kayıt olarak korundu.
+- Commit/push/deploy yapılmadı. Sonraki adım sahibin parolayı belirlemesi ve yeni yayında giriş/çıkış kabulü; ardından username/parola ile Okul Admin ve okul kullanıcı yönetimi. Ortam branch ayrımı, kısıtlı DB rolü/RLS, parola kurtarma, IP/WAF, MFA ve gerçek özel domain kabulü açık işlerdir.

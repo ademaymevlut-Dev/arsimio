@@ -67,12 +67,25 @@ export async function LoginPage({
           </h2>
           <p className="mt-3 mb-8 text-sm leading-6 text-muted-foreground">
             {bootstrap
-              ? "Yalnızca önceden onaylanmış yönetici adresiyle kurulum yapabilirsiniz."
+              ? "İlk yönetici parolası yalnızca proje sahibinin yerel terminalinden belirlenir."
               : platform
                 ? "Süper Admin hesabınızla devam edin."
                 : `${name} tarafından tanımlanan hesabınızı kullanın.`}
           </p>
-          <LoginForm bootstrap={bootstrap} />
+          {bootstrap ? (
+            <div className="rounded-xl border bg-muted/30 p-5 text-sm leading-6">
+              <p>Proje klasöründeki terminalde çalıştırın:</p>
+              <code className="mt-3 block rounded-md bg-background p-3 font-mono">
+                pnpm auth:bootstrap
+              </code>
+              <p className="mt-3 text-muted-foreground">
+                Parolanız terminalde görünmez. Kurulumdan sonra e-posta ve
+                parolanızla giriş yapın. E-posta veya SMS kodu gerekmez.
+              </p>
+            </div>
+          ) : (
+            <LoginForm platform={platform} />
+          )}
           <p className="mt-6 text-sm leading-6 text-muted-foreground">
             {bootstrap ? (
               <Link

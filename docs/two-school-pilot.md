@@ -2,11 +2,13 @@
 
 Tarih: 2026-09-19. Durum: `DEVAM EDİYOR`; okul/domain altyapısı ve ilk giriş ekranları yayında. Tam pilot kabulü henüz tamamlanmadı.
 
+Güncel karar: mail/SMS ve Neon Auth tabanlı aktivasyon ertelendi. Süper Admin e-posta + parola, bütün okul rolleri username + parola kullanır. Kod ve ikinci migration tamamlandı; yeni giriş kodu henüz yayımlanmadı. [Parolalı giriş](./password-auth.md) bu konudaki güncel kaynaktır; çalışma günlüğündeki önceki provider denemeleri tarihsel kayıttır.
+
 ## Hedef ve mevcut durum
 
 İlk çalışan ürün dilimi: iki örnek okulun farklı adreslerden, kendi markası ve giriş ekranıyla aynı Arsimio uygulamasını kullanması; kullanıcıların yalnızca yetkili oldukları okulun verilerine erişmesi.
 
-Mevcut 13 uygulama tablosu bu pilotun çekirdeği için yeterlidir. İlk migration ve ilişkisel bütünlük testleri tamamlandı. İki okul, doğrulanmış domainler, rol/permission seed'i, hostname çözümleme, markalı giriş, kontrollü Süper Admin bootstrap'ı ve korumalı ilk panel sayfaları uygulandı. Seed ve bootstrap değişiklikleri audit kaydı üretir. Bu, bütün eğitim/operasyon tablolarının veya aşağıdaki tam kabul senaryosunun tamamlandığı anlamına gelmez. Okul Admin daveti, üyelik aktivasyonu, yönetim yazma akışları ve oturumlu izolasyon testleri bekliyor. Güncel operasyon ve doğrulama kaydı: [pilot kurulum notları](./pilot-setup.md).
+Mevcut 16 uygulama tablosu bu pilotun çekirdeği için yeterlidir. Çekirdek ve parolalı giriş migration'ları, ilişkisel bütünlük ve auth DB testleri tamamlandı. İki okul, doğrulanmış domainler, rol/permission seed'i, hostname çözümleme, markalı giriş, kontrollü terminal bootstrap'ı ve korumalı ilk panel sayfaları uygulandı. Seed, bootstrap ve giriş/çıkış audit üretir. Bu, bütün eğitim/operasyon tablolarının veya aşağıdaki tam kabul senaryosunun tamamlandığı anlamına gelmez. Okul Admin oluşturma, üyelik yönetimi, yönetim yazma akışları ve canlı oturumlu izolasyon testleri bekliyor. Güncel operasyon ve doğrulama kaydı: [pilot kurulum notları](./pilot-setup.md).
 
 ## Temel kararlar
 
@@ -15,7 +17,7 @@ Mevcut 13 uygulama tablosu bu pilotun çekirdeği için yeterlidir. İlk migrati
 - Kullanıcı kimliği küresel; üyelik ve yetkiler okul bazlı olacak. Aynı kişi iki okulda farklı rollere sahip olabilecek.
 - Giriş ekranlarının bileşenleri ortak, okul adı/logo/renkleri farklı olacak. Pilot, okulların tanıtım sitelerini veya sayfa oluşturucusunu kapsamayacak.
 - Süper Admin platform kontrol panelini kullanacak. Platform rolü, okulun günlük işlemlerine sessizce sınırsız erişim sağlamayacak.
-- Başlangıçta davetle katılım kullanılacak; açık kayıt formuyla okul üyeliği veya yönetici yetkisi edinilemeyecek.
+- Başlangıçta yetkili yöneticinin hesap oluşturması kullanılacak; açık kayıt formuyla okul üyeliği veya yönetici yetkisi edinilemeyecek. Mail/SMS ile davet teslimi sonraya bırakıldı.
 - İlk pilotta domainler arasında otomatik tek oturum açma (SSO) hedeflenmeyecek. Her okul adresindeki uygulama oturumu ayrı doğrulanacak; okul erişimi her istekte yeniden denetlenecek.
 
 ## Adres ve ekran düzeni
@@ -39,11 +41,11 @@ Vercel tarafında iki uygun `.vercel.app` adı aynı Arsimio projesine domain/al
 ### 1. Ortam, domain ve kimlik doğrulama ön kontrolü
 
 - Arsimio Vercel projesinin, hedef deployment'ın ve Neon ortamının eşleşmesini doğrula. Diğer projelerin domain, entegrasyon ve ortam değişkenlerini değiştirme.
-- Geliştirme/preview ile canlı ortamın veritabanı ve auth bağlantılarını ayır; entegrasyonun otomatik branch ayarlarını mevcut kabul etmeden kontrol et.
+- Geliştirme/preview ile canlı ortamın veritabanı bağlantılarını ayır; entegrasyonun otomatik branch ayarlarını mevcut kabul etmeden kontrol et.
 - İki test adresinin uygunluğunu ve aynı projeye bağlanmasını doğrula.
-- Mevcut Neon Auth'u ilk aday olarak sınayacak kısa bir teknik deneme yap: iki hostname, güvenilir origin listesi, giriş/çıkış, davet kabulü, e-posta doğrulama ve parola kurtarma dönüş adresleri.
-- Safari dahil çerez davranışını ve özel domain desteğini doğrula; ücret/limitleri seçilen kullanım için kontrol et. Gerekli davranış sağlanamazsa alternatif sağlayıcı kararını belgeleyip kullanıcıyla netleştir; kendiliğinden yeni ücretli servis oluşturma.
-- Auth sağlayıcısı şifre/oturum yönetir; okul üyeliklerinin ve permission'ların kaynağı Arsimio tablolarıdır. `neon_auth` tablolarını Prisma uygulama migration'larıyla değiştirme.
+- Yerel parolalı giriş kararını iki hostname'de doğrula: platform e-posta, okul username, giriş/çıkış ve oturum izolasyonu. Mail/SMS doğrulaması bu dilime dahil değildir.
+- Safari dahil çerez davranışını ve özel domain desteğini doğrula. Kendiliğinden yeni ücretli auth servisi oluşturma.
+- Arsimio scrypt hash ve DB session kullanır; okul üyelikleri ve permission'lar yine Arsimio tablolarıdır. Kullanılmayan dış `neon_auth` tablolarını Prisma migration'larıyla değiştirme.
 
 Çıktı: doğrulanmış ortam/adres listesi ve auth karar kaydı. Nihai auth entegrasyonuna geçiş için bu kontrol tamamlanmalıdır.
 
@@ -59,12 +61,12 @@ Vercel tarafında iki uygun `.vercel.app` adı aynı Arsimio projesine domain/al
 
 Çıktı: iki adreste doğru okul adı/markası; bilinmeyen adreste erişim yok. Demo seed canlı ortamda build sırasında otomatik çalıştırılmayacak.
 
-### 3. Giriş, davet ve yetki bağlama
+### 3. Giriş, kullanıcı oluşturma ve yetki bağlama
 
-- Sağlayıcının doğrulanmış kullanıcı kimliğini `users.authProvider` + `authProviderUserId` ile eşleştir. E-posta eşitliği tek başına hesap birleştirme veya Süper Admin verme gerekçesi olmasın.
-- İlk Süper Admin'i kontrollü bootstrap ile doğrulanmış kimliğe bağla. İlk kayıt olan kişiyi otomatik Süper Admin yapma; depo/seed içinde parola tutma.
-- Her okul için bir Okul Admin daveti; ayrıca okul dışı erişimi ve iki okulda farklı rolü sınayan kontrollü test kimlikleri hazırla. Gerçek kişilere davet gönderimi alıcılar kesinleşince yapılacak.
-- Davet kabulü: token, son kullanma, iptal durumu, doğrulanmış alıcı ve hedef okul kontrolü; tek kullanımlık ve işlem bütünlüğü korunmuş akış.
+- Platformda e-posta + atanmış SUPER_ADMIN rolü, okulda `(school_id, username)` üzerinden kimliği çöz. Parola doğrulamasını sunucuda yap. E-posta eşitliği hesap birleştirme veya yetki verme gerekçesi olmasın.
+- İlk Süper Admin parolasını bir defalık yerel operatör komutuyla belirle. İlk kayıt olan kişiyi otomatik Süper Admin yapma; depo/seed içinde parola tutma.
+- Yetkili kullanıcı yönetimi ekranında her okul için bir Okul Admin; ayrıca okul dışı erişimi ve iki okulda farklı rolü sınayan test kimlikleri oluştur. Şu an bu hesaplar henüz oluşturulmadı.
+- Mail/SMS ve davet kabulü sonra: token, son kullanma, iptal, alıcı ve okul kapsamı kontrolleriyle tek kullanımlık akış. Davet tabloları bu amaçla korunur.
 - Aktif kullanıcı + aktif okul + aktif üyelik + permission + hedef kayıt okulu kontrollerini merkezi sunucu yardımcılarında uygula. UI'da düğme gizlemek yeterli değil.
 - Rol/üyelik iptalini eski oturumla aşmayı engelle. Yanlış okulda giriş yapan kullanıcıya o okulun özel verilerini göstermeden erişim reddi sun.
 - Cookie kapsamını ilgili hostla sınırla; domainler arası ortak cookie varsayma. Dönüş URL'leri doğrulanmış izin listesine ve güvenli bağlama dayansın; açık yönlendirme ve CSRF testleri olsun.
@@ -73,9 +75,9 @@ Vercel tarafında iki uygun `.vercel.app` adı aynı Arsimio projesine domain/al
 
 ### 4. Minimum yönetim ekranları ve premium kabuk
 
-- Süper Admin: okul listesi, okul oluşturma, durum değiştirme, domain durumu, marka ayarları ve ilk Okul Admin daveti. İlk pilotta DNS/Vercel doğrulaması kontrollü operasyon adımı olabilir; tam otomatik domain provisioning sonraki geliştirmedir.
+- Süper Admin: okul listesi, okul oluşturma, durum değiştirme, domain durumu, marka ayarları ve ilk Okul Admin hesabı oluşturma. İlk pilotta DNS/Vercel doğrulaması kontrollü operasyon adımı olabilir; tam otomatik domain provisioning sonraki geliştirmedir.
 - Okul tarafı: logo/renklerle markalı giriş, responsive ortak panel kabuğu, profil/çıkış ve izin bazlı menüler. Öğretmen, öğrenci, veli ve şoför için rol uygun boş durumlar; hayali not/yoklama verisi yok.
-- İlk gerçek yazma senaryosu: izinli okul ayarını güncelleme ve yetkili kullanıcı daveti/üyelik yönetimi. Okul Admin platform rolü atayamasın veya kendi yetki sınırını yükseltemesin.
+- İlk gerçek yazma senaryosu: izinli okul ayarını güncelleme ve yetkili kullanıcı oluşturma/üyelik yönetimi. Okul Admin platform rolü atayamasın veya kendi yetki sınırını yükseltemesin.
 - Marka/domain yönetimi varsayılan olarak Süper Admin'de; Okul Admin'e yalnızca açıkça izin verilirse açılacak.
 - İş değişikliği ve audit kaydı aynı transaction içinde yazılsın. Kim, hangi okulda, neyi değiştirdi görülebilsin; parola/token/oturum sırrı audit'e yazılmasın.
 - Yetkili kullanıcı için salt okunur okul audit ekranı. Üyelik arşivleme/geri alma, sunucu yetkisi ve audit ile sınansın; kalıcı silme ekranı yapılmasın.
@@ -103,7 +105,7 @@ Vercel tarafında iki uygun `.vercel.app` adı aynı Arsimio projesine domain/al
 | A'da Admin, B'de Öğretmen olan aynı kişi | B'de yönetici işlemi yapamıyor |
 | Öğrenci/veli/şoför rolüyle admin endpoint'i | Arayüzden bağımsız olarak sunucuda reddediliyor |
 | Üyelik/kullanıcı/okul askıya alma veya domain kapatma | Önceki oturum erişimi sürdürmüyor |
-| Süresi geçmiş, iptal edilmiş, tekrar kullanılan veya yanlış okula ait davet | Kabul edilmiyor; kimse yetki yükseltemiyor |
+| Parola/oturum hatalı, süresi geçmiş, iptal edilmiş veya başka okula ait | Kabul edilmiyor; kimse yetki yükseltemiyor |
 | İki okul sekmesi, cache ve pooled DB istekleri | Marka, oturum bağlamı veya veri okullar arasında karışmıyor |
 | Ayar değişikliği ve üyelik arşivleme/geri alma | Yetkili işlem başarılı; doğru actor ve okul ile audit kaydı var |
 | Okul Admin'in platform paneline doğrudan erişimi | Platform işlemi ve platform verisi yok |
@@ -114,13 +116,13 @@ Testler yalnız tarayıcı ekranına bakılarak tamamlanmış sayılmayacak: sun
 
 İki okul pilotu kabul edildiğinde sıradaki modül akademik çekirdektir: akademik yıl/dönem → sınıf/şube/ders → öğretmen/öğrenci/veli profilleri → kayıtlar ve atamalar. Sonrasında ilk tam eğitim iş akışı olarak yoklama geliştirilecek. Not, ödev, finans ve servis modülleri bu temelin ardından gelecek.
 
-Şema yalnız ihtiyaç doğduğunda, anlamlı özellik migration'larıyla büyütülecek; mevcut migration yeniden yazılmayacak. Pilot için başlangıçta yeni iş tablosu zorunlu değil, ancak RLS/izin değişiklikleri SQL migration gerektirebilir.
+Şema yalnız ihtiyaç doğduğunda, anlamlı özellik migration'larıyla büyütülecek; mevcut migration yeniden yazılmayacak. Parolalı giriş için ikinci migration eklendi. RLS/izin değişiklikleri de SQL migration gerektirebilir.
 
 ## Kesinleştirilecek bilgiler
 
 - İki test hostname'i kesinleşti ve bağlandı; sonraki özel domainler ayrıca doğrulanacak.
-- Süper Admin e-postası kullanıcı onayıyla ortam değişkenine kondu ve `PENDING` uygulama hesabı ayrıldı; doğrulanmış provider kimliğine bağlanması bekliyor. İki Okul Admin test kimliği henüz belirlenmedi; şifreler belgeye yazılmayacak.
-- Neon Auth teknik denemesinin sonucu, kullanılacak giriş yöntemi ve limitler.
+- Süper Admin e-postası kullanıcı onayıyla ortam değişkenine kondu ve `PENDING` hesabı ayrıldı; sahibinin yerel terminalde parola belirlemesi bekliyor. İki Okul Admin test kimliği henüz belirlenmedi; şifreler belgeye yazılmayacak.
+- Parolalı giriş kararı kesinleşti; yeni kodun yayını ve canlı kabul testi bekliyor.
 - Gerçek özel domain provası için sahip olunan test adresi.
 
 Bu bilgiler olmadan mimari/tenant yardımcıları tasarlanabilir; dış servis bağlantıları ve gerçek hesap davetleri varsayımla yapılmayacak.
@@ -131,4 +133,3 @@ Bu bilgiler olmadan mimari/tenant yardımcıları tasarlanabilir; dış servis b
 - [Vercel domain ekleme](https://vercel.com/docs/domains/working-with-domains/add-a-domain): proje domainleri ve doğrulama.
 - [Vercel alias komutu](https://vercel.com/docs/cli/alias): deployment'a alias bağlama; proje domain yönetiminden farkı.
 - [Vercel alias uygunluk hataları](https://vercel.com/kb/guide/how-to-resolve-alias-errors-on-vercel): `.vercel.app` adının başkasında kullanımda olması.
-- [Neon Auth ve Vercel entegrasyonu](https://neon.com/blog/auth-that-just-works-in-vercel-previews): branch auth endpoint'leri ve güvenilir production/preview origin'leri. Entegrasyonun bu yeteneği proje ayarlarının kontrolünün ve çoklu domain testinin yerine geçmez.

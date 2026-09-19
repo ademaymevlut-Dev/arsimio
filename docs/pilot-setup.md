@@ -1,115 +1,105 @@
 # Pilot kurulumu ve doğrulama
 
-Tarih: 2026-09-19. Durum: `DEVAM EDİYOR` — ilk dilim production'da, tam pilot kabulü açık.
+Tarih: 2026-09-19. Durum: `DEVAM EDİYOR`. Üç domain/marka dilimi yayında; yeni parolalı giriş kodu yerelde doğrulandı, GitHub/Vercel yayını ve gerçek hesap aktivasyonu bekliyor.
 
-## Canlı adresler
+## Adresler ve giriş biçimi
 
-| Alan | Adres | Durum |
+| Alan | Canlı adres | Yeni giriş biçimi |
 | --- | --- | --- |
-| Platform | https://arsimio.vercel.app | Giriş ve kontrollü ilk hesap kurulumu |
-| HorizonEdu | https://horizonedu.vercel.app | Mavi okul markası ve ayrı giriş |
-| GjimCamEdu | https://gjimcamedu.vercel.app | Yeşil okul markası ve ayrı giriş |
+| Platform | `arsimio.vercel.app/login` | Süper Admin e-posta + parola |
+| HorizonEdu | `horizonedu.vercel.app/login` | Kullanıcı adı + parola |
+| GjimCamEdu | `gjimcamedu.vercel.app/login` | Kullanıcı adı + parola |
 
-Üç adres aynı `arsimio` Vercel projesindedir. Okul adresleri kalıcı proje domaini olarak eklendi; başka projeden domain taşınmadı. Veritabanında iki okul ve iki doğrulanmış ana okul domaini vardır. Her okulda SCHOOL_ADMIN, TEACHER, STUDENT, GUARDIAN ve DRIVER rolleri; platformda ayrı SUPER_ADMIN rolü bulunur. Henüz Okul Admin üyeliği veya gerçek okul kullanıcıları oluşturulmadı.
+Üç adres aynı `arsimio` Vercel projesindedir. Okul adresleri kalıcı proje domainidir; başka projeden domain taşınmadı. DB'de iki okul ve iki VERIFIED ana okul domaini vardır. Her okulda SCHOOL_ADMIN, TEACHER, STUDENT, GUARDIAN ve DRIVER rolleri; platformda SUPER_ADMIN rolü bulunur. Henüz gerçek Okul Admin üyeliği veya okul kullanıcıları oluşturulmadı.
 
-## Giriş için mevcut engel
-
-İlk deployment sonrasında Neon Auth `trusted_origins` listesi boş kaldı. Üç origin için oturumsuz GET isteği 200/null dönse de negatif POST giriş denemesi `403 INVALID_ORIGIN` verdi. Dolayısıyla sayfaların açılması, girişin tamamlandığı anlamına gelmez.
-
-Yalnızca yukarıdaki üç HTTPS origin'in `neon-arsimio → Settings → Auth → Domains` listesine eklenmesi gerekir. Güvenlik ayarı değişikliği için kullanıcı onayı istendi; henüz uygulanmadı. Wildcard veya başka proje adresi eklenmeyecek. Sonrasında negatif giriş isteğinin origin kontrolünü geçip yanlış kimlik bilgisi yanıtı vermesi ve gerçek hesapla pozitif giriş ayrıca sınanmalıdır.
+Kullanıcının talebiyle mail/SMS ve doğrulama e-postası bağımlılığı kaldırıldı. Önceki Neon Auth origin hatası yeni kodda kullanılan bir servise ait değildir; yeni yayın için Neon Auth Domains ayarı gerekmez. Dış Neon Auth entegrasyonu, `neon_auth` şeması ve eski ortam değişkenleri silinmedi. Neon PostgreSQL kullanılmaya devam ediyor.
 
 ## İlk Süper Admin aktivasyonu
 
-Origin engeli giderildikten sonra hesap sahibi şu adımları kendisi tamamlar:
+Proje sahibi kendi terminalinde:
 
-1. https://arsimio.vercel.app/setup adresini açar.
-2. Onayladığı e-posta adresiyle, yalnız Arsimio için yeni ve en az 12 karakterli parola belirler. GitHub/Vercel parolası kullanılmaz; parola sohbet veya belgeye yazılmaz.
-3. Neon'un gönderdiği e-posta doğrulama bağlantısını açar.
-4. https://arsimio.vercel.app/login üzerinden giriş yapar.
-5. Doğrulanmış provider kimliği, önceden ayrılmış PENDING uygulama hesabına atomik olarak bağlanır; aktivasyon audit kaydıyla birlikte tamamlanır.
+```bash
+cd /Users/mevlutademay/arsimio
+pnpm auth:bootstrap
+```
 
-Adres `ARSIMIO_BOOTSTRAP_ADMIN_EMAIL` ortam değişkenindedir. Sırf kayıt olmak, aynı e-postayı forma yazmak veya ilk kullanıcı olmak yetki vermez. Normal kullanıcılar yalnız immutable provider kimliğiyle eşleşir. İlk hesap aktivasyonundan sonra bootstrap ortam değişkeninin kaldırılması operasyon adımıdır; mevcut ACTIVE hesap yeniden bootstrap edilmez.
+Araç hedef hesabı gösterir; sahibi `EVET` yazar ve en az 12 karakterli yeni parolasını iki kez gizli olarak girer. `ARSIMIO_BOOTSTRAP_ADMIN_EMAIL` ile önceden ayrılmış, PENDING ve SUPER_ADMIN rolü mevcut hesap etkinleşir. Aktif hesabın parolasını değiştirmez veya yeni yönetici atamaz. Parola sohbete, `.env` dosyasına veya Git'e konmaz. `/setup` yalnızca bu komutu açıklayan bilgi sayfasıdır.
 
-Provider hesabı/gerçek oturum henüz oluşturulmadığından başarılı giriş, e-posta teslimi, çıkış ve eski oturum iptali kabul testleri açık. Hesap oluşturulup doğrulama e-postası alınamazsa yeniden gönderme/parola kurtarma akışı tamamlanmadan ikinci bir hesap oluşturulmaz.
+Yerelde `http://localhost:3000/login` kullanılabilir. Canlıda e-posta/parolayla giriş için yeni kod önce yayımlanmalıdır. Ayrıntılar, güvenlik kuralları ve kurtarma akışının mevcut sınırları [parolalı giriş belgesinde](./password-auth.md).
 
-## Güvenlik sınırları
+Bu çalışma sırasında gerçek parola oluşturulmadı; DB incelemesi iki okul, bir PENDING kullanıcı, sıfır parola hesabı ve sıfır aktif oturum gösterdi. Başarılı gerçek kullanıcı giriş/çıkış kabulü henüz yapılmadı.
+
+## Güvenlik ve ortam sınırları
 
 - Hostname tam eşleşmeyle çözülür; bilinmeyen host, doğrulanmamış/devre dışı domain veya aktif olmayan okul kabul edilmez.
-- Kullanıcı tarafından gönderilen okul/forwarded-host header'ları tenant yetkisi vermez. Next.js sunucu katmanı tenant'ı yeniden çözer; proxy tek güvenlik katmanı değildir.
-- Platform paneli yalnız ana platform hostname'inde açılır. Süper Admin rolü okul üyeliğinin yerine geçmez.
-- Okul paneli aktif kullanıcı, doğrulanmış e-posta, aktif okul üyeliği, aynı okul kapsamındaki rol ve permission gerektirir.
-- Oturum cookie'sinde ortak domain tanımlanmaz. Her hostname'in cookie'si ayrıdır; domainler arası otomatik SSO yoktur.
-- Auth Route Handler yalnız GET `verify-email` akışını açar; genel admin/organization/kayıt API proxy'si sunulmaz. Neon'un kendi public kayıt endpoint'inde oluşan bir hesap Arsimio yetkisi kazanmaz.
-- Okul marka/context verisi istek içi memoization kullanır; oturumlu sayfalar paylaşılan cache'e yazılmaz.
-- Neon Auth'un provider düzeyinde e-posta doğrulama zorunluluğu kapalı olsa da Arsimio, `emailVerified` olmayan kullanıcıyı kabul etmez.
+- Kullanıcıdan gelen okul/forwarded-host header'ları tenant yetkisi vermez. Sunucu her istekte tenant ve session'ı kontrol eder.
+- Platform paneli yalnız platform hostname'inde açılır. Süper Admin rolü okul üyeliğinin yerine geçmez.
+- Okul paneli aktif kullanıcı, aktif okul üyeliği ve aynı okul kapsamında permission gerektirir. Okul girişinde e-posta istenmez.
+- Cookie ortak domain taşımaz; session hostname ve okul üyeliğine bağlıdır. Oturumlu sayfalar ortak cache'e yazılmaz.
+- Scrypt hash, rastgele DB session, hesap/okul bazlı rate limit, origin kontrolü ve giriş/çıkış audit'i uygulanmıştır. Açık signup/auth proxy endpoint'i yoktur.
+- Development/preview/production başlangıçta aynı DB bağlantısını kullanıyor. Ayrı cookie, DB izolasyonu sağlamaz. Gerçek öğrenci/veli verisi öncesi branch ayrımı, kısıtlı runtime rolü, RLS ve uçtan uca tenant testleri tamamlanmalıdır.
 
-Auth SDK `@neondatabase/auth@0.5.0-beta` sabit sürümündedir. `getSession` sorgusunda beta SDK'nın tip/runtime farkı için belgeli literal `"true"` uyarlaması vardır; sürüm yükseltilince cache iptal davranışı yeniden test edilmelidir.
+Runtime için `DATABASE_URL`; migration için mevcut unpooled bağlantı değişkeni kullanılır. İlk kurulum/seed için `ARSIMIO_BOOTSTRAP_ADMIN_EMAIL` gerekir. Yeni kod `NEON_AUTH_BASE_URL` veya `NEON_AUTH_COOKIE_SECRET` kullanmaz; bunların varlığı yeni parolalı girişi etkilemez.
 
-## Ortamlar ve yerel çalışma
+Yerel alias'lar yalnız development modunda:
 
-Gerekli değişkenler: `DATABASE_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_COOKIE_SECRET`; ilk kurulum/seed için ayrıca `ARSIMIO_BOOTSTRAP_ADMIN_EMAIL`. Migration komutları mevcut unpooled bağlantı değişkenini kullanır. Cookie sırları development/preview/production için ayrı oluşturuldu; hiçbir değer belgeye yazılmaz.
+- `http://localhost:3000` — platform
+- `http://horizonedu.localhost:3000` — HorizonEdu
+- `http://gjimcamedu.localhost:3000` — GjimCamEdu
 
-Önemli: Arsimio'nun başlangıç entegrasyonunda development/preview/production aynı DB/Auth bağlantısını kullanıyor. Ayrı branch izolasyonu kurulmuş kabul edilmez. Ayrı cookie sırrı, DB izolasyonu sağlamaz. Gerçek öğrenci/veli verisi alınmadan önce ortam ayrımı, kısıtlı runtime DB rolü, PostgreSQL RLS ve oturumlu tenant izolasyon testleri tamamlanmalıdır.
+Genel preview hostname'leri otomatik platform yetkisi almaz. Preview erişim stratejisi ortam ayrımıyla birlikte tamamlanacaktır.
 
-Yerel adresler:
-
-- http://localhost:3000 — platform
-- http://horizonedu.localhost:3000 — HorizonEdu
-- http://gjimcamedu.localhost:3000 — GjimCamEdu
-
-Yerel alias'lar yalnız development modunda çalışır. Genel preview deployment hostname'leri otomatik platform yetkisi almaz; preview stratejisi sonraki ortam ayrımı işinin parçasıdır.
+## Komutlar
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm db:generate
 pnpm dev
-```
 
-## Seed ve test komutları
-
-```bash
-pnpm db:seed:pilot          # Dry-run; yazma yapmaz
-pnpm db:seed:pilot --apply  # Yalnız operatör kontrolüyle, hedef DB doğrulandıktan sonra
+pnpm db:seed:pilot          # Dry-run; yazmaz
+pnpm db:seed:pilot --apply  # Yalnız operatör hedef kontrolünden sonra
 pnpm test
 pnpm lint
 pnpm build
 pnpm db:validate
-pnpm db:verify             # Kontrollü DB'de; geçici fixture'lar transaction sonunda rollback edilir
-node scripts/verify-pilot-http.mjs
-node scripts/verify-pilot-http.mjs --production
+pnpm db:status
+pnpm db:verify             # Kontrollü DB; fixture'lar rollback edilir
+pnpm db:verify:auth        # Kontrollü DB; fixture'lar rollback edilir
 node scripts/inspect-pilot.mjs
-node scripts/probe-auth.mjs --login
+node scripts/verify-pilot-http.mjs               # Yerel sunucu açıkken
+node scripts/verify-pilot-http.mjs --production  # Yeni kod yayımlandıktan sonra
 ```
 
-Seed, Arsimio'nun Vercel proje/team bağlantısını kontrol eder. Domain eklemeden önce Vercel sahipliği, doğrulanmış bağlantı ve HTTPS erişimini sınar. Tek transaction/advisory lock ile çalışır; var olan okul ayarını veya iptal edilmiş permission'ları yeniden yazmaz, var olan kullanıcıya sessizce platform rolü vermez. Tekrar çalıştırılması ikinci okul/hesap kopyaları üretmez. Build/postinstall/deploy sırasında otomatik çalıştırılmaz.
+Seed Arsimio Vercel proje/team bağlantısını, domain sahipliği ve HTTPS'i kontrol eder. Transaction/advisory lock kullanır; var olan okul ayarını veya iptal edilmiş permission'ları tekrar yazmaz, mevcut kullanıcıya sessizce platform rolü vermez. Kopya okul/hesap oluşturmaz ve build/deploy sırasında çalışmaz. İlk hesap parolası seed'in parçası değildir.
 
-`scripts/setup-auth-env.mjs` ilk kurulum için operatör aracıdır; tamamlanmıştır, rutin olarak yeniden çalıştırılmaz. Cookie sırrı rotasyonu ayrıca planlanır.
+### Vercel build ve Prisma Client
 
-## Kanıtlananlar ve açık kabul işleri
+`pnpm build`, önce `prisma generate`, sonra `next build` çalıştırır. `src/generated/prisma` Git'e eklenmez; her build'de güncel şemadan üretilir. `postinstall` yerel kurulum kolaylığı için korunur, fakat bağımlılık cache'i kullanılan deployment'larda buna güvenilmez. Build migration/seed çalıştırmaz ve DB verisi değiştirmez.
 
-| Kontrol | Sonuç |
+`22f2deb` deployment'ında install cache nedeniyle client üretilmedi; build yalnız `next build` çağırdığı için import bulunamadı. Açık generate adımı bu hatayı çözer; generated dosyaları commit etmek veya her yayında cache temizlemek gerekmez. [Prisma'nın Vercel cache açıklaması](https://docs.prisma.io/docs/orm/v7/more/troubleshooting/nextjs).
+
+## Kontrol kaydı
+
+| Kontrol | Yeni parolalı giriş sonucu |
 | --- | --- |
-| Unit test | 30 geçti: hostname, domain/okul durumu, rol/kaynak tenant sınırı |
-| DB bütünlüğü | 36 kontrol geçti, test verileri rollback edildi |
-| Lint / TypeScript / Prisma validate | Geçti |
-| Yerel production build ve Vercel build | Geçti |
-| Seed tekrarı | İki çalıştırmadan sonra 2 okul, 1 PENDING uygulama kullanıcısı, 0 auth kullanıcısı |
-| Yerel HTTP | 14 geçti; bilinmeyen host/header sahteciliği de sınandı |
-| Canlı HTTP | 13 geçti; üç giriş adresi, yetkisiz panel yönlendirmeleri, okulda platform/setup/admin API reddi |
-| Yerel tarayıcı | İki markalı giriş ve dar ekran formu görüldü |
-| Neon origin POST | Başarısız: üç adres için INVALID_ORIGIN; ayar onayı bekliyor |
-| Production hata taraması | `vercel logs --level error --since 1h` sonuç bulmadı; tam oturumlu akışın hatasızlık kanıtı değildir |
+| Birim test | 36 geçti |
+| Çekirdek DB bütünlüğü | 36 geçti; fixture'lar rollback |
+| Auth DB testleri | Migration öncesi 18 prova, uygulama sonrası 17 geçti; fixture'lar rollback |
+| Migration | İki migration uygulandı; güncel |
+| Prisma validate / TypeScript / lint / build | Geçti |
+| Yerel HTTP | 14 geçti; form türü, yetkisiz panel, bilinmeyen host/header sahteciliği |
+| Yerel tarayıcı | Platform e-posta, iki okul username; hatalı okul girişinde genel hata, console error yok |
+| Gerçek hesap / yeni production oturumu | Bekliyor; parola belirlenmedi, yeni kod gönderilmedi |
 
-Henüz tamamlanmayanlar: gerçek Süper Admin aktivasyonu, Okul Admin davetleri/üyelik bağlama, e-posta tekrar gönderme/parola kurtarma, okul oluşturma/ayar değiştirme ekranları, logo yükleme, audit okuma ekranı, arşivleme/geri alma, ortam branch ayrımı, RLS/kısıtlı rol, iki gerçek test oturumuyla çapraz okul okuma/yazma reddi, özel kök domain ve Safari oturum provası.
+Tarayıcıda hatalı giriş testi yalnız var olmayan test kullanıcı adıyla yapıldı; hesap veya oturum oluşturulmadı. DB testleri gerçek browser/production oturum testinin yerine geçmez.
 
-## Yayın kaydı
+Sıradaki işler: gerçek Süper Admin aktivasyonu/yayın kabulü, kullanıcı adıyla Okul Admin oluşturma, okul/üyelik/rol yönetim ekranları, parola değişimi/kurtarma, logo yükleme, audit okuma, arşivleme/geri alma, ortam ayrımı ve kısıtlı DB/RLS, gerçek özel domain/Safari provası. Mail/SMS ve MFA sonraki güvenlik dilimidir.
 
-- Production: **READY**, 2026-09-19, Next.js 16.3.5.
-- Deployment: `dpl_HRdYztjygGPubEDP5oThsu6N6DQE`.
-- [Vercel inceleme](https://vercel.com/ademaymevlut-4764s-projects/arsimio/HRdYztjygGPubEDP5oThsu6N6DQE).
-- Vercel build yaklaşık bir dakika sürdü; CLI kaynak deployment'ı kullanıldı.
-- İlk CLI yayını sırasında varsayılan `/usr/bin/git`, Xcode lisansı nedeniyle çalışmadı. Sonraki kontrolde bilgisayarda zaten kurulu `/Library/Developer/CommandLineTools/usr/bin/git` doğrulandı; lisans veya sistem ayarı değiştirilmeden bu Git ile commit/push yapılabilir.
-- GitHub deposu `ademaymevlut-Dev/arsimio`, Vercel production dalı `main` olarak doğrulandı. Git üzerinden yayında, yalnız push başarısı değil aynı commit'in Vercel'de READY olması da kontrol edilir. Manuel CLI deployment'ı otomatik Git deployment'ının kanıtı sayılmaz.
-- Log drain/harici hata alarmı bu dilimde kurulmadı; izleme eksikliği açık iş olarak kalır.
+## Önceki yayın kaydı
 
-Kaynak: [Neon Auth Vercel entegrasyonu](https://neon.com/blog/auth-that-just-works-in-vercel-previews), otomatik güvenilir domain özelliğini anlatır; bu projede ilk CLI deployment'ı sonrası origin listesinin boş kaldığı ayrıca ölçüldü. Dokümandaki genel davranış, mevcut proje ayarının kanıtı yerine kullanılmadı.
+- İlk CLI deployment: `dpl_HRdYztjygGPubEDP5oThsu6N6DQE`, 2026-09-19, READY, Next.js 16.3.5. [Vercel inceleme](https://vercel.com/ademaymevlut-4764s-projects/arsimio/HRdYztjygGPubEDP5oThsu6N6DQE).
+- O sürümde canlı 13 HTTP kontrolü geçti; negatif auth POST'unda Neon origin hatası bulundu. Bunlar eski sağlayıcı akışına ait tarihsel sonuçlardır, yeni girişin canlı kanıtı değildir.
+- Kullanıcı sonrasında Prisma build düzeltmesini gönderdiğini, deployment ve üç domainin çalıştığını bildirdi.
+- GitHub deposu `ademaymevlut-Dev/arsimio`, production dalı `main`. Yeni giriş için bu çalışmada commit/push/deploy yapılmadı; kullanıcı kendi terminalinden gönderecek.
+- Varsayılan Git'in Xcode lisans sorunu için zaten kurulu `/Library/Developer/CommandLineTools/usr/bin/git` kullanılabilir; lisans veya global ayar değiştirilmedi.
+- Önceki production hata taraması boştu; log drain/harici alarm henüz kurulmadı. Sonraki yayında commit/READY eşleşmesi ve üç domain yeniden sınanmalıdır.

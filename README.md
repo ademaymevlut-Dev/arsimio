@@ -10,6 +10,7 @@ Arsimio, okul yönetimi için sıfırdan geliştirilen modern ve çok kiracılı
 - shadcn/ui (Radix tabanı)
 - Prisma ORM 7 (`schema.prisma` ve Prisma Migrate)
 - Neon PostgreSQL ve `@prisma/adapter-neon`
+- Scrypt parola hash'i ve hostname/üyelik kapsamlı veritabanı oturumları
 - Vercel dağıtımına hazır yapı
 
 ## Yerel geliştirme
@@ -65,6 +66,7 @@ Dokümantasyon başlangıç noktası: [`docs/README.md`](./docs/README.md)
 - [Migration çalışma düzeni](./docs/database-migrations.md)
 - [İki okul pilotu](./docs/two-school-pilot.md)
 - [Pilot kurulum ve doğrulama](./docs/pilot-setup.md)
+- [Parolalı giriş ve ilk yönetici kurulumu](./docs/password-auth.md)
 - [Denetim, geçmiş ve veri yaşam döngüsü](./docs/audit-history-data-lifecycle.md)
 - [Yol haritası](./docs/roadmap.md)
 - [Çalışma günlüğü](./docs/work-log.md)
@@ -78,4 +80,4 @@ pnpm build
 pnpm db:validate
 ```
 
-İlk migration Neon'a uygulanmıştır. Sonraki değişiklikler özellik bazlı migration'larla ilerler. `pnpm db:status` uygulanan sürümü gösterir; `pnpm db:verify` geliştirme/test DB'sinde geçici kayıtlarla bütünlük kurallarını sınar ve kayıtları geri alır. Ayrıntılar [migration çalışma düzeninde](./docs/database-migrations.md).
+İlk çekirdek ve parolalı giriş migration'ları Neon'a uygulanmıştır. Sonraki değişiklikler özellik bazlı migration'larla ilerler. `pnpm db:status` uygulanan sürümü gösterir; `pnpm db:verify` ve `pnpm db:verify:auth` kontrollü test DB'sinde geçici kayıtlarla kuralları sınar ve kayıtları geri alır. Ayrıntılar [migration çalışma düzeninde](./docs/database-migrations.md).

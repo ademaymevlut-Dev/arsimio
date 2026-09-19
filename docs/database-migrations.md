@@ -6,7 +6,7 @@ Migration kullanmaya çekirdek şemadan itibaren başlıyoruz. Bütün modüller
 
 Örnek sıra: `init_core` → `add_academic_years` → `add_student_enrollments` → `add_attendance`. Her adım küçük, gözden geçirilebilir ve çalıştırılabilir olmalıdır. Prisma şema dosyasını kaydetmek kendiliğinden veritabanını değiştirmez; SQL üretilir, incelenir ve uygulanır.
 
-## Şu an uygulanan migration
+## Uygulanan migration'lar
 
 `20260919000100_init_core`, Arsimio'ya bağlı Neon veritabanının `public` şemasına uygulandı. Uygulama öncesinde bu şema boştu. Ayrı `neon_auth` şemasındaki 9 servis tablosu korundu.
 
@@ -18,7 +18,9 @@ Oluşturulan 13 uygulama tablosu:
 - `school_invitations`, `invitation_roles`
 - `audit_events`
 
-Prisma ayrıca uygulanan migration'ları `_prisma_migrations` tablosunda izler. Akademik ve operasyon tabloları ilgili modüller geliştikçe eklenecek. Henüz gerçek kullanıcı, okul veya rol seed'i oluşturulmadı.
+`20260919000200_password_auth` da 2026-09-19'da uygulandı: okul üyeliğine okul kapsamında benzersiz username eklendi, kullanıcı e-postası nullable oldu; `user_credentials`, `auth_sessions`, `auth_throttles` tablolarıyla toplam 16 uygulama tablosuna ulaşıldı. Oturumun kullanıcı/üyelik/okul bağlantısı bileşik FK ile korunur; username, token hash, sayaç ve süre kısıtları SQL'dedir. Önce 18 kontrollü rollback provası, uygulama sonrası 17 auth DB kontrolü geçti. Veri silme/reset yapılmadı; `neon_auth` şemasına dokunulmadı.
+
+Prisma ayrıca uygulanan migration'ları `_prisma_migrations` tablosunda izler. Akademik ve operasyon tabloları ilgili modüller geliştikçe eklenecek. Pilot seed'i iki okul, doğrulanmış domainler, roller/permission'lar ve bir PENDING Süper Admin hesabı oluşturdu. Henüz gerçek parola veya okul kullanıcı hesabı oluşturulmadı.
 
 ## İncelemede düzeltilen kurallar
 
@@ -37,7 +39,7 @@ Prisma ayrıca uygulanan migration'ları `_prisma_migrations` tablosunda izler. 
 
 Okul açılırken standart okul rolleri o okul için oluşturulacak. Örneğin iki okulun `TEACHER` rolü aynı kodu taşır fakat farklı role ID ve `school_id` kullanır. Süper Admin `user_roles` üzerinden platforma atanır. `role_permissions` bir bağlantı tablosudur; okul sahipliğini referans verdiği rolden alır, permission kataloğu küreseldir.
 
-Bu kısıtlar ilişkisel bütünlüğü sağlar. Giriş yapan kullanıcının hangi satırları okuyabileceği ve hangi işlemleri yapabileceği ayrıca DAL/permission guard ile denetlenecek. PostgreSQL RLS, ayrı yetkileri kısıtlanmış runtime DB rolü ve işlem sırasında audit üretimi henüz uygulanmadı. Şu anki bağlantı DB sahibi rolünü kullanır; son kullanıcı erişimi açılmadan bu sınırlar tamamlanmalıdır.
+Bu kısıtlar ilişkisel bütünlüğü sağlar. Giriş yapan kullanıcının hangi satırları okuyabileceği ve hangi işlemleri yapabileceği ayrıca DAL/permission guard ile denetlenir. Seed, ilk aktivasyon ve giriş/çıkış audit üretir; yeni iş modülleri de aynı transaction düzenini kullanmalıdır. PostgreSQL RLS ve ayrı yetkileri kısıtlanmış runtime DB rolü henüz uygulanmadı. Şu anki bağlantı DB sahibi rolünü kullanır; gerçek öğrenci/veli verisi alınmadan bu sınırlar tamamlanmalıdır.
 
 Audit trigger'ı normal veri değiştirme işlemlerini engeller; şema sahibi veya yetkili yönetici DDL ile korumayı kaldırabilir. Saklama ve anonimleştirme için henüz bypass tanımlanmadı; ileride ayrı, kayıtlı bir yönetim akışı hazırlanacak. Kullanıcı profilinin anonimleştirilmesi, audit actor UUID referansının silinmesini gerektirmez.
 
@@ -87,6 +89,8 @@ pnpm db:status
 `pnpm db:verify` iki geçici okul ve ilişkili test kayıtlarını tek transaction içinde oluşturur. Doğru ilişkilerin kabul edildiğini, çapraz okul atamalarının ve audit değişikliklerinin reddedildiğini kontrol eder; tüm test verisini ROLLBACK ile geri alır. Bu DB bütünlüğü testidir, kullanıcı yetkilendirmesi/RLS testi değildir. Geliştirme veya test ortamında çalıştırılır.
 
 İlk uygulama öncesi `node scripts/verify-core-schema.mjs --preview-migration` kullanıldı. Bu seçenek yalnızca `public` şeması boşken ilk migration'ın tamamını rollback içinde dener; artık oluşturulmuş veritabanında normal `pnpm db:verify` kullanılır.
+
+`pnpm db:verify:auth` parola/oturum, çapraz okul/hostname, üyelik ve credential iptali, rate limit ve bir defalık bootstrap için 17 kontrol çalıştırır. Test kayıtları rollback edilir; gerçek kullanıcının parolası değiştirilmez. HTTP/tarayıcı ve production kabulü ayrı test katmanlarıdır. Güncel kurulum [parolalı giriş belgesindedir](./password-auth.md).
 
 ## Kaynaklar
 

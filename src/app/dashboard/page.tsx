@@ -14,7 +14,9 @@ export default async function DashboardPage() {
         </form>
       </header>
       <h2 className="mt-12 text-3xl font-semibold">Hoş geldiniz</h2>
-      <p className="mt-4 text-muted-foreground">{user.email}</p>
+      <p className="mt-4 text-muted-foreground">
+        {membership.username ?? user.firstName ?? "Kullanıcı"}
+      </p>
       <p className="mt-2 text-sm">
         {membership.roles.map((r) => r.role.name).join(" · ")}
       </p>

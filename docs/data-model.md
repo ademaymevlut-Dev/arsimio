@@ -2,7 +2,7 @@
 
 Bu modelin uygulamadaki ana kaynağı [`prisma/schema.prisma`](../prisma/schema.prisma) dosyasıdır. Şema değişiklikleri Prisma Migrate ile sürümlenir; PostgreSQL RLS ve Prisma'nın doğrudan ifade edemediği kısıtlar migration SQL'ine açıkça eklenir.
 
-2026-09-19 tarihinde 13 çekirdek tablo Neon'a uygulandı. [Migration çalışma düzeni](./database-migrations.md) mevcut kısıtları ve henüz uygulanmamış güvenlik katmanlarını ayırır. Aşağıdaki akademik/profil tabloları ve `school_settings` sonraki aşamalar için planlanmıştır.
+2026-09-19 tarihinde 13 çekirdek + 3 parola/oturum tablosu, toplam 16 uygulama tablosu Neon'a uygulandı. [Migration çalışma düzeni](./database-migrations.md) mevcut kısıtları ve henüz uygulanmamış güvenlik katmanlarını ayırır. Aşağıdaki akademik/profil tabloları ve `school_settings` sonraki aşamalar için planlanmıştır.
 
 ## Modelleme standartları
 
@@ -38,11 +38,23 @@ Okulun özellik ve davranış ayarlarını sürümlenebilir şekilde tutar. Sık
 
 ### `users`
 
-Küresel kullanıcı profili ve harici kimlik sağlayıcısı eşlemesini tutar. Kullanıcının okul rolü bu tabloda tutulmaz.
+Küresel kullanıcı profilini tutar. `email` nullable'dır; okul kullanıcıları için zorunlu değildir. Süper Admin girişinde normalize e-posta kullanılır. Eski provider eşleme kolonları korunur ancak parolalı giriş bunları kullanmaz. Kullanıcının okul rolü bu tabloda tutulmaz.
 
 ### `school_memberships`
 
-Kullanıcı ile okul arasındaki üyeliği, durumunu ve yaşam döngüsünü tutar. Aynı kullanıcı farklı okullarda farklı üyeliklere sahip olabilir.
+Kullanıcı ile okul arasındaki üyeliği, kullanıcı adını, durumunu ve yaşam döngüsünü tutar. `(school_id, username)` benzersizdir; username normalize ASCII olarak saklanır. Geçiş için nullable olmakla birlikte kullanıcı adı olmayan üyelik okul girişini kullanamaz. Aynı kullanıcı farklı okullarda farklı üyeliklere sahip olabilir.
+
+### `user_credentials`
+
+Küresel kullanıcı başına bir scrypt parola hash'i, credential sürümü ve tarihleri içerir. Aynı kişinin farklı okul üyelikleri aynı parolayı kullanır. Parola değişikliğinde sürüm artırılarak önceki session'lar geçersizleştirilmelidir.
+
+### `auth_sessions`
+
+Rastgele token'ın SHA-256 özeti, kullanıcı, hostname, okul/üyelik, credential sürümü, son kullanma ve iptal tarihini tutar. Platform session'ında okul/üyelik birlikte boş, okul session'ında birlikte doludur. Üyelik/okul/kullanıcı aynı kaydı işaretlemek zorundadır; bileşik FK bu ilişkiyi doğrular. Düz token saklanmaz.
+
+### `auth_throttles`
+
+Giriş deneme sayacı ve süre sonunu tutar. Anahtar platform+e-posta veya okul+kullanıcı adı kapsamının hash'idir; aynı okulun alias'ları ortak limit kullanır. Sunucu örneklerinden bağımsız atomik artırım yapılır.
 
 ### `roles`, `permissions`, `role_permissions`
 

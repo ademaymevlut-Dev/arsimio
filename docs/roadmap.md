@@ -6,7 +6,7 @@ Bu belge yaşayan plandır. Sıralama, güvenli bir temel üzerinde küçük ama
 
 Faz 1 ve Faz 2'nin minimum çalışan kapsamı birlikte teslim edilecek: iki kurgusal okul, aynı Vercel projesine bağlı iki adres, ayrı marka/giriş, okul bazlı yetkiler ve denetlenmiş veri izolasyonu. Ayrıntılı sıra ve kabul testleri [iki okul pilotu planında](./two-school-pilot.md).
 
-Sıra: ortam/domain/auth doğrulaması → iki okul seed'i ve tenant çözümleme → giriş/davet/yetki → minimum yönetim ekranları ve audit → DB izolasyonu → iki adreste uçtan uca kabul. İlk dilim yayında: iki okul/domain, marka bazlı giriş, sunucu guard'ları ve bekleyen Süper Admin kaydı hazır. Hesap aktivasyonu ve aşağıdaki tam pilot kabulü henüz tamamlanmadı. Ayrıntılar [kurulum notlarında](./pilot-setup.md).
+Sıra: ortam/domain doğrulaması → iki okul seed'i ve tenant çözümleme → parolalı giriş ve yetki → kullanıcı/okul yönetimi ve audit → DB izolasyonu → iki adreste uçtan uca kabul. Domain/marka dilimi yayında. Süper Admin için e-posta, okul kullanıcıları için username ile parolalı giriş kodu ve migration tamamlandı; henüz gönderilmedi. Hesap aktivasyonu ve tam pilot kabulü açık. Ayrıntılar [kurulum notlarında](./pilot-setup.md) ve [giriş kararında](./password-auth.md).
 
 ## Faz 0 — Proje temeli
 
@@ -28,17 +28,18 @@ Sıra: ortam/domain/auth doğrulaması → iki okul seed'i ve tenant çözümlem
 - [x] `TAMAMLANDI` Tekrarlanabilir pilot seed'i: iki okul, başlangıç rol/permission'ları ve PENDING Süper Admin rezervasyonu; build sırasında çalışmaz.
 - [x] `TAMAMLANDI` İlk tenant context ve aktif üyelik/permission gerektiren panel guard'ları.
 - [x] `TAMAMLANDI` Doğrulanmış hostname çözümlemesi ve aynı Arsimio projesindeki HorizonEdu/GjimCamEdu domainleri.
-- [x] `TAMAMLANDI` Kontrollü Süper Admin kayıt/giriş kodu; kimlik yalnızca doğrulanmış provider hesabıyla bağlanır.
-- [ ] `SIRADAKİ` Süper Admin'in kendi parolası/e-posta doğrulamasıyla aktivasyonu ve canlı giriş/çıkış kabul testi.
-- [ ] `SIRADAKİ` Development/preview/production DB ve Auth branch ayrımını kur ve doğrula; şu an ortak başlangıç bağlantısı kullanılıyor.
-- [ ] `ARAŞTIRMA` Önce mevcut Neon Auth'u iki test hostname'inde doğrula; gerçek okul kabulünden önce özel test alan adı provasını da tamamla.
+- [x] `TAMAMLANDI` E-posta/username ayrımı, scrypt parola hash'i, DB oturumları ve bir defalık terminalden Süper Admin aktivasyon kodu.
+- [x] `TAMAMLANDI` `password_auth` migration'ı, hesap/okul bazlı rate limit, sunucu origin kontrolü, giriş/çıkış audit ve rollback'li auth DB testleri.
+- [ ] `SIRADAKİ` Yeni kodun GitHub/Vercel yayını; Süper Admin'in kendi terminalinde ilk parolasını belirlemesi ve canlı giriş/çıkış kabul testi.
+- [ ] `SIRADAKİ` Development/preview/production DB branch ayrımını kur ve doğrula; şu an ortak başlangıç bağlantısı kullanılıyor.
+- [ ] `PLANLANDI` Gerçek okul kabulünden önce özel test alan adı ve Safari oturum provasını tamamla.
 - [ ] `PLANLANDI` İlk panel guard'larını bütün iş modüllerinin Server Action ve Route Handler'larına genişlet.
 - [ ] `PLANLANDI` Seed/ilk admin aktivasyonunda çalışan transactional audit yazımını iş modüllerine genişlet; arşivleme ve geri alma ekle.
 - [ ] `PLANLANDI` Oturum bazlı okuma/yazma izolasyon testleri, kısıtlı runtime DB rolü ve PostgreSQL RLS politikaları.
 
 ## Faz 2 — Okul kurulumu ve premium uygulama kabuğu
 
-- [ ] `SIRADAKİ` Süper Admin okul oluşturma ve ilk Okul Admin daveti akışı (iki okul pilotu).
+- [ ] `SIRADAKİ` Süper Admin okul oluşturma ve ilk Okul Admin'i kullanıcı adı/parola ile tanımlama ekranı (mail/SMS bağımlılığı yok).
 - [x] `TAMAMLANDI` İki farklı marka rengiyle responsive giriş ve korumalı ilk panel sayfaları.
 - [ ] `PLANLANDI` Okul alan adı doğrulama ve durum yönetimi.
 - [ ] `PLANLANDI` Logo yükleme ve marka/tema yönetim ekranları (ilk renkler DB'den okunuyor).
@@ -48,7 +49,8 @@ Sıra: ortam/domain/auth doğrulaması → iki okul seed'i ve tenant çözümlem
 
 ## Faz 3 — Kullanıcı ve akademik çekirdek
 
-- [ ] `PLANLANDI` Pilotun temel davet/üyelik/rol akışını genişlet; ayrıntılı kullanıcı yönetimi ve kaynak bazlı yetkiler.
+- [ ] `PLANLANDI` Pilotun kullanıcı oluşturma/üyelik/rol akışını genişlet; ayrıntılı kullanıcı yönetimi ve kaynak bazlı yetkiler.
+- [ ] `PLANLANDI` Parola değiştirme/sıfırlama ve oturum iptali. Mail/SMS, davet teslimi ve MFA daha sonra eklenecek.
 - [ ] `PLANLANDI` Çalışan ve öğretmen profilleri.
 - [ ] `PLANLANDI` Öğrenci ve veli profilleri ile doğrulanmış bağlantılar.
 - [ ] `PLANLANDI` Akademik yıl, dönem, sınıf, şube ve dersler.
@@ -80,6 +82,7 @@ Sıra: ortam/domain/auth doğrulaması → iki okul seed'i ve tenant çözümlem
 - [ ] `PLANLANDI` Temizleme, dönüştürme, prova aktarımı ve mutabakat raporu.
 - [ ] `PLANLANDI` Gözlemlenebilirlik, hata izleme, yedekleme ve geri yükleme tatbikatı.
 - [ ] `PLANLANDI` Performans, erişilebilirlik ve güvenlik kontrolleri.
+- [ ] `PLANLANDI` IP/WAF giriş koruması, session/throttle kayıt temizliği ve canlı kullanım öncesi güvenlik kabulü.
 - [ ] `PLANLANDI` Saklama/anonymization politikalarının ülke ve sözleşmeye göre kesinleştirilmesi.
 
 ## İlk teslim ölçütü
@@ -88,7 +91,7 @@ Faz 1 ve Faz 2'nin pilot kapsamı, aşağıdaki senaryo kurgusal test verisiyle 
 
 1. Süper Admin bir okul oluşturur.
 2. Okul doğrulanmış alan adından açılır.
-3. Okul Admin davetle giriş yapar.
+3. Yetkili yönetici tarafından tanımlanan Okul Admin kullanıcı adı/parola ile kendi okuluna giriş yapar.
 4. Yetkili bir kayıt oluşturur ve günceller.
 5. Başka okulun kullanıcısı kaydı okuyamaz veya değiştiremez.
 6. Değişiklik actor ve önce/sonra bilgisiyle denetim geçmişinde görünür.

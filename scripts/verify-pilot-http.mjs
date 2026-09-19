@@ -50,7 +50,14 @@ async function check(host, path, status, expectedText, extraHeaders = {}) {
       `${host}${path}: expected branding missing`,
     );
   if (status === 307) assert.equal(response.headers.get("location"), "/login");
-  if (path === "/login") {
+  if (path === "/login" && status === 200) {
+    assert.ok(
+      body.includes(
+        host === "arsimio.vercel.app" ? "E-posta adresi" : "Kullanıcı adı",
+      ),
+    );
+    if (host !== "arsimio.vercel.app")
+      assert.ok(!body.includes('type="email"'));
     assert.match(
       response.headers.get("cache-control") ?? "",
       live ? /no-store/ : /no-cache|no-store/,

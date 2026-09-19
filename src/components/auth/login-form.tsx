@@ -3,27 +3,26 @@ import { useActionState } from "react";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { signIn, registerBootstrap } from "@/app/login/actions";
+import { signIn } from "@/app/login/actions";
 
-export function LoginForm({ bootstrap = false }: { bootstrap?: boolean }) {
-  const [state, action, pending] = useActionState(
-    bootstrap ? registerBootstrap : signIn,
-    {},
-  );
+export function LoginForm({ platform }: { platform: boolean }) {
+  const [state, action, pending] = useActionState(signIn, {});
   return (
     <form action={action} className="space-y-5">
       <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium">
-          E-posta adresi
+        <label htmlFor="identifier" className="text-sm font-medium">
+          {platform ? "E-posta adresi" : "Kullanıcı adı"}
         </label>
         <Input
-          id="email"
-          name="email"
-          type="email"
+          id="identifier"
+          name="identifier"
+          type={platform ? "email" : "text"}
           autoComplete="username"
           required
-          maxLength={320}
-          placeholder="ad@okulunuz.edu"
+          autoCapitalize="none"
+          spellCheck={false}
+          maxLength={platform ? 320 : 64}
+          placeholder={platform ? "yonetici@ornek.com" : "Kullanıcı adınız"}
         />
       </div>
       <div className="space-y-2">
@@ -34,17 +33,11 @@ export function LoginForm({ bootstrap = false }: { bootstrap?: boolean }) {
           id="password"
           name="password"
           type="password"
-          autoComplete={bootstrap ? "new-password" : "current-password"}
+          autoComplete="current-password"
           required
-          minLength={bootstrap ? 12 : 8}
+          minLength={12}
           maxLength={128}
-          aria-describedby={bootstrap ? "password-help" : undefined}
         />
-        {bootstrap && (
-          <p id="password-help" className="text-sm text-muted-foreground">
-            En az 12 karakter kullanın. GitHub/Vercel parolanızı kullanmayın.
-          </p>
-        )}
       </div>
       {state.error && (
         <p
@@ -52,14 +45,6 @@ export function LoginForm({ bootstrap = false }: { bootstrap?: boolean }) {
           className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
         >
           {state.error}
-        </p>
-      )}
-      {state.message && (
-        <p
-          role="status"
-          className="rounded-lg border border-primary/30 p-3 text-sm"
-        >
-          {state.message}
         </p>
       )}
       <Button
@@ -71,7 +56,7 @@ export function LoginForm({ bootstrap = false }: { bootstrap?: boolean }) {
         {pending && (
           <LoaderCircle className="size-4 animate-spin" aria-hidden />
         )}
-        {bootstrap ? "Hesabımı oluştur" : "Giriş yap"}
+        Giriş yap
         {!pending && <ArrowRight className="size-4" aria-hidden />}
       </Button>
     </form>

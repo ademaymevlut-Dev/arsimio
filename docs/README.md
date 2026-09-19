@@ -13,6 +13,7 @@ Arsimio sıfırdan geliştirilen yeni bir üründür. Eski HorizonEdu/Flask proj
 - [Migration çalışma düzeni](./database-migrations.md): Artımlı şema geliştirme, uygulanan migration, SQL kısıtları ve doğrulama.
 - [İki okul pilotu](./two-school-pilot.md): Sıradaki teslim; iki domain, markalı giriş, üyelik/yetki ve veri izolasyonu kabul planı.
 - [Pilot kurulum ve doğrulama](./pilot-setup.md): Canlı adresler, ilk hesap aktivasyonu, komutlar ve açık kabul işleri.
+- [Parolalı giriş](./password-auth.md): Süper Admin e-posta, okul kullanıcı adı politikası; hash/oturum ve terminalden ilk aktivasyon.
 - [Denetim, geçmiş ve veri yaşam döngüsü](./audit-history-data-lifecycle.md): İşlem geçmişi, silme, geri alma ve kalıcı silme kuralları.
 - [Yol haritası](./roadmap.md): Tamamlanan, sıradaki ve ileride yapılacak işler.
 - [Çalışma günlüğü](./work-log.md): Tarih sırasıyla alınan kararlar ve yapılan işlemler.

@@ -15,6 +15,17 @@ Bir kullanıcı:
 - Aynı okulda birden fazla rol taşıyabilir.
 - Geçici veya kapsamı daraltılmış ek izinlere sahip olabilir.
 
+## Giriş kimliği
+
+- Süper Admin yalnız ana platform domaininde **e-posta + parola** ile giriş yapar.
+- Okul Admin, öğretmen, öğrenci, veli ve servis şoförü kendi okul domaininde **kullanıcı adı + parola** kullanır; e-posta zorunlu değildir.
+- Kullanıcı adı okul üyeliğine aittir ve okul içinde benzersizdir. İki ayrı okulda aynı kullanıcı adı farklı kişilere ait olabilir.
+- Aynı küresel kullanıcının birden fazla okul üyeliği varsa kullanıcı adları/rolleri farklı olabilir; parolası küresel hesap üzerinde ortaktır.
+- Mail/SMS doğrulaması şu an istenmez. Hash, oturum, tenant ve sunucu permission kontrolleri geliştirmede de zorunludur.
+- Açık kayıt yoktur. İlk yönetici yerel operatör komutuyla etkinleşir; okul kullanıcı oluşturma ekranı sıradaki geliştirmedir. Giriş hesabı oluşturulması tek başına rol/yetki vermez.
+
+Güncel uygulama ve kurulum: [parolalı giriş](./password-auth.md).
+
 ## Başlangıç rolleri
 
 ### Süper Admin

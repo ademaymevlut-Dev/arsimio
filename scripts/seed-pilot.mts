@@ -96,7 +96,7 @@ try {
         {
           mode: "dry-run",
           schools: PILOT_SCHOOLS,
-          adminReservation: "PENDING; verified auth identity required",
+          adminReservation: "PENDING; operator password bootstrap required",
           writes: false,
         },
         null,
@@ -174,7 +174,7 @@ try {
               entityId: user.id,
               afterData: { status: "PENDING" },
               reason:
-                "Operator-approved bootstrap; no auth access until verified identity is bound.",
+                "Operator-approved reservation; no auth access until local password bootstrap is completed.",
             },
           });
         }

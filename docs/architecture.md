@@ -59,12 +59,12 @@ Bu dizin yapısı hedef yapıdır; modüller geliştikçe aşamalı kurulacaktı
 - `users`, uygulamadaki küresel insan kimliğini temsil eder.
 - Bir kullanıcı birden fazla okulun üyesi olabilir.
 - Bir kullanıcının aynı okul içinde birden fazla rolü olabilir.
-- Kimlik sağlayıcısı giriş ve oturum güvenliğini sağlar; okul üyeliği ve iş yetkileri Arsimio veritabanında tutulur.
-- Kimlik sağlayıcısı seçimi, özel okul alan adlarında oturum davranışı kanıtlandıktan sonra kesinleştirilir.
+- Süper Admin e-posta + parola; bütün okul rolleri kullanıcı adı + parola ile giriş yapar. Okul kullanıcı adı üyelik üzerinde okul kapsamında benzersizdir; e-posta zorunlu değildir.
+- Parola ve DB oturumlarını Arsimio yönetir; mail/SMS veya harici kimlik sağlayıcısı giriş bağımlılığı değildir. Aynı küresel kullanıcının farklı okul üyelikleri tek parolayı paylaşır.
 
-Pilotun ilk diliminde `@neondatabase/auth` sürümü `0.5.0-beta` olarak sabitlendi. Server Action'lar sağlayıcının resmi SDK'sını kullanır; oturum cookie'si host kapsamlıdır. Okul üyeliği/permission her korumalı istekte uygulama DB'sinden kontrol edilir. `getSession` cookie cache'i devre dışı bırakılarak sağlayıcıya doğrulatılır. Beta SDK'nın boolean tipine rağmen literal `"true"` kontrolü yapan davranışı için sürüme özel uyarlama vardır; SDK yükseltmesinde yeniden sınanmalıdır.
+2026-09-19 kararıyla ilk Neon Auth denemesi yerini scrypt hash + rastgele opaque DB session modeline bıraktı. Cookie host kapsamlıdır; session hostname/üyelik/kullanıcı/parola sürümüne bağlıdır. Okul üyeliği/permission her korumalı istekte uygulama DB'sinden kontrol edilir. Ayrıntılar [parolalı giriş belgesinde](./password-auth.md).
 
-Normal kullanıcı eşlemesi yalnızca `authProvider` + `authProviderUserId` ile yapılır. Tek istisna kontrollü ilk kurulumdur: ana platform hostunda, operatörün ayırdığı PENDING kullanıcı ve SUPER_ADMIN rolü, önceden yapılandırılmış e-postanın sağlayıcı tarafından doğrulanması sonrasında atomik olarak kimliğe bağlanır. İlk kaydolan kişiye yetki verilmez. Okul daveti kabulü sonraki dilimdir.
+İlk yönetici, operatörün kendi terminalindeki bir defalık `pnpm auth:bootstrap` komutuyla önceden ayrılmış PENDING hesabın parolasını belirler. Public signup/bootstrap endpoint'i yoktur; ilk kayıt olana veya e-posta eşitliğine göre yetki verilmez. Okul kullanıcılarını yetkili yöneticinin oluşturacağı ekran sonraki dilimdir. Eski provider kolonları ve dış `neon_auth` şeması korunur, yeni auth akışında kullanılmaz.
 
 ## Güvenlik sınırları
 
@@ -95,8 +95,8 @@ Savunma tek bir kontrole dayanmaz:
 - Şema, type-safe istemci ve migration yönetimi için Prisma ORM 7 ve `schema.prisma` kullanılacaktır.
 - Çalışma zamanı Neon'un pooled bağlantısını `@prisma/adapter-neon` üzerinden, migration işlemleri unpooled bağlantıyı kullanacaktır.
 - PostgreSQL RLS ve Prisma şemasında doğrudan ifade edilemeyen veritabanı kuralları sürümlü özel SQL migration'larıyla yönetilecektir.
-- Harici kimlik sağlayıcısı adayı kullanılmadan önce alt alan adı ve özel alan adı oturum senaryosu üzerinde teknik deneme yapılacaktır.
+- Giriş için Node.js scrypt ve Prisma DB oturumları; parola ve session sırları istemciye serialize edilmez. Mail/SMS/MFA eklemeleri daha sonraki dilimdir.
 
 ## İlk uygulama dilimi
 
-[İki okul pilotu](./two-school-pilot.md), bu mimarinin ilk uçtan uca doğrulamasıdır. Tek Vercel projesine bağlı iki test hostname'i aynı uygulamayı, farklı okul markaları ve üyelik yetkileriyle açacaktır. İlk auth adayı mevcut Neon Auth entegrasyonudur; çoklu domain denemesi geçmeden sağlayıcı kararı kesinleşmiş sayılmaz. Giriş ekranı ortak bileşenlerden üretilecek, pilotta domainler arası otomatik SSO hedeflenmeyecektir. Nihai yetki kontrolü proxy veya menü görünürlüğüne bırakılmayacaktır.
+[İki okul pilotu](./two-school-pilot.md), bu mimarinin ilk uçtan uca doğrulamasıdır. Tek Vercel projesine bağlı iki test hostname'i aynı uygulamayı, farklı okul markaları ve üyelik yetkileriyle açar. Giriş ekranı ortak bileşenlerden üretilir; okulda kullanıcı adı, platformda e-posta istenir. Domainler arası otomatik SSO hedeflenmez. Nihai yetki kontrolü proxy veya menü görünürlüğüne bırakılmaz. Gerçek özel domain ve oturumlu yönetim kabul testleri henüz açıktır.

@@ -56,7 +56,7 @@ export default async function PlatformPage() {
         ))}
       </div>
       <p className="mt-8 text-sm text-muted-foreground">
-        Pilot kurulumu: okul listesi hazır. Yönetici davetleri ve okul ayarları
+        Pilot kurulumu: okul listesi hazır. Kullanıcı yönetimi ve okul ayarları
         sonraki geliştirme paketinde açılacak.
       </p>
     </main>

@@ -119,7 +119,7 @@ model User {
   id                 String     @id @default(uuid()) @db.Uuid
   authProvider       String?    @map("auth_provider") @db.VarChar(50)
   authProviderUserId String?    @map("auth_provider_user_id") @db.VarChar(191)
-  email              String     @unique @db.VarChar(320)
+  email              String?    @unique @db.VarChar(320)
   firstName          String?    @map("first_name") @db.VarChar(100)
   lastName           String?    @map("last_name") @db.VarChar(100)
   status             UserStatus @default(PENDING)
@@ -137,6 +137,8 @@ model User {
   auditEvents             AuditEvent[]       @relation("AuditActor")
   membershipRolesAssigned MembershipRole[]   @relation("MembershipRoleAssigner")
   userRolesAssigned       UserRole[]         @relation("UserRoleAssigner")
+  credential              UserCredential?
+  sessions                AuthSession[]
 
   @@unique([authProvider, authProviderUserId])
   @@index([status])
@@ -147,6 +149,7 @@ model SchoolMembership {
   id          String           @id @default(uuid()) @db.Uuid
   schoolId    String           @map("school_id") @db.Uuid
   userId      String           @map("user_id") @db.Uuid
+  username    String?          @db.VarChar(64)
   status      MembershipStatus @default(INVITED)
   joinedAt    DateTime?        @map("joined_at") @db.Timestamptz(6)
   suspendedAt DateTime?        @map("suspended_at") @db.Timestamptz(6)
@@ -158,13 +161,57 @@ model SchoolMembership {
   user        User             @relation(fields: [userId], references: [id], onDelete: Restrict)
   roles       MembershipRole[]
   auditEvents AuditEvent[]     @relation("AuditMembership")
+  sessions    AuthSession[]
 
   @@unique([schoolId, userId])
+  @@unique([schoolId, username])
   @@unique([id, schoolId])
   @@unique([id, schoolId, userId])
   @@index([schoolId, status])
   @@index([userId, status])
   @@map("school_memberships")
+}
+
+// Credentials are separate from profile records and must never be returned to UI/audit.
+model UserCredential {
+  userId       String   @id @map("user_id") @db.Uuid
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  version      Int      @default(1)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("user_credentials")
+}
+
+model AuthSession {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  tokenHash         String    @unique @map("token_hash") @db.Char(64)
+  hostname          String    @db.VarChar(253)
+  schoolId          String?   @map("school_id") @db.Uuid
+  membershipId      String?   @map("membership_id") @db.Uuid
+  credentialVersion Int       @map("credential_version")
+  expiresAt         DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  membership SchoolMembership? @relation(fields: [membershipId, schoolId, userId], references: [id, schoolId, userId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+model AuthThrottle {
+  key      String   @id @db.Char(64)
+  attempts Int
+  resetAt  DateTime @map("reset_at") @db.Timestamptz(6)
+
+  @@index([resetAt])
+  @@map("auth_throttles")
 }
 
 model Role {
