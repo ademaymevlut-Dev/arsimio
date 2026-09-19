@@ -1,6 +1,12 @@
-import { neon } from "@neondatabase/serverless";
+import "server-only";
+import { PrismaNeon } from "@prisma/adapter-neon";
+import { PrismaClient } from "@/generated/prisma/client";
 
-export function getSql() {
+const globalForPrisma = globalThis as typeof globalThis & {
+  arsimioPrisma?: PrismaClient;
+};
+
+function createPrismaClient() {
   const databaseUrl = process.env.DATABASE_URL;
 
   if (!databaseUrl) {
@@ -9,5 +15,15 @@ export function getSql() {
     );
   }
 
-  return neon(databaseUrl);
+  const adapter = new PrismaNeon({ connectionString: databaseUrl });
+
+  return new PrismaClient({ adapter });
+}
+
+export function getPrisma() {
+  if (!globalForPrisma.arsimioPrisma) {
+    globalForPrisma.arsimioPrisma = createPrismaClient();
+  }
+
+  return globalForPrisma.arsimioPrisma;
 }

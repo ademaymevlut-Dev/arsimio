@@ -1,0 +1,322 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  runtime             = "nodejs"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SchoolStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum DomainStatus {
+  PENDING
+  VERIFIED
+  FAILED
+  DISABLED
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum RoleScope {
+  PLATFORM
+  SCHOOL
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum AuditSource {
+  USER
+  SYSTEM
+  API
+  IMPORT
+}
+
+model School {
+  id              String       @id @default(uuid()) @db.Uuid
+  slug            String       @unique @db.VarChar(80)
+  name            String       @db.VarChar(200)
+  legalName       String?      @map("legal_name") @db.VarChar(240)
+  status          SchoolStatus @default(DRAFT)
+  timezone        String       @default("UTC") @db.VarChar(100)
+  defaultLocale   String       @default("tr") @map("default_locale") @db.VarChar(10)
+  createdByUserId String?      @map("created_by_user_id") @db.Uuid
+  archivedAt      DateTime?    @map("archived_at") @db.Timestamptz(6)
+  archivedById    String?      @map("archived_by_id") @db.Uuid
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  createdBy   User?              @relation("SchoolCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  archivedBy  User?              @relation("SchoolArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+  domains     SchoolDomain[]
+  branding    SchoolBranding?
+  memberships SchoolMembership[]
+  roles       Role[]
+  invitations SchoolInvitation[]
+  auditEvents AuditEvent[]
+
+  @@index([status])
+  @@map("schools")
+}
+
+model SchoolDomain {
+  id            String       @id @default(uuid()) @db.Uuid
+  schoolId      String       @map("school_id") @db.Uuid
+  hostname      String       @unique @db.VarChar(253)
+  status        DomainStatus @default(PENDING)
+  isPrimary     Boolean      @default(false) @map("is_primary")
+  verifiedAt    DateTime?    @map("verified_at") @db.Timestamptz(6)
+  lastCheckedAt DateTime?    @map("last_checked_at") @db.Timestamptz(6)
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+
+  @@index([schoolId, status])
+  @@map("school_domains")
+}
+
+model SchoolBranding {
+  schoolId       String   @id @map("school_id") @db.Uuid
+  logoAssetKey   String?  @map("logo_asset_key") @db.VarChar(500)
+  iconAssetKey   String?  @map("icon_asset_key") @db.VarChar(500)
+  primaryColor   String?  @map("primary_color") @db.VarChar(20)
+  secondaryColor String?  @map("secondary_color") @db.VarChar(20)
+  accentColor    String?  @map("accent_color") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+
+  @@map("school_branding")
+}
+
+model User {
+  id                 String     @id @default(uuid()) @db.Uuid
+  authProvider       String?    @map("auth_provider") @db.VarChar(50)
+  authProviderUserId String?    @map("auth_provider_user_id") @db.VarChar(191)
+  email              String     @unique @db.VarChar(320)
+  firstName          String?    @map("first_name") @db.VarChar(100)
+  lastName           String?    @map("last_name") @db.VarChar(100)
+  status             UserStatus @default(PENDING)
+  lastLoginAt        DateTime?  @map("last_login_at") @db.Timestamptz(6)
+  archivedAt         DateTime?  @map("archived_at") @db.Timestamptz(6)
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  schoolsCreated          School[]           @relation("SchoolCreatedBy")
+  schoolsArchived         School[]           @relation("SchoolArchivedBy")
+  memberships             SchoolMembership[]
+  platformRoles           UserRole[]
+  invitationsSent         SchoolInvitation[] @relation("InvitationSender")
+  invitationsAccepted     SchoolInvitation[] @relation("InvitationAcceptor")
+  auditEvents             AuditEvent[]       @relation("AuditActor")
+  membershipRolesAssigned MembershipRole[]   @relation("MembershipRoleAssigner")
+  userRolesAssigned       UserRole[]         @relation("UserRoleAssigner")
+
+  @@unique([authProvider, authProviderUserId])
+  @@index([status])
+  @@map("users")
+}
+
+model SchoolMembership {
+  id          String           @id @default(uuid()) @db.Uuid
+  schoolId    String           @map("school_id") @db.Uuid
+  userId      String           @map("user_id") @db.Uuid
+  status      MembershipStatus @default(INVITED)
+  joinedAt    DateTime?        @map("joined_at") @db.Timestamptz(6)
+  suspendedAt DateTime?        @map("suspended_at") @db.Timestamptz(6)
+  archivedAt  DateTime?        @map("archived_at") @db.Timestamptz(6)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school      School           @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  roles       MembershipRole[]
+  auditEvents AuditEvent[]     @relation("AuditMembership")
+
+  @@unique([schoolId, userId])
+  @@unique([id, schoolId])
+  @@unique([id, schoolId, userId])
+  @@index([schoolId, status])
+  @@index([userId, status])
+  @@map("school_memberships")
+}
+
+model Role {
+  id          String    @id @default(uuid()) @db.Uuid
+  schoolId    String?   @map("school_id") @db.Uuid
+  key         String    @unique @db.VarChar(191)
+  code        String    @db.VarChar(100)
+  name        String    @db.VarChar(120)
+  description String?   @db.VarChar(500)
+  scope       RoleScope
+  isSystem    Boolean   @default(false) @map("is_system")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school          School?          @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  permissions     RolePermission[]
+  membershipRoles MembershipRole[]
+  userRoles       UserRole[]
+  invitationRoles InvitationRole[]
+
+  @@unique([schoolId, code])
+  @@unique([id, schoolId])
+  @@unique([id, scope])
+  @@index([scope, isSystem])
+  @@map("roles")
+}
+
+model Permission {
+  id          String    @id @default(uuid()) @db.Uuid
+  code        String    @unique @db.VarChar(191)
+  scope       RoleScope
+  description String?   @db.VarChar(500)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  roles RolePermission[]
+
+  @@unique([id, scope])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String    @map("role_id") @db.Uuid
+  permissionId String    @map("permission_id") @db.Uuid
+  scope        RoleScope
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  role       Role       @relation(fields: [roleId, scope], references: [id, scope], onDelete: Cascade, onUpdate: Restrict)
+  permission Permission @relation(fields: [permissionId, scope], references: [id, scope], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId, scope])
+  @@map("role_permissions")
+}
+
+model MembershipRole {
+  schoolId     String   @map("school_id") @db.Uuid
+  membershipId String   @map("membership_id") @db.Uuid
+  roleId       String   @map("role_id") @db.Uuid
+  assignedById String?  @map("assigned_by_id") @db.Uuid
+  assignedAt   DateTime @default(now()) @map("assigned_at") @db.Timestamptz(6)
+
+  membership SchoolMembership @relation(fields: [membershipId, schoolId], references: [id, schoolId], onDelete: Cascade, onUpdate: Restrict)
+  role       Role             @relation(fields: [roleId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  assignedBy User?            @relation("MembershipRoleAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@id([membershipId, roleId])
+  @@index([roleId])
+  @@index([schoolId])
+  @@map("membership_roles")
+}
+
+model UserRole {
+  userId       String    @map("user_id") @db.Uuid
+  roleId       String    @map("role_id") @db.Uuid
+  roleScope    RoleScope @default(PLATFORM) @map("role_scope")
+  assignedById String?   @map("assigned_by_id") @db.Uuid
+  assignedAt   DateTime  @default(now()) @map("assigned_at") @db.Timestamptz(6)
+
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role  @relation(fields: [roleId, roleScope], references: [id, scope], onDelete: Restrict, onUpdate: Restrict)
+  assignedBy User? @relation("UserRoleAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model SchoolInvitation {
+  id               String           @id @default(uuid()) @db.Uuid
+  schoolId         String           @map("school_id") @db.Uuid
+  email            String           @db.VarChar(320)
+  tokenHash        String           @unique @map("token_hash") @db.VarChar(191)
+  status           InvitationStatus @default(PENDING)
+  invitedByUserId  String           @map("invited_by_user_id") @db.Uuid
+  acceptedByUserId String?          @map("accepted_by_user_id") @db.Uuid
+  expiresAt        DateTime         @map("expires_at") @db.Timestamptz(6)
+  acceptedAt       DateTime?        @map("accepted_at") @db.Timestamptz(6)
+  revokedAt        DateTime?        @map("revoked_at") @db.Timestamptz(6)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school     School           @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  invitedBy  User             @relation("InvitationSender", fields: [invitedByUserId], references: [id], onDelete: Restrict)
+  acceptedBy User?            @relation("InvitationAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+  roles      InvitationRole[]
+
+  @@unique([id, schoolId])
+  @@index([schoolId, email, status])
+  @@index([expiresAt, status])
+  @@map("school_invitations")
+}
+
+model InvitationRole {
+  schoolId     String @map("school_id") @db.Uuid
+  invitationId String @map("invitation_id") @db.Uuid
+  roleId       String @map("role_id") @db.Uuid
+
+  invitation SchoolInvitation @relation(fields: [invitationId, schoolId], references: [id, schoolId], onDelete: Cascade, onUpdate: Restrict)
+  role       Role             @relation(fields: [roleId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([invitationId, roleId])
+  @@index([roleId])
+  @@index([schoolId])
+  @@map("invitation_roles")
+}
+
+model AuditEvent {
+  id                String      @id @default(uuid()) @db.Uuid
+  schoolId          String?     @map("school_id") @db.Uuid
+  actorUserId       String?     @map("actor_user_id") @db.Uuid
+  actorMembershipId String?     @map("actor_membership_id") @db.Uuid
+  source            AuditSource @default(USER)
+  action            String      @db.VarChar(191)
+  entityType        String      @map("entity_type") @db.VarChar(100)
+  entityId          String?     @map("entity_id") @db.VarChar(191)
+  beforeData        Json?       @map("before_data") @db.JsonB
+  afterData         Json?       @map("after_data") @db.JsonB
+  changedFields     Json?       @map("changed_fields") @db.JsonB
+  reason            String?     @db.VarChar(1000)
+  requestId         String?     @map("request_id") @db.VarChar(100)
+  ipAddress         String?     @map("ip_address") @db.Inet
+  userAgent         String?     @map("user_agent") @db.VarChar(500)
+  createdAt         DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  school          School?           @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actor           User?             @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  actorMembership SchoolMembership? @relation("AuditMembership", fields: [actorMembershipId, schoolId, actorUserId], references: [id, schoolId, userId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([schoolId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([requestId])
+  @@map("audit_events")
+}

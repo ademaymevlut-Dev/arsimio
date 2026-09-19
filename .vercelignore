@@ -1,0 +1,7 @@
+horizonedu/
+.env*
+!.env.example
+docs/
+tests/
+.git/
+*.tsbuildinfo

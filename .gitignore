@@ -21,6 +21,9 @@
 # production
 /build
 
+# generated Prisma Client (created by pnpm postinstall)
+/src/generated/prisma/
+
 # misc
 .DS_Store
 *.pem
