@@ -64,6 +64,7 @@ Sıra: ortam/domain doğrulaması → iki okul seed'i ve tenant çözümleme →
 - [ ] `DEVAM EDİYOR` Marka yönetimi: üç renk düzenleme ve girişe uygulama yerelde hazır. Logo/ikon/kapak görseli yükleme, kalıcı dosya depolaması ve okul bazlı giriş şablonu seçimi sıradaki dilim.
 - [ ] `DEVAM EDİYOR` Süper Admin responsive navigasyon/dashboard ve Okul Admin Faz 0 kabuğu hazır; öğretmen, öğrenci, veli ve şoför panelleri planlandı.
 - [ ] `PLANLANDI` Okul ayarları, saat dilimi, dil ve akademik takvim başlangıcı.
+- [x] `TAMAMLANDI` Türkçe/Arnavutça/İngilizce temel i18n: okul girişi ve Okul Admin akademik dilimi, hostname/üyelik bazlı dil tercihi ve tek dönem ID'sine bağlı çeviri tablosu. Ders ve sonraki çevrilebilir kataloglar aynı standardı kullanacak.
 - [ ] `PLANLANDI` Denetim geçmişi görüntüleme ekranı.
 
 ## Faz 3 — Kullanıcı ve akademik çekirdek
@@ -74,7 +75,7 @@ Okul Admin ekranlarının ayrıntılı uygulama sırası [Okul Admin faz planın
 - [ ] `PLANLANDI` Parola değiştirme/sıfırlama ve oturum iptali. Mail/SMS, davet teslimi ve MFA daha sonra eklenecek.
 - [ ] `PLANLANDI` Çalışan ve öğretmen profilleri.
 - [ ] `PLANLANDI` Öğrenci ve veli profilleri ile doğrulanmış bağlantılar.
-- [ ] `DEVAM EDİYOR` Akademik yapı: öğretim yılı/dönem CRUD'u tamamlandı; seviye, sınıf/şube ve dersler sırada. Tek aktif yıl/dönem, tarihler, lifecycle, tenant permission ve audit DB/servis seviyesinde korunur.
+- [ ] `DEVAM EDİYOR` Akademik yapı: öğretim yılı/dönem CRUD'u ve üç dilli dönem adları tamamlandı; seviye, sınıf/şube ve dersler sırada. Tek aktif yıl/dönem, tarihler, lifecycle, tenant permission ve audit DB/servis seviyesinde korunur.
 - [ ] `PLANLANDI` Öğrenci kayıtları ve öğretmen atamaları.
 - [ ] `PLANLANDI` Toplu içe aktarma için doğrulama ve hata raporu.
 

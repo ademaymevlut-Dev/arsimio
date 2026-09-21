@@ -1,8 +1,12 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
+import { SUPPORTED_LOCALES, type Locale, type LocalizedNames } from "@/i18n/config";
+import { formatMessage } from "@/i18n/format";
+import { tr } from "@/i18n/dictionaries/tr";
 import {
   dateOnlyValue,
   type AcademicCalendarState,
+  type AcademicServerMessages,
   type AcademicTermInput,
   type AcademicTransition,
   type AcademicYearInput,
@@ -12,24 +16,26 @@ type ActorContext = {
   schoolId: string;
   actorUserId: string;
   actorMembershipId: string;
+  locale: Locale;
+  defaultLocale: Locale;
+  messages: AcademicServerMessages;
 };
 
-export const academicCalendarConflict: AcademicCalendarState = {
-  status: "error",
-  message:
-    "Bu kayıt başka bir işlemle değişti. Sayfayı yenileyip tekrar deneyin.",
-};
+export function academicCalendarConflict(
+  messages: AcademicServerMessages = tr.academicServer,
+): AcademicCalendarState {
+  return { status: "error", message: messages.conflict };
+}
 
-const unavailable: AcademicCalendarState = {
-  status: "error",
-  message: "Bu kayıt bulunamadı veya okulunuzun kapsamında değil.",
-};
+function unavailable(messages: AcademicServerMessages): AcademicCalendarState {
+  return { status: "error", message: messages.unavailable };
+}
 
-const editableDraftOnly: AcademicCalendarState = {
-  status: "error",
-  message:
-    "Yalnız taslak kayıtların adı ve tarihleri değiştirilebilir. Önce yaşam döngüsü durumunu kontrol edin.",
-};
+function editableDraftOnly(
+  messages: AcademicServerMessages,
+): AcademicCalendarState {
+  return { status: "error", message: messages.draftOnly };
+}
 
 function yearSnapshot(year: {
   name: string;
@@ -51,6 +57,7 @@ function yearSnapshot(year: {
 
 function termSnapshot(term: {
   name: string;
+  translations?: { locale: string; name: string }[];
   sequence: number;
   startDate: Date;
   endDate: Date;
@@ -62,6 +69,12 @@ function termSnapshot(term: {
   return {
     academicYearId: term.academicYearId,
     name: term.name,
+    names: Object.fromEntries(
+      term.translations?.map((translation) => [
+        translation.locale,
+        translation.name,
+      ]) ?? [],
+    ),
     sequence: term.sequence,
     startDate: dateOnlyValue(term.startDate),
     endDate: dateOnlyValue(term.endDate),
@@ -140,16 +153,16 @@ export async function persistAcademicYear(
       afterData: yearSnapshot(created),
       changedFields: ["name", "startDate", "endDate", "status"],
     });
-    return { status: "success", message: "Öğretim yılı oluşturuldu." };
+    return { status: "success", message: actor.messages.yearCreated };
   }
 
   const current = await tx.academicYear.findFirst({
     where: { id: input.id, schoolId: actor.schoolId },
   });
-  if (!current) return unavailable;
-  if (current.status !== "DRAFT") return editableDraftOnly;
+  if (!current) return unavailable(actor.messages);
+  if (current.status !== "DRAFT") return editableDraftOnly(actor.messages);
   if (current.updatedAt.toISOString() !== input.revision)
-    return academicCalendarConflict;
+    return academicCalendarConflict(actor.messages);
   const beforeData = yearSnapshot(current);
   const afterData = {
     ...beforeData,
@@ -163,7 +176,7 @@ export async function persistAcademicYear(
       afterData[key as keyof typeof afterData],
   );
   if (!changedFields.length)
-    return { status: "success", message: "Değişiklik bulunmadı." };
+    return { status: "success", message: actor.messages.noChange };
 
   const result = await tx.academicYear.updateMany({
     where: {
@@ -179,7 +192,7 @@ export async function persistAcademicYear(
       updatedById: actor.actorUserId,
     },
   });
-  if (result.count !== 1) return academicCalendarConflict;
+  if (result.count !== 1) return academicCalendarConflict(actor.messages);
   await audit(tx, actor, {
     action: "academic.year.updated",
     entityType: "AcademicYear",
@@ -188,7 +201,7 @@ export async function persistAcademicYear(
     afterData,
     changedFields,
   });
-  return { status: "success", message: "Öğretim yılı güncellendi." };
+  return { status: "success", message: actor.messages.yearUpdated };
 }
 
 export async function persistAcademicTerm(
@@ -200,17 +213,20 @@ export async function persistAcademicTerm(
     where: { id: input.academicYearId, schoolId: actor.schoolId },
     select: { id: true, status: true, startDate: true, endDate: true },
   });
-  if (!year) return unavailable;
+  if (!year) return unavailable(actor.messages);
   if (year.status !== "DRAFT")
     return {
       status: "error",
-      message: "Dönemler yalnız öğretim yılı taslaktayken düzenlenebilir.",
+      message: actor.messages.termDraftYearOnly,
     };
   if (input.startDate < year.startDate || input.endDate > year.endDate)
     return {
       status: "error",
-      message: "Dönem tarihleri öğretim yılının tarih aralığında olmalı.",
-      fieldErrors: { startDate: "Yıl aralığını kontrol edin.", endDate: "Yıl aralığını kontrol edin." },
+      message: actor.messages.termOutsideYear,
+      fieldErrors: {
+        startDate: actor.messages.checkYearRange,
+        endDate: actor.messages.checkYearRange,
+      },
     };
 
   const overlap = await tx.academicTerm.findFirst({
@@ -222,13 +238,21 @@ export async function persistAcademicTerm(
       startDate: { lte: input.endDate },
       endDate: { gte: input.startDate },
     },
-    select: { id: true, name: true },
+    include: { translations: true },
   });
   if (overlap)
     return {
       status: "error",
-      message: `Tarih aralığı “${overlap.name}” ile çakışıyor.`,
-      fieldErrors: { startDate: "Dönemler çakışamaz.", endDate: "Dönemler çakışamaz." },
+      message: formatMessage(actor.messages.overlapMessage, {
+        name:
+          overlap.translations.find(
+            (translation) => translation.locale === actor.locale,
+          )?.name ?? overlap.name,
+      }),
+      fieldErrors: {
+        startDate: actor.messages.overlapField,
+        endDate: actor.messages.overlapField,
+      },
     };
 
   if (!input.id) {
@@ -236,13 +260,21 @@ export async function persistAcademicTerm(
       data: {
         schoolId: actor.schoolId,
         academicYearId: year.id,
-        name: input.name,
+        name: input.names[actor.defaultLocale],
         sequence: input.sequence,
         startDate: input.startDate,
         endDate: input.endDate,
         createdById: actor.actorUserId,
         updatedById: actor.actorUserId,
+        translations: {
+          create: SUPPORTED_LOCALES.map((locale) => ({
+            school: { connect: { id: actor.schoolId } },
+            locale,
+            name: input.names[locale],
+          })),
+        },
       },
+      include: { translations: true },
     });
     await audit(tx, actor, {
       action: "academic.term.created",
@@ -251,14 +283,16 @@ export async function persistAcademicTerm(
       afterData: termSnapshot(created),
       changedFields: [
         "academicYearId",
-        "name",
+        "names.tr",
+        "names.sq",
+        "names.en",
         "sequence",
         "startDate",
         "endDate",
         "status",
       ],
     });
-    return { status: "success", message: "Dönem oluşturuldu." };
+    return { status: "success", message: actor.messages.termCreated };
   }
 
   const current = await tx.academicTerm.findFirst({
@@ -267,26 +301,33 @@ export async function persistAcademicTerm(
       schoolId: actor.schoolId,
       academicYearId: year.id,
     },
+    include: { translations: true },
   });
-  if (!current) return unavailable;
-  if (current.status !== "DRAFT") return editableDraftOnly;
+  if (!current) return unavailable(actor.messages);
+  if (current.status !== "DRAFT") return editableDraftOnly(actor.messages);
   if (current.updatedAt.toISOString() !== input.revision)
-    return academicCalendarConflict;
+    return academicCalendarConflict(actor.messages);
   const beforeData = termSnapshot(current);
   const afterData = {
     ...beforeData,
-    name: input.name,
+    name: input.names[actor.defaultLocale],
+    names: input.names,
     sequence: input.sequence,
     startDate: dateOnlyValue(input.startDate),
     endDate: dateOnlyValue(input.endDate),
   };
-  const changedFields = Object.keys(afterData).filter(
-    (key) =>
-      beforeData[key as keyof typeof beforeData] !==
-      afterData[key as keyof typeof afterData],
-  );
+  const changedFields = [
+    ...(beforeData.sequence !== afterData.sequence ? ["sequence"] : []),
+    ...(beforeData.startDate !== afterData.startDate ? ["startDate"] : []),
+    ...(beforeData.endDate !== afterData.endDate ? ["endDate"] : []),
+    ...SUPPORTED_LOCALES.filter(
+      (locale) =>
+        (beforeData.names as Partial<LocalizedNames>)[locale] !==
+        input.names[locale],
+    ).map((locale) => `names.${locale}`),
+  ];
   if (!changedFields.length)
-    return { status: "success", message: "Değişiklik bulunmadı." };
+    return { status: "success", message: actor.messages.noChange };
 
   const result = await tx.academicTerm.updateMany({
     where: {
@@ -297,14 +338,31 @@ export async function persistAcademicTerm(
       updatedAt: new Date(input.revision as string),
     },
     data: {
-      name: input.name,
+      name: input.names[actor.defaultLocale],
       sequence: input.sequence,
       startDate: input.startDate,
       endDate: input.endDate,
       updatedById: actor.actorUserId,
     },
   });
-  if (result.count !== 1) return academicCalendarConflict;
+  if (result.count !== 1) return academicCalendarConflict(actor.messages);
+  for (const locale of SUPPORTED_LOCALES) {
+    await tx.academicTermTranslation.upsert({
+      where: {
+        academicTermId_locale: {
+          academicTermId: current.id,
+          locale,
+        },
+      },
+      create: {
+        academicTermId: current.id,
+        schoolId: actor.schoolId,
+        locale,
+        name: input.names[locale],
+      },
+      update: { name: input.names[locale] },
+    });
+  }
   await audit(tx, actor, {
     action: "academic.term.updated",
     entityType: "AcademicTerm",
@@ -313,7 +371,7 @@ export async function persistAcademicTerm(
     afterData,
     changedFields,
   });
-  return { status: "success", message: "Dönem güncellendi." };
+  return { status: "success", message: actor.messages.termUpdated };
 }
 
 export async function transitionAcademicYear(
@@ -323,11 +381,16 @@ export async function transitionAcademicYear(
 ): Promise<AcademicCalendarState> {
   const current = await tx.academicYear.findFirst({
     where: { id: input.id, schoolId: actor.schoolId },
-    include: { terms: { where: { status: { not: "ARCHIVED" } } } },
+    include: {
+      terms: {
+        where: { status: { not: "ARCHIVED" } },
+        include: { translations: true },
+      },
+    },
   });
-  if (!current) return unavailable;
+  if (!current) return unavailable(actor.messages);
   if (current.updatedAt.toISOString() !== input.revision)
-    return academicCalendarConflict;
+    return academicCalendarConflict(actor.messages);
 
   const beforeData = yearSnapshot(current);
   let nextStatus: "DRAFT" | "ACTIVE" | "CLOSED" | "ARCHIVED";
@@ -336,11 +399,12 @@ export async function transitionAcademicYear(
   let reason: string;
 
   if (input.transition === "activate") {
-    if (current.status !== "DRAFT") return academicCalendarConflict;
+    if (current.status !== "DRAFT")
+      return academicCalendarConflict(actor.messages);
     if (!current.terms.length)
       return {
         status: "error",
-        message: "Öğretim yılını etkinleştirmeden önce en az bir dönem ekleyin.",
+        message: actor.messages.yearNeedsTerm,
       };
     const previous = await tx.academicYear.findFirst({
       where: {
@@ -349,7 +413,12 @@ export async function transitionAcademicYear(
         archivedAt: null,
         id: { not: current.id },
       },
-      include: { terms: { where: { status: "ACTIVE" } } },
+      include: {
+        terms: {
+          where: { status: "ACTIVE" },
+          include: { translations: true },
+        },
+      },
     });
     if (previous) {
       await tx.academicTerm.updateMany({
@@ -386,7 +455,8 @@ export async function transitionAcademicYear(
     nextStatus = "ACTIVE";
     reason = "Academic year activated by school administrator.";
   } else if (input.transition === "close") {
-    if (current.status !== "ACTIVE") return academicCalendarConflict;
+    if (current.status !== "ACTIVE")
+      return academicCalendarConflict(actor.messages);
     await tx.academicTerm.updateMany({
       where: {
         schoolId: actor.schoolId,
@@ -410,7 +480,7 @@ export async function transitionAcademicYear(
     reason = "Academic year closed by school administrator.";
   } else if (input.transition === "archive") {
     if (!(["DRAFT", "CLOSED"] as string[]).includes(current.status))
-      return academicCalendarConflict;
+      return academicCalendarConflict(actor.messages);
     const archivedOn = new Date();
     await tx.academicTerm.updateMany({
       where: {
@@ -441,7 +511,8 @@ export async function transitionAcademicYear(
     archivedById = actor.actorUserId;
     reason = "Academic year archived; non-active terms archived with it.";
   } else {
-    if (current.status !== "ARCHIVED") return academicCalendarConflict;
+    if (current.status !== "ARCHIVED")
+      return academicCalendarConflict(actor.messages);
     nextStatus = "DRAFT";
     reason = "Academic year restored as draft; archived terms remain archived.";
   }
@@ -460,7 +531,7 @@ export async function transitionAcademicYear(
       updatedById: actor.actorUserId,
     },
   });
-  if (result.count !== 1) return academicCalendarConflict;
+  if (result.count !== 1) return academicCalendarConflict(actor.messages);
   await audit(tx, actor, {
     action: `academic.year.${input.transition}d`,
     entityType: "AcademicYear",
@@ -482,12 +553,12 @@ export async function transitionAcademicYear(
     status: "success",
     message:
       input.transition === "activate"
-        ? "Öğretim yılı etkinleştirildi."
+        ? actor.messages.yearActivated
         : input.transition === "close"
-          ? "Öğretim yılı kapatıldı."
+          ? actor.messages.yearClosed
           : input.transition === "archive"
-            ? "Öğretim yılı arşivlendi."
-            : "Öğretim yılı taslak olarak geri alındı.",
+            ? actor.messages.yearArchived
+            : actor.messages.yearRestored,
   };
 }
 
@@ -498,11 +569,14 @@ export async function transitionAcademicTerm(
 ): Promise<AcademicCalendarState> {
   const current = await tx.academicTerm.findFirst({
     where: { id: input.id, schoolId: actor.schoolId },
-    include: { academicYear: { select: { status: true } } },
+    include: {
+      academicYear: { select: { status: true } },
+      translations: true,
+    },
   });
-  if (!current) return unavailable;
+  if (!current) return unavailable(actor.messages);
   if (current.updatedAt.toISOString() !== input.revision)
-    return academicCalendarConflict;
+    return academicCalendarConflict(actor.messages);
   const beforeData = termSnapshot(current);
   let nextStatus: "DRAFT" | "ACTIVE" | "CLOSED" | "ARCHIVED";
   let archivedAt: Date | null = null;
@@ -513,7 +587,7 @@ export async function transitionAcademicTerm(
     if (current.status !== "DRAFT" || current.academicYear.status !== "ACTIVE")
       return {
         status: "error",
-        message: "Yalnız aktif öğretim yılındaki taslak dönem etkinleştirilebilir.",
+        message: actor.messages.activeTermRule,
       };
     const previous = await tx.academicTerm.findFirst({
       where: {
@@ -522,6 +596,7 @@ export async function transitionAcademicTerm(
         status: "ACTIVE",
         id: { not: current.id },
       },
+      include: { translations: true },
     });
     if (previous) {
       await tx.academicTerm.update({
@@ -541,12 +616,13 @@ export async function transitionAcademicTerm(
     nextStatus = "ACTIVE";
     reason = "Academic term activated by school administrator.";
   } else if (input.transition === "close") {
-    if (current.status !== "ACTIVE") return academicCalendarConflict;
+    if (current.status !== "ACTIVE")
+      return academicCalendarConflict(actor.messages);
     nextStatus = "CLOSED";
     reason = "Academic term closed by school administrator.";
   } else if (input.transition === "archive") {
     if (!(["DRAFT", "CLOSED"] as string[]).includes(current.status))
-      return academicCalendarConflict;
+      return academicCalendarConflict(actor.messages);
     archivedAt = new Date();
     archivedById = actor.actorUserId;
     nextStatus = "ARCHIVED";
@@ -558,8 +634,7 @@ export async function transitionAcademicTerm(
     )
       return {
         status: "error",
-        message:
-          "Dönem yalnız öğretim yılı taslak durumundayken geri alınabilir.",
+        message: actor.messages.restoreTermRule,
       };
     nextStatus = "DRAFT";
     reason = "Academic term restored as draft.";
@@ -579,7 +654,7 @@ export async function transitionAcademicTerm(
       updatedById: actor.actorUserId,
     },
   });
-  if (result.count !== 1) return academicCalendarConflict;
+  if (result.count !== 1) return academicCalendarConflict(actor.messages);
   await audit(tx, actor, {
     action: `academic.term.${input.transition}d`,
     entityType: "AcademicTerm",
@@ -601,11 +676,11 @@ export async function transitionAcademicTerm(
     status: "success",
     message:
       input.transition === "activate"
-        ? "Dönem etkinleştirildi."
+        ? actor.messages.termActivated
         : input.transition === "close"
-          ? "Dönem kapatıldı."
+          ? actor.messages.termClosed
           : input.transition === "archive"
-            ? "Dönem arşivlendi."
-            : "Dönem taslak olarak geri alındı.",
+            ? actor.messages.termArchived
+            : actor.messages.termRestored,
   };
 }

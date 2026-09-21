@@ -2,7 +2,7 @@
 
 Bu modelin uygulamadaki ana kaynağı [`prisma/schema.prisma`](../prisma/schema.prisma) dosyasıdır. Şema değişiklikleri Prisma Migrate ile sürümlenir; PostgreSQL RLS ve Prisma'nın doğrudan ifade edemediği kısıtlar migration SQL'ine açıkça eklenir.
 
-2026-09-21 itibarıyla 13 çekirdek + 3 parola/oturum + 2 akademik takvim tablosu, toplam 18 uygulama tablosu Neon'a uygulandı. [Migration çalışma düzeni](./database-migrations.md) mevcut kısıtları ve henüz uygulanmamış güvenlik katmanlarını ayırır. Aşağıdaki profil tabloları, akademik yapının kalan bölümü ve `school_settings` sonraki aşamalar için planlanmıştır.
+2026-09-21 itibarıyla 13 çekirdek + 3 parola/oturum + 2 akademik takvim + 1 dönem çeviri tablosu, toplam 19 uygulama tablosu Neon'a uygulandı. [Migration çalışma düzeni](./database-migrations.md) mevcut kısıtları ve henüz uygulanmamış güvenlik katmanlarını ayırır. Aşağıdaki profil tabloları, akademik yapının kalan bölümü ve `school_settings` sonraki aşamalar için planlanmıştır.
 
 ## Modelleme standartları
 
@@ -42,7 +42,7 @@ Küresel kullanıcı profilini tutar. `email` nullable'dır; okul kullanıcılar
 
 ### `school_memberships`
 
-Kullanıcı ile okul arasındaki üyeliği, kullanıcı adını, durumunu ve yaşam döngüsünü tutar. `(school_id, username)` benzersizdir; username normalize ASCII olarak saklanır. Geçiş için nullable olmakla birlikte kullanıcı adı olmayan üyelik okul girişini kullanamaz. Aynı kullanıcı farklı okullarda farklı üyeliklere sahip olabilir.
+Kullanıcı ile okul arasındaki üyeliği, kullanıcı adını, tercih edilen UI dilini, durumunu ve yaşam döngüsünü tutar. `(school_id, username)` benzersizdir; username normalize ASCII olarak saklanır. `preferred_locale` nullable ve `tr/sq/en` ile sınırlıdır; tercih küresel kullanıcıya değil okul üyeliğine aittir. Geçiş için nullable olmakla birlikte kullanıcı adı olmayan üyelik okul girişini kullanamaz. Aynı kullanıcı farklı okullarda farklı üyeliklere sahip olabilir.
 
 ### `user_credentials`
 
@@ -88,6 +88,10 @@ Okula ait öğretim yılını ad, başlangıç/bitiş tarihi ve `DRAFT → ACTIV
 
 Bir öğretim yılının sıralı dönemlerini tutar. Dönemin okul kimliği üst yılıyla bileşik foreign key üzerinden eşleşir; tarihleri yıl aralığında kalır ve arşivlenmemiş dönemlerle çakışamaz. Yıl başına yalnız bir aktif dönem bulunur. Kapalı/arşivli yılın geçersiz dönem durumları migration trigger'larıyla reddedilir.
 
+### `academic_term_translations`
+
+Tek bir dönemin `tr`, `sq` ve `en` görünen adlarını tutar. `(academic_term_id, locale)` birincil anahtardır; dil başına ayrı dönem ID'si üretilmez. `school_id` ve dönem kimliği bileşik foreign key ile eşleşir. Eski `academic_terms.name` kolonu sıfır kesintili geçiş için geçici olarak korunur; yeni yazımlar üç çeviriyi aynı transaction'da üretir.
+
 Her iki tablo da oluşturan, güncelleyen ve arşivleyen kullanıcı bağlarını taşır. Uygulama yazmaları okul permission'ı, optimistic revision ve aynı transaction içindeki `audit_events` kaydıyla yürür.
 
 ## Kişi profilleri
@@ -111,7 +115,7 @@ users
           └── kişi profili bağlantıları
 
 schools
-  ├── academic_years ── academic_terms
+  ├── academic_years ── academic_terms ── academic_term_translations
   ├── classes / sections
   ├── subjects / courses
   ├── enrollments

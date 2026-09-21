@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  createContext,
+  useContext,
   useActionState,
   useState,
   type ReactNode,
@@ -65,29 +67,47 @@ import type {
   AcademicTransition,
 } from "@/lib/academic-calendar-validation";
 import { cn } from "@/lib/utils";
+import { HTML_LOCALES, type Locale } from "@/i18n/config";
+import type { AppDictionary } from "@/i18n/dictionaries/types";
+import { formatMessage } from "@/i18n/format";
 import type {
   AcademicTermRecord,
   AcademicYearRecord,
 } from "@/server/academics/academic-calendar";
 
 const initialActionState: AcademicCalendarState = {};
-const dateFormatter = new Intl.DateTimeFormat("tr-TR", {
-  dateStyle: "medium",
-  timeZone: "UTC",
-});
-
-const statusPresentation = {
-  DRAFT: { label: "Taslak", variant: "secondary" as const },
-  ACTIVE: { label: "Aktif", variant: "success" as const },
-  CLOSED: { label: "Kapalı", variant: "info" as const },
-  ARCHIVED: { label: "Arşiv", variant: "outline" as const },
+type AcademicI18nContextValue = {
+  locale: Locale;
+  messages: Pick<AppDictionary, "common" | "academics">;
 };
 
-function formatDate(value: string) {
-  return dateFormatter.format(new Date(`${value}T00:00:00Z`));
+const AcademicI18nContext = createContext<AcademicI18nContextValue | null>(null);
+
+function useAcademicI18n() {
+  const value = useContext(AcademicI18nContext);
+  if (!value) throw new Error("Academic i18n context is missing.");
+  return value;
 }
 
-function StatusBadge({ status }: { status: keyof typeof statusPresentation }) {
+function formatDate(value: string, locale: Locale) {
+  return new Intl.DateTimeFormat(HTML_LOCALES[locale], {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function StatusBadge({
+  status,
+}: {
+  status: "DRAFT" | "ACTIVE" | "CLOSED" | "ARCHIVED";
+}) {
+  const { messages } = useAcademicI18n();
+  const statusPresentation = {
+    DRAFT: { label: messages.academics.statusDraft, variant: "secondary" as const },
+    ACTIVE: { label: messages.academics.statusActive, variant: "success" as const },
+    CLOSED: { label: messages.academics.statusClosed, variant: "info" as const },
+    ARCHIVED: { label: messages.academics.statusArchived, variant: "outline" as const },
+  };
   const presentation = statusPresentation[status];
   return <Badge variant={presentation.variant}>{presentation.label}</Badge>;
 }
@@ -129,6 +149,9 @@ function YearFormContent({
   year?: AcademicYearRecord;
   onClose: () => void;
 }) {
+  const { messages } = useAcademicI18n();
+  const academic = messages.academics;
+  const common = messages.common;
   const [state, action, pending] = useActionState(
     saveAcademicYear,
     initialActionState,
@@ -139,11 +162,10 @@ function YearFormContent({
     <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {year ? "Öğretim yılını düzenle" : "Yeni öğretim yılı"}
+            {year ? academic.editYear : academic.newYear}
           </DialogTitle>
           <DialogDescription>
-            Öğretim yılı taslak olarak kaydedilir. Etkinleştirmeden önce en az
-            bir dönem eklenmelidir.
+            {academic.yearFormDescription}
           </DialogDescription>
         </DialogHeader>
         <form action={action} className="space-y-5">
@@ -154,7 +176,7 @@ function YearFormContent({
             value={year?.revision ?? "new"}
           />
           <div>
-            <Label htmlFor={`${prefix}-name`}>Öğretim yılı adı</Label>
+            <Label htmlFor={`${prefix}-name`}>{academic.yearName}</Label>
             <Input
               id={`${prefix}-name`}
               name="name"
@@ -178,7 +200,7 @@ function YearFormContent({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label htmlFor={`${prefix}-start`}>Başlangıç tarihi</Label>
+              <Label htmlFor={`${prefix}-start`}>{common.startDate}</Label>
               <Input
                 id={`${prefix}-start`}
                 name="startDate"
@@ -201,7 +223,7 @@ function YearFormContent({
               />
             </div>
             <div>
-              <Label htmlFor={`${prefix}-end`}>Bitiş tarihi</Label>
+              <Label htmlFor={`${prefix}-end`}>{common.endDate}</Label>
               <Input
                 id={`${prefix}-end`}
                 name="endDate"
@@ -232,15 +254,15 @@ function YearFormContent({
               onClick={onClose}
               disabled={pending}
             >
-              {state.status === "success" ? "Kapat" : "Vazgeç"}
+              {state.status === "success" ? common.close : common.cancel}
             </Button>
             {state.status !== "success" && (
               <Button type="submit" disabled={pending}>
                 {pending
-                  ? "Kaydediliyor…"
+                  ? common.saving
                   : year
-                    ? "Değişiklikleri kaydet"
-                    : "Taslak oluştur"}
+                    ? common.save
+                    : academic.createDraft}
               </Button>
             )}
           </DialogFooter>
@@ -276,6 +298,9 @@ function TermFormContent({
   term?: AcademicTermRecord;
   onClose: () => void;
 }) {
+  const { messages } = useAcademicI18n();
+  const academic = messages.academics;
+  const common = messages.common;
   const [state, action, pending] = useActionState(
     saveAcademicTerm,
     initialActionState,
@@ -288,10 +313,9 @@ function TermFormContent({
   return (
     <DialogContent>
         <DialogHeader>
-          <DialogTitle>{term ? "Dönemi düzenle" : "Yeni dönem"}</DialogTitle>
+          <DialogTitle>{term ? academic.editTerm : academic.newTerm}</DialogTitle>
           <DialogDescription>
-            {year.name} içindeki dönemler tarih olarak çakışamaz ve yıl
-            aralığının dışına çıkamaz.
+            {formatMessage(academic.termFormDescription, { year: year.name })}
           </DialogDescription>
         </DialogHeader>
         <form action={action} className="space-y-5">
@@ -302,32 +326,51 @@ function TermFormContent({
             value={term?.revision ?? "new"}
           />
           <input type="hidden" name="academicYearId" value={year.id} />
-          <div className="grid gap-4 sm:grid-cols-[1fr_120px]">
-            <div>
-              <Label htmlFor={`${prefix}-name`}>Dönem adı</Label>
+          <div>
+            <p className="text-sm font-medium">{academic.termName}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {academic.translationsHelp}
+            </p>
+            <div className="mt-3 grid gap-4 sm:grid-cols-3">
+            {([
+              ["Tr", academic.termNameTr, academic.termPlaceholderTr, "tr"],
+              ["Sq", academic.termNameSq, academic.termPlaceholderSq, "sq"],
+              ["En", academic.termNameEn, academic.termPlaceholderEn, "en"],
+            ] as const).map(([suffix, label, placeholder, locale]) => {
+              const field = `name${suffix}` as "nameTr" | "nameSq" | "nameEn";
+              return (
+              <div key={locale}>
+              <Label htmlFor={`${prefix}-name-${locale}`}>{label}</Label>
               <Input
-                id={`${prefix}-name`}
-                name="name"
-                defaultValue={term?.name}
-                placeholder="1. Dönem"
+                id={`${prefix}-name-${locale}`}
+                name={field}
+                defaultValue={term?.names[locale]}
+                placeholder={placeholder}
                 minLength={2}
                 maxLength={100}
                 required
                 disabled={pending}
-                aria-invalid={Boolean(state.fieldErrors?.name)}
+                aria-invalid={Boolean(state.fieldErrors?.[field])}
                 aria-describedby={
-                  state.fieldErrors?.name ? `${prefix}-name-error` : undefined
+                  state.fieldErrors?.[field]
+                    ? `${prefix}-name-${locale}-error`
+                    : undefined
                 }
                 className="mt-2"
               />
               <FieldError
                 state={state}
-                field="name"
-                id={`${prefix}-name-error`}
+                field={field}
+                id={`${prefix}-name-${locale}-error`}
               />
+              </div>
+              );
+            })}
             </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-[120px_1fr_1fr]">
             <div>
-              <Label htmlFor={`${prefix}-sequence`}>Sıra</Label>
+              <Label htmlFor={`${prefix}-sequence`}>{common.sequence}</Label>
               <Input
                 id={`${prefix}-sequence`}
                 name="sequence"
@@ -351,10 +394,8 @@ function TermFormContent({
                 id={`${prefix}-sequence-error`}
               />
             </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label htmlFor={`${prefix}-start`}>Başlangıç tarihi</Label>
+              <Label htmlFor={`${prefix}-start`}>{common.startDate}</Label>
               <Input
                 id={`${prefix}-start`}
                 name="startDate"
@@ -379,7 +420,7 @@ function TermFormContent({
               />
             </div>
             <div>
-              <Label htmlFor={`${prefix}-end`}>Bitiş tarihi</Label>
+              <Label htmlFor={`${prefix}-end`}>{common.endDate}</Label>
               <Input
                 id={`${prefix}-end`}
                 name="endDate"
@@ -412,15 +453,15 @@ function TermFormContent({
               onClick={onClose}
               disabled={pending}
             >
-              {state.status === "success" ? "Kapat" : "Vazgeç"}
+              {state.status === "success" ? common.close : common.cancel}
             </Button>
             {state.status !== "success" && (
               <Button type="submit" disabled={pending}>
                 {pending
-                  ? "Kaydediliyor…"
+                  ? common.saving
                   : term
-                    ? "Değişiklikleri kaydet"
-                    : "Dönem oluştur"}
+                    ? common.save
+                    : academic.createTerm}
               </Button>
             )}
           </DialogFooter>
@@ -474,6 +515,7 @@ function LifecycleContent({
   confirmLabel,
   confirmVariant = "default",
 }: LifecycleContentProps) {
+  const { messages } = useAcademicI18n();
   const [state, action, pending] = useActionState(
     changeAcademicCalendarStatus,
     initialActionState,
@@ -493,7 +535,9 @@ function LifecycleContent({
           <ActionAlert state={state} />
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>
-              {state.status === "success" ? "Kapat" : "Vazgeç"}
+              {state.status === "success"
+                ? messages.common.close
+                : messages.common.cancel}
             </AlertDialogCancel>
             {state.status !== "success" && (
               <Button
@@ -507,7 +551,7 @@ function LifecycleContent({
                       : "default"
                 }
               >
-                {pending ? "İşleniyor…" : confirmLabel}
+                {pending ? messages.common.processing : confirmLabel}
               </Button>
             )}
           </AlertDialogFooter>
@@ -536,7 +580,13 @@ function YearActions({
   year: AcademicYearRecord;
   canManage: boolean;
 }) {
-  if (!canManage) return <span className="text-xs text-muted-foreground">Salt okunur</span>;
+  const { messages } = useAcademicI18n();
+  const academic = messages.academics;
+  const common = messages.common;
+  if (!canManage)
+    return (
+      <span className="text-xs text-muted-foreground">{common.readOnly}</span>
+    );
   return (
     <div className="flex flex-wrap justify-end gap-2">
       {year.status === "DRAFT" && (
@@ -545,7 +595,7 @@ function YearActions({
           year={year}
           trigger={
             <Button variant="outline" size="sm">
-              <Pencil aria-hidden /> Düzenle
+              <Pencil aria-hidden /> {common.edit}
             </Button>
           }
         />
@@ -556,13 +606,13 @@ function YearActions({
           transition="activate"
           id={year.id}
           revision={year.revision}
-          title={`${year.name} etkinleştirilsin mi?`}
-          description="Okulda başka bir aktif öğretim yılı varsa dönemleriyle birlikte kapatılır. Bu yıl aktif akademik bağlam olur."
-          confirmLabel="Etkinleştir"
+          title={formatMessage(academic.activateYearTitle, { name: year.name })}
+          description={academic.activateYearDescription}
+          confirmLabel={common.activate}
           confirmVariant="success"
           trigger={
             <Button variant="success" size="sm">
-              <CalendarCheck2 aria-hidden /> Etkinleştir
+              <CalendarCheck2 aria-hidden /> {common.activate}
             </Button>
           }
         />
@@ -573,12 +623,12 @@ function YearActions({
           transition="close"
           id={year.id}
           revision={year.revision}
-          title={`${year.name} kapatılsın mı?`}
-          description="Aktif dönem de kapatılır. Geçmiş kayıtlar korunur; yıl yeniden etkinleştirilmez."
-          confirmLabel="Yılı kapat"
+          title={formatMessage(academic.closeYearTitle, { name: year.name })}
+          description={academic.closeYearDescription}
+          confirmLabel={academic.closeYear}
           trigger={
             <Button variant="outline" size="sm">
-              <LockKeyhole aria-hidden /> Kapat
+              <LockKeyhole aria-hidden /> {common.close}
             </Button>
           }
         />
@@ -589,13 +639,13 @@ function YearActions({
           transition="archive"
           id={year.id}
           revision={year.revision}
-          title={`${year.name} arşivlensin mi?`}
-          description="Yıl ve arşivlenmemiş dönemleri listede geçmiş kayıt olarak kalır. Etkin yıl önce kapatılmalıdır."
-          confirmLabel="Arşivle"
+          title={formatMessage(academic.archiveYearTitle, { name: year.name })}
+          description={academic.archiveYearDescription}
+          confirmLabel={common.archive}
           confirmVariant="danger"
           trigger={
             <Button variant="ghost" size="sm">
-              <Archive aria-hidden /> Arşivle
+              <Archive aria-hidden /> {common.archive}
             </Button>
           }
         />
@@ -606,12 +656,12 @@ function YearActions({
           transition="restore"
           id={year.id}
           revision={year.revision}
-          title={`${year.name} geri alınsın mı?`}
-          description="Yıl taslak olur. Arşivlenmiş dönemler otomatik geri alınmaz; gerekli dönemleri ayrı ayrı seçebilirsiniz."
-          confirmLabel="Taslağa geri al"
+          title={formatMessage(academic.restoreYearTitle, { name: year.name })}
+          description={academic.restoreYearDescription}
+          confirmLabel={academic.restoreDraft}
           trigger={
             <Button variant="outline" size="sm">
-              <RotateCcw aria-hidden /> Geri al
+              <RotateCcw aria-hidden /> {common.restore}
             </Button>
           }
         />
@@ -629,7 +679,13 @@ function TermActions({
   term: AcademicTermRecord;
   canManage: boolean;
 }) {
-  if (!canManage) return <span className="text-xs text-muted-foreground">Salt okunur</span>;
+  const { messages } = useAcademicI18n();
+  const academic = messages.academics;
+  const common = messages.common;
+  if (!canManage)
+    return (
+      <span className="text-xs text-muted-foreground">{common.readOnly}</span>
+    );
   return (
     <div className="flex flex-wrap justify-end gap-2">
       {year.status === "DRAFT" && term.status === "DRAFT" && (
@@ -639,7 +695,7 @@ function TermActions({
           term={term}
           trigger={
             <Button variant="outline" size="sm">
-              <Pencil aria-hidden /> Düzenle
+              <Pencil aria-hidden /> {common.edit}
             </Button>
           }
         />
@@ -650,13 +706,13 @@ function TermActions({
           transition="activate"
           id={term.id}
           revision={term.revision}
-          title={`${term.name} etkinleştirilsin mi?`}
-          description="Bu yılda başka bir aktif dönem varsa otomatik kapatılır."
-          confirmLabel="Dönemi etkinleştir"
+          title={formatMessage(academic.activateTermTitle, { name: term.name })}
+          description={academic.activateTermDescription}
+          confirmLabel={academic.activateTerm}
           confirmVariant="success"
           trigger={
             <Button variant="success" size="sm">
-              <CircleDot aria-hidden /> Etkinleştir
+              <CircleDot aria-hidden /> {common.activate}
             </Button>
           }
         />
@@ -667,12 +723,12 @@ function TermActions({
           transition="close"
           id={term.id}
           revision={term.revision}
-          title={`${term.name} kapatılsın mı?`}
-          description="Dönem kapalı duruma alınır ve geçmiş kayıtları korunur."
-          confirmLabel="Dönemi kapat"
+          title={formatMessage(academic.closeTermTitle, { name: term.name })}
+          description={academic.closeTermDescription}
+          confirmLabel={academic.closeTerm}
           trigger={
             <Button variant="outline" size="sm">
-              <LockKeyhole aria-hidden /> Kapat
+              <LockKeyhole aria-hidden /> {common.close}
             </Button>
           }
         />
@@ -683,13 +739,13 @@ function TermActions({
           transition="archive"
           id={term.id}
           revision={term.revision}
-          title={`${term.name} arşivlensin mi?`}
-          description="Dönem kalıcı olarak silinmez; geçmiş kayıt olarak korunur."
-          confirmLabel="Arşivle"
+          title={formatMessage(academic.archiveTermTitle, { name: term.name })}
+          description={academic.archiveTermDescription}
+          confirmLabel={common.archive}
           confirmVariant="danger"
           trigger={
             <Button variant="ghost" size="sm">
-              <Archive aria-hidden /> Arşivle
+              <Archive aria-hidden /> {common.archive}
             </Button>
           }
         />
@@ -700,12 +756,12 @@ function TermActions({
           transition="restore"
           id={term.id}
           revision={term.revision}
-          title={`${term.name} geri alınsın mı?`}
-          description="Dönem taslak olur. Tarih çakışması varsa işlem reddedilir."
-          confirmLabel="Taslağa geri al"
+          title={formatMessage(academic.restoreTermTitle, { name: term.name })}
+          description={academic.restoreTermDescription}
+          confirmLabel={academic.restoreDraft}
           trigger={
             <Button variant="outline" size="sm">
-              <RotateCcw aria-hidden /> Geri al
+              <RotateCcw aria-hidden /> {common.restore}
             </Button>
           }
         />
@@ -719,12 +775,18 @@ export function AcademicCalendarManager({
   years,
   selectedYearId,
   canManage,
+  locale,
+  messages,
 }: {
   schoolName: string;
   years: AcademicYearRecord[];
   selectedYearId: string | null;
   canManage: boolean;
+  locale: Locale;
+  messages: Pick<AppDictionary, "common" | "academics">;
 }) {
+  const academic = messages.academics;
+  const common = messages.common;
   const selectedYear =
     years.find((year) => year.id === selectedYearId) ?? null;
   const activeYear = years.find((year) => year.status === "ACTIVE") ?? null;
@@ -733,17 +795,18 @@ export function AcademicCalendarManager({
   ).length;
 
   return (
+    <AcademicI18nContext.Provider value={{ locale, messages }}>
     <div className="space-y-8">
       <PageHeader
-        eyebrow="AKADEMİK YAPI"
-        title="Öğretim yılları ve dönemler"
-        description={`${schoolName} için akademik takvimin temelini kurun. Önce yılı ve dönemleri taslak olarak hazırlayın, ardından doğru kaydı etkinleştirin.`}
+        eyebrow={academic.eyebrow}
+        title={academic.title}
+        description={formatMessage(academic.description, { name: schoolName })}
         actions={
           canManage ? (
             <YearFormDialog
               trigger={
                 <Button size="lg">
-                  <Plus aria-hidden /> Yeni öğretim yılı
+                  <Plus aria-hidden /> {academic.newYear}
                 </Button>
               }
             />
@@ -751,27 +814,36 @@ export function AcademicCalendarManager({
         }
       />
 
-      <section className="grid gap-4 md:grid-cols-3" aria-label="Akademik takvim özeti">
+      <section
+        className="grid gap-4 md:grid-cols-3"
+        aria-label={academic.summaryLabel}
+      >
         <Card className="py-5">
           <CardContent>
             <CalendarCheck2 className="size-5 text-primary" aria-hidden />
-            <p className="mt-5 text-xs text-muted-foreground">Aktif öğretim yılı</p>
+            <p className="mt-5 text-xs text-muted-foreground">
+              {academic.activeYear}
+            </p>
             <p className="mt-2 text-lg font-medium">
-              {activeYear?.name ?? "Henüz etkin değil"}
+              {activeYear?.name ?? academic.notActive}
             </p>
           </CardContent>
         </Card>
         <Card className="py-5">
           <CardContent>
             <CalendarDays className="size-5 text-primary" aria-hidden />
-            <p className="mt-5 text-xs text-muted-foreground">Arşiv dışı yıl</p>
+            <p className="mt-5 text-xs text-muted-foreground">
+              {academic.nonArchivedYears}
+            </p>
             <p className="mt-2 text-lg font-medium">{visibleYearCount}</p>
           </CardContent>
         </Card>
         <Card className="py-5">
           <CardContent>
             <CalendarClock className="size-5 text-primary" aria-hidden />
-            <p className="mt-5 text-xs text-muted-foreground">Seçili yılın dönemleri</p>
+            <p className="mt-5 text-xs text-muted-foreground">
+              {academic.selectedYearTerms}
+            </p>
             <p className="mt-2 text-lg font-medium">
               {selectedYear?.terms.filter((term) => term.status !== "ARCHIVED").length ?? 0}
             </p>
@@ -780,19 +852,21 @@ export function AcademicCalendarManager({
       </section>
 
       <DataTableShell
-        title="Öğretim yılları"
-        description="Bir yılı seçerek dönemlerini yönetin. Okulda aynı anda yalnız bir öğretim yılı aktif olabilir."
-        footer={`${years.length} öğretim yılı gösteriliyor`}
+        title={academic.yearsTitle}
+        description={academic.yearsDescription}
+        footer={formatMessage(academic.yearsFooter, { count: years.length })}
       >
         {years.length ? (
           <Table className="min-w-[920px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead scope="col">Öğretim yılı</TableHead>
-                <TableHead scope="col">Tarih aralığı</TableHead>
-                <TableHead scope="col">Dönem</TableHead>
-                <TableHead scope="col">Durum</TableHead>
-                <TableHead scope="col" className="text-right">İşlemler</TableHead>
+                <TableHead scope="col">{academic.yearColumn}</TableHead>
+                <TableHead scope="col">{common.dateRange}</TableHead>
+                <TableHead scope="col">{academic.termColumn}</TableHead>
+                <TableHead scope="col">{common.status}</TableHead>
+                <TableHead scope="col" className="text-right">
+                  {common.actions}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -813,11 +887,14 @@ export function AcademicCalendarManager({
                         </Link>
                       </Button>
                       {selected && (
-                        <span className="mt-1 block text-[11px] text-primary">Dönemleri gösteriliyor</span>
+                        <span className="mt-1 block text-[11px] text-primary">
+                          {academic.showingTerms}
+                        </span>
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(year.startDate)} – {formatDate(year.endDate)}
+                      {formatDate(year.startDate, locale)} –{" "}
+                      {formatDate(year.endDate, locale)}
                     </TableCell>
                     <TableCell>
                       {year.terms.filter((term) => term.status !== "ARCHIVED").length}
@@ -835,14 +912,14 @@ export function AcademicCalendarManager({
           </Table>
         ) : (
           <TableEmptyState
-            title="Henüz öğretim yılı yok"
-            description="İlk öğretim yılını taslak olarak oluşturun; ardından dönemlerini ekleyip yılı etkinleştirin."
+            title={academic.noYears}
+            description={academic.noYearsDescription}
             action={
               canManage ? (
                 <YearFormDialog
                   trigger={
                     <Button>
-                      <Plus aria-hidden /> İlk öğretim yılını oluştur
+                      <Plus aria-hidden /> {academic.createFirstYear}
                     </Button>
                   }
                 />
@@ -854,31 +931,37 @@ export function AcademicCalendarManager({
 
       {selectedYear ? (
         <DataTableShell
-          title={`${selectedYear.name} dönemleri`}
-          description="Sıra ve tarihler ders, kayıt ve program modüllerinin dönem bağlamını oluşturacak."
+          title={formatMessage(academic.termsTitle, {
+            name: selectedYear.name,
+          })}
+          description={academic.termsDescription}
           toolbar={
             canManage && selectedYear.status === "DRAFT" ? (
               <TermFormDialog
                 year={selectedYear}
                 trigger={
                   <Button variant="outline">
-                    <Plus aria-hidden /> Yeni dönem
+                    <Plus aria-hidden /> {academic.newTerm}
                   </Button>
                 }
               />
             ) : undefined
           }
-          footer={`${selectedYear.terms.length} dönem gösteriliyor`}
+          footer={formatMessage(academic.termsFooter, {
+            count: selectedYear.terms.length,
+          })}
         >
           {selectedYear.terms.length ? (
             <Table className="min-w-[900px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead scope="col">Sıra</TableHead>
-                  <TableHead scope="col">Dönem</TableHead>
-                  <TableHead scope="col">Tarih aralığı</TableHead>
-                  <TableHead scope="col">Durum</TableHead>
-                  <TableHead scope="col" className="text-right">İşlemler</TableHead>
+                  <TableHead scope="col">{common.sequence}</TableHead>
+                  <TableHead scope="col">{academic.termColumn}</TableHead>
+                  <TableHead scope="col">{common.dateRange}</TableHead>
+                  <TableHead scope="col">{common.status}</TableHead>
+                  <TableHead scope="col" className="text-right">
+                    {common.actions}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -890,7 +973,8 @@ export function AcademicCalendarManager({
                     <TableCell className="font-mono text-xs">{term.sequence}</TableCell>
                     <TableCell className="font-medium">{term.name}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(term.startDate)} – {formatDate(term.endDate)}
+                      {formatDate(term.startDate, locale)} –{" "}
+                      {formatDate(term.endDate, locale)}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={term.status} />
@@ -904,11 +988,11 @@ export function AcademicCalendarManager({
             </Table>
           ) : (
             <TableEmptyState
-              title="Bu yıl için dönem yok"
+              title={academic.noTerms}
               description={
                 selectedYear.status === "DRAFT"
-                  ? "Öğretim yılını etkinleştirmeden önce en az bir dönem oluşturun."
-                  : "Bu kayıt dönem içermiyor. Yaşam döngüsü durumunu kontrol edin."
+                  ? academic.noTermsDraft
+                  : academic.noTermsOther
               }
               action={
                 canManage && selectedYear.status === "DRAFT" ? (
@@ -916,7 +1000,7 @@ export function AcademicCalendarManager({
                     year={selectedYear}
                     trigger={
                       <Button variant="outline">
-                        <Plus aria-hidden /> İlk dönemi oluştur
+                        <Plus aria-hidden /> {academic.createFirstTerm}
                       </Button>
                     }
                   />
@@ -930,11 +1014,12 @@ export function AcademicCalendarManager({
           <Alert variant="info">
             <CheckCircle2 aria-hidden />
             <AlertDescription>
-              Dönemleri görmek için tablodan bir öğretim yılı seçin.
+              {academic.selectYear}
             </AlertDescription>
           </Alert>
         )
       )}
     </div>
+    </AcademicI18nContext.Provider>
   );
 }

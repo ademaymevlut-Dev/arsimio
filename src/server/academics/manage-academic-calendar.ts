@@ -16,11 +16,9 @@ import {
   transitionAcademicTerm,
   transitionAcademicYear,
 } from "./academic-calendar-service";
-
-const invalid: AcademicCalendarState = {
-  status: "error",
-  message: "Bilgiler doğrulanamadı. Alanları kontrol edip tekrar deneyin.",
-};
+import { normalizeLocale } from "@/i18n/config";
+import { getDictionary, getSchoolLocale } from "@/i18n/server";
+import type { AcademicServerMessages } from "@/lib/academic-calendar-validation";
 
 async function actorContext() {
   const { user, tenant, membership } =
@@ -34,36 +32,49 @@ async function actorContext() {
     )
   )
     return null;
+  const locale = await getSchoolLocale(
+    membership.preferredLocale,
+    tenant.school.defaultLocale,
+  );
+  const dictionary = await getDictionary(locale);
   return {
     schoolId: tenant.school.id,
     actorUserId: user.id,
     actorMembershipId: membership.id,
+    locale,
+    defaultLocale: normalizeLocale(tenant.school.defaultLocale),
+    messages: dictionary.academicServer,
   };
 }
 
-function databaseError(error: unknown): AcademicCalendarState {
+function invalid(messages: AcademicServerMessages): AcademicCalendarState {
+  return { status: "error", message: messages.invalid };
+}
+
+function databaseError(
+  error: unknown,
+  messages: AcademicServerMessages,
+): AcademicCalendarState {
   if (!error || typeof error !== "object" || !("code" in error))
     return {
       status: "error",
-      message: "İşlem tamamlanamadı. Lütfen tekrar deneyin.",
+      message: messages.failed,
     };
   const code = String(error.code);
-  if (code === "P2034") return academicCalendarConflict;
+  if (code === "P2034") return academicCalendarConflict(messages);
   if (code === "P2002")
     return {
       status: "error",
-      message:
-        "Aynı ad veya sıra numarası bu kapsamda zaten kullanılıyor.",
+      message: messages.duplicate,
     };
   if (["P2003", "P2004", "P2010"].includes(code))
     return {
       status: "error",
-      message:
-        "Tarih, durum veya okul ilişkisi iş kurallarına uymuyor. Sayfayı yenileyip bilgileri kontrol edin.",
+      message: messages.ruleViolation,
     };
   return {
     status: "error",
-    message: "İşlem tamamlanamadı. Lütfen tekrar deneyin.",
+    message: messages.failed,
   };
 }
 
@@ -71,8 +82,11 @@ export async function manageAcademicYear(
   form: FormData,
 ): Promise<AcademicCalendarState> {
   const actor = await actorContext();
-  if (!actor) return invalid;
-  const parsed = parseAcademicYear(form);
+  if (!actor) {
+    const { academicServer } = await getDictionary("tr");
+    return invalid(academicServer);
+  }
+  const parsed = parseAcademicYear(form, actor.messages);
   if (!parsed.success) return parsed.state;
   try {
     return await getPrisma().$transaction(
@@ -81,7 +95,7 @@ export async function manageAcademicYear(
     );
   } catch (error) {
     console.error("ACADEMIC_YEAR_SAVE_UNAVAILABLE");
-    return databaseError(error);
+    return databaseError(error, actor.messages);
   }
 }
 
@@ -89,8 +103,11 @@ export async function manageAcademicTerm(
   form: FormData,
 ): Promise<AcademicCalendarState> {
   const actor = await actorContext();
-  if (!actor) return invalid;
-  const parsed = parseAcademicTerm(form);
+  if (!actor) {
+    const { academicServer } = await getDictionary("tr");
+    return invalid(academicServer);
+  }
+  const parsed = parseAcademicTerm(form, actor.messages);
   if (!parsed.success) return parsed.state;
   try {
     return await getPrisma().$transaction(
@@ -99,7 +116,7 @@ export async function manageAcademicTerm(
     );
   } catch (error) {
     console.error("ACADEMIC_TERM_SAVE_UNAVAILABLE");
-    return databaseError(error);
+    return databaseError(error, actor.messages);
   }
 }
 
@@ -107,9 +124,12 @@ export async function manageAcademicTransition(
   form: FormData,
 ): Promise<AcademicCalendarState> {
   const actor = await actorContext();
-  if (!actor) return invalid;
+  if (!actor) {
+    const { academicServer } = await getDictionary("tr");
+    return invalid(academicServer);
+  }
   const parsed = parseAcademicTransition(form);
-  if (!parsed) return invalid;
+  if (!parsed) return invalid(actor.messages);
   try {
     return await getPrisma().$transaction(
       (tx) =>
@@ -120,6 +140,6 @@ export async function manageAcademicTransition(
     );
   } catch (error) {
     console.error("ACADEMIC_CALENDAR_TRANSITION_UNAVAILABLE");
-    return databaseError(error);
+    return databaseError(error, actor.messages);
   }
 }

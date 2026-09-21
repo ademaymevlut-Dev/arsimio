@@ -13,12 +13,10 @@ import {
   revokeSession,
 } from "@/server/auth/service";
 import { sessionCookieName, SESSION_SECONDS } from "@/server/auth/tokens";
+import { normalizeLocale } from "@/i18n/config";
+import { getRequestDictionary } from "@/i18n/server";
 
 export type AuthState = { error?: string };
-const failure = {
-  error:
-    "Giriş yapılamadı. Bilgilerinizi kontrol edin veya daha sonra tekrar deneyin.",
-};
 
 async function sameOriginRequest() {
   const request = await headers();
@@ -34,6 +32,12 @@ export async function signIn(
   form: FormData,
 ): Promise<AuthState> {
   const tenant = await getTenantContext();
+  const fallback =
+    tenant.kind === "school"
+      ? normalizeLocale(tenant.school.defaultLocale)
+      : undefined;
+  const { dictionary } = await getRequestDictionary(fallback);
+  const failure = { error: dictionary.auth.invalidCredentials };
   if (!(await sameOriginRequest())) return failure;
   const rawIdentifier = form.get("identifier");
   const password = form.get("password");
@@ -72,7 +76,7 @@ export async function signIn(
   } catch {
     console.error("AUTH_SIGN_IN_UNAVAILABLE");
     return {
-      error: "Giriş hizmetine şu an ulaşılamıyor. Lütfen tekrar deneyin.",
+      error: dictionary.auth.unavailable,
     };
   }
   redirect(tenant.kind === "platform" ? "/platform" : "/dashboard");
@@ -80,7 +84,13 @@ export async function signIn(
 
 export async function signOut() {
   const tenant = await getTenantContext();
-  if (!(await sameOriginRequest())) throw new Error("İstek doğrulanamadı.");
+  const fallback =
+    tenant.kind === "school"
+      ? normalizeLocale(tenant.school.defaultLocale)
+      : undefined;
+  const { dictionary } = await getRequestDictionary(fallback);
+  if (!(await sameOriginRequest()))
+    throw new Error(dictionary.auth.invalidRequest);
   const jar = await cookies();
   const name = sessionCookieName(process.env.NODE_ENV === "production");
   await getPrisma().$transaction((tx) =>

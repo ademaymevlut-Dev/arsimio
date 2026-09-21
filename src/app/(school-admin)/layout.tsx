@@ -3,6 +3,7 @@ import { SchoolAdminShell } from "@/components/school-admin/school-admin-shell";
 import { DEFAULT_BRANDING, normalizeColor } from "@/lib/school-branding";
 import { getAcademicCalendarSummary } from "@/server/academics/academic-calendar";
 import { requireSchoolPermission } from "@/server/authorization/guards";
+import { getDictionary, getSchoolLocale } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +15,17 @@ export default async function SchoolAdminLayout({
   const { user, tenant, membership, permissions } =
     await requireSchoolPermission("dashboard.read");
   const roleNames = membership.roles.map(({ role }) => role.name);
-  const userLabel = user.firstName ?? membership.username ?? "Okul yöneticisi";
   const primaryColor =
     normalizeColor(tenant.school.branding?.primaryColor) ??
     DEFAULT_BRANDING.primaryColor;
   const academic = await getAcademicCalendarSummary(tenant.school.id);
+  const locale = await getSchoolLocale(
+    membership.preferredLocale,
+    tenant.school.defaultLocale,
+  );
+  const dictionary = await getDictionary(locale);
+  const userLabel =
+    user.firstName ?? membership.username ?? dictionary.shell.schoolUser;
 
   return (
     <SchoolAdminShell
@@ -30,6 +37,8 @@ export default async function SchoolAdminLayout({
       roleNames={roleNames}
       permissions={permissions}
       academicYearReady={academic.yearCount > 0}
+      locale={locale}
+      messages={{ language: dictionary.language, shell: dictionary.shell }}
     >
       {children}
     </SchoolAdminShell>

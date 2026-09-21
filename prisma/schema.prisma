@@ -84,16 +84,17 @@ model School {
   createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  createdBy     User?              @relation("SchoolCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  archivedBy    User?              @relation("SchoolArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
-  domains       SchoolDomain[]
-  branding      SchoolBranding?
-  memberships   SchoolMembership[]
-  roles         Role[]
-  invitations   SchoolInvitation[]
-  auditEvents   AuditEvent[]
-  academicYears AcademicYear[]
-  academicTerms AcademicTerm[]
+  createdBy                User?                     @relation("SchoolCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  archivedBy               User?                     @relation("SchoolArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+  domains                  SchoolDomain[]
+  branding                 SchoolBranding?
+  memberships              SchoolMembership[]
+  roles                    Role[]
+  invitations              SchoolInvitation[]
+  auditEvents              AuditEvent[]
+  academicYears            AcademicYear[]
+  academicTerms            AcademicTerm[]
+  academicTermTranslations AcademicTermTranslation[]
 
   @@index([status])
   @@map("schools")
@@ -168,16 +169,17 @@ model User {
 }
 
 model SchoolMembership {
-  id          String           @id @default(uuid()) @db.Uuid
-  schoolId    String           @map("school_id") @db.Uuid
-  userId      String           @map("user_id") @db.Uuid
-  username    String?          @db.VarChar(64)
-  status      MembershipStatus @default(INVITED)
-  joinedAt    DateTime?        @map("joined_at") @db.Timestamptz(6)
-  suspendedAt DateTime?        @map("suspended_at") @db.Timestamptz(6)
-  archivedAt  DateTime?        @map("archived_at") @db.Timestamptz(6)
-  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id              String           @id @default(uuid()) @db.Uuid
+  schoolId        String           @map("school_id") @db.Uuid
+  userId          String           @map("user_id") @db.Uuid
+  username        String?          @db.VarChar(64)
+  preferredLocale String?          @map("preferred_locale") @db.VarChar(10)
+  status          MembershipStatus @default(INVITED)
+  joinedAt        DateTime?        @map("joined_at") @db.Timestamptz(6)
+  suspendedAt     DateTime?        @map("suspended_at") @db.Timestamptz(6)
+  archivedAt      DateTime?        @map("archived_at") @db.Timestamptz(6)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   school      School           @relation(fields: [schoolId], references: [id], onDelete: Restrict)
   user        User             @relation(fields: [userId], references: [id], onDelete: Restrict)
@@ -432,11 +434,12 @@ model AcademicTerm {
   createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school       School       @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  academicYear AcademicYear @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  createdBy    User?        @relation("AcademicTermCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  updatedBy    User?        @relation("AcademicTermUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  archivedBy   User?        @relation("AcademicTermArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  school       School                    @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear AcademicYear              @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  createdBy    User?                     @relation("AcademicTermCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  updatedBy    User?                     @relation("AcademicTermUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  archivedBy   User?                     @relation("AcademicTermArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  translations AcademicTermTranslation[]
 
   @@unique([academicYearId, sequence])
   @@unique([academicYearId, name])
@@ -444,4 +447,20 @@ model AcademicTerm {
   @@index([schoolId, status, startDate])
   @@index([academicYearId, status, sequence])
   @@map("academic_terms")
+}
+
+model AcademicTermTranslation {
+  academicTermId String   @map("academic_term_id") @db.Uuid
+  schoolId       String   @map("school_id") @db.Uuid
+  locale         String   @db.VarChar(10)
+  name           String   @db.VarChar(100)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  academicTerm AcademicTerm @relation(fields: [academicTermId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([academicTermId, locale])
+  @@index([schoolId, locale])
+  @@map("academic_term_translations")
 }

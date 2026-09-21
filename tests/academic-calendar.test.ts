@@ -85,14 +85,23 @@ test("academic term validates year ownership reference, sequence and dates", () 
       id: "new",
       revision: "new",
       academicYearId: id,
-      name: " 1. Dönem ",
+      nameTr: " 1. Dönem ",
+      nameSq: " Semestri i parë ",
+      nameEn: " First Semester ",
       sequence: "1",
       startDate: "2026-09-01",
       endDate: "2027-01-31",
     }),
   );
   assert.equal(parsed.success, true);
-  if (parsed.success) assert.equal(parsed.data.sequence, 1);
+  if (parsed.success) {
+    assert.equal(parsed.data.sequence, 1);
+    assert.deepEqual(parsed.data.names, {
+      tr: "1. Dönem",
+      sq: "Semestri i parë",
+      en: "First Semester",
+    });
+  }
   for (const sequence of ["0", "21", "1.5", "x"])
     assert.equal(
       parseAcademicTerm(
@@ -100,7 +109,9 @@ test("academic term validates year ownership reference, sequence and dates", () 
           id: "new",
           revision: "new",
           academicYearId: id,
-          name: "Dönem",
+          nameTr: "Dönem",
+          nameSq: "Semestër",
+          nameEn: "Term",
           sequence,
           startDate: "2026-09-01",
           endDate: "2027-01-31",
@@ -108,6 +119,24 @@ test("academic term validates year ownership reference, sequence and dates", () 
       ).success,
       false,
     );
+});
+
+test("academic term requires all three translations under one record", () => {
+  const parsed = parseAcademicTerm(
+    form({
+      id: "new",
+      revision: "new",
+      academicYearId: id,
+      nameTr: "1. Dönem",
+      nameSq: "Semestri i parë",
+      nameEn: "",
+      sequence: "1",
+      startDate: "2026-09-01",
+      endDate: "2027-01-31",
+    }),
+  );
+  assert.equal(parsed.success, false);
+  if (!parsed.success) assert.ok(parsed.state.fieldErrors?.nameEn);
 });
 
 test("academic lifecycle transitions accept only known entities and actions", () => {

@@ -29,6 +29,7 @@ export const getTenantContext = cache(async () => {
           id: true,
           name: true,
           slug: true,
+          defaultLocale: true,
           status: true,
           archivedAt: true,
           branding: {

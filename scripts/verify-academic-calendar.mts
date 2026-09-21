@@ -10,6 +10,7 @@ import {
   transitionAcademicTerm,
   transitionAcademicYear,
 } from "../src/server/academics/academic-calendar-service";
+import { tr } from "../src/i18n/dictionaries/tr";
 
 config({ path: ".env.local", quiet: true });
 config({ path: ".env", quiet: true });
@@ -89,6 +90,9 @@ try {
         schoolId: school.id,
         actorUserId: actor.id,
         actorMembershipId: membership.id,
+        locale: "tr" as const,
+        defaultLocale: "tr" as const,
+        messages: tr.academicServer,
       };
 
       assert.equal(
@@ -108,13 +112,21 @@ try {
       });
       for (const term of [
         {
-          name: "1. Dönem",
+          names: {
+            tr: "1. Dönem",
+            sq: "Semestri i parë",
+            en: "First Semester",
+          },
           sequence: 1,
           startDate: new Date("2026-09-01T00:00:00.000Z"),
           endDate: new Date("2027-01-22T00:00:00.000Z"),
         },
         {
-          name: "2. Dönem",
+          names: {
+            tr: "2. Dönem",
+            sq: "Semestri i dytë",
+            en: "Second Semester",
+          },
           sequence: 2,
           startDate: new Date("2027-02-08T00:00:00.000Z"),
           endDate: new Date("2027-06-30T00:00:00.000Z"),
@@ -136,7 +148,11 @@ try {
         id: null,
         revision: null,
         academicYearId: firstYear.id,
-        name: "Çakışan dönem",
+        names: {
+          tr: "Çakışan dönem",
+          sq: "Semestër i mbivendosur",
+          en: "Overlapping term",
+        },
         sequence: 3,
         startDate: new Date("2027-01-20T00:00:00.000Z"),
         endDate: new Date("2027-02-10T00:00:00.000Z"),
@@ -148,6 +164,22 @@ try {
         }),
         2,
       );
+      const translatedTerms = await tx.academicTerm.findMany({
+        where: { schoolId: school.id, academicYearId: firstYear.id },
+        include: { translations: { orderBy: { locale: "asc" } } },
+      });
+      assert.ok(
+        translatedTerms.every(
+          (term) =>
+            term.translations.length === 3 &&
+            term.translations.every(
+              (translation) =>
+                translation.academicTermId === term.id &&
+                translation.schoolId === school.id,
+            ),
+        ),
+      );
+      pass("three locale names share one term id and remain tenant scoped");
       pass("year and non-overlapping terms persist atomically; overlap is rejected");
 
       assert.equal(
@@ -195,7 +227,11 @@ try {
             id: null,
             revision: null,
             academicYearId: nextYear.id,
-            name: "1. Dönem",
+            names: {
+              tr: "1. Dönem",
+              sq: "Semestri i parë",
+              en: "First Semester",
+            },
             sequence: 1,
             startDate: nextYear.startDate,
             endDate: new Date("2028-01-21T00:00:00.000Z"),

@@ -170,7 +170,7 @@ Her yönetim listesinde, ihtiyaca göre şu parçalar bulunur:
 
 **Amaç:** Öğrenci, öğretmen, program ve yoklamanın bağlanacağı okul/yıl omurgasını kurmak.
 
-**Durum:** `ADIM 1 TAMAMLANDI` — Öğretim yılı ve dönem CRUD'u; tenant kapsamlı okuma/yazma, yaşam döngüsü, audit, optimistic concurrency ve DB kısıtlarıyla uygulandı. Seviye, sınıf/şube, ders, ders saati ve takvim adımları henüz başlamadı.
+**Durum:** `ADIM 1 TAMAMLANDI` — Öğretim yılı ve dönem CRUD'u; tenant kapsamlı okuma/yazma, yaşam döngüsü, audit, optimistic concurrency, üç dilli dönem adları ve DB kısıtlarıyla uygulandı. Seviye, sınıf/şube, ders, ders saati ve takvim adımları henüz başlamadı.
 
 **Önerilen kavramlar:**
 
@@ -190,7 +190,7 @@ Her yönetim listesinde, ihtiyaca göre şu parçalar bulunur:
 5. Ders saatleri.
 6. Takvim ve okul haftaları.
 
-**Şema yönü:** `academic_years`, `academic_terms`, `grade_levels`, `class_sections`, `subjects`, `course_offerings`, `lesson_periods` ve takvim kayıtları. Nihai adlar migration tasarımında kesinleşir. Bütün benzersizlikler `school_id` ve gerekli yıl/dönem kapsamıyla kurulur.
+**Şema yönü:** `academic_years`, `academic_terms`, `academic_term_translations`, `grade_levels`, `class_sections`, `subjects`, `subject_translations`, `course_offerings`, `lesson_periods` ve takvim kayıtları. Dile göre ayrı iş kaydı/ID üretilmez; çevrilebilir katalog adları `(entity_id, locale)` tablolarında tutulur. Nihai adlar migration tasarımında kesinleşir. Bütün benzersizlikler `school_id` ve gerekli yıl/dönem kapsamıyla kurulur.
 
 **Kabul:** Öğretim yılı/dönem diliminde bir okulun kaydı başka okul kapsamıyla değiştirilemez; aynı okulda tek aktif yıl ve yıl içinde tek aktif dönem DB seviyesinde korunur; tarihler yıl içinde ve çakışmasızdır; kayıtlar silinmez, kapatılır/arşivlenir ve bütün kritik değişiklikler audit üretir. Sınıf/şube kabulü kendi adımında tamamlanacaktır.
 

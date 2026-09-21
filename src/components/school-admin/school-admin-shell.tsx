@@ -26,36 +26,46 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { readableForeground, schoolInitials } from "@/lib/school-branding";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
+import { formatMessage } from "@/i18n/format";
+import type { Locale } from "@/i18n/config";
+import type { AppDictionary } from "@/i18n/dictionaries/types";
 
-const navigation = [
-  {
-    group: "GENEL",
+function createNavigation(messages: AppDictionary["shell"]) {
+  return [
+    {
+    group: messages.general,
     href: "/dashboard",
-    label: "Genel bakış",
+    label: messages.overview,
     icon: LayoutDashboard,
     permission: "dashboard.read",
   },
   {
-    group: "AKADEMİK YAPI",
+    group: messages.academics,
     href: "/academics/years",
-    label: "Öğretim yılları",
+    label: messages.academicYears,
     icon: CalendarRange,
     permission: "academics.read",
   },
-];
+  ];
+}
+
+type NavigationItem = ReturnType<typeof createNavigation>[number];
 
 function Navigation({
   items,
   pathname,
   mobile = false,
+  label,
 }: {
-  items: typeof navigation;
+  items: NavigationItem[];
   pathname: string;
   mobile?: boolean;
+  label: string;
 }) {
   const groups = [...new Set(items.map((item) => item.group))];
   return (
-    <nav aria-label="Okul yönetimi menüsü">
+    <nav aria-label={label}>
       {groups.map((group, groupIndex) => (
         <div key={group} className={cn(groupIndex > 0 && "mt-7")}>
           <p className="mb-3 px-3 text-[10px] font-semibold tracking-[0.16em] text-muted-foreground">
@@ -102,15 +112,17 @@ function Navigation({
 function SchoolBrand({
   schoolName,
   primaryColor,
+  messages,
 }: {
   schoolName: string;
   primaryColor: string;
+  messages: AppDictionary["shell"];
 }) {
   return (
     <Link
       href="/dashboard"
       className="flex min-w-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      aria-label={`${schoolName} yönetim ana sayfası`}
+      aria-label={formatMessage(messages.homeLabel, { name: schoolName })}
     >
       <span
         className="flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold"
@@ -127,24 +139,30 @@ function SchoolBrand({
           {schoolName}
         </span>
         <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-          Okul yönetimi
+          {messages.schoolManagement}
         </span>
       </span>
     </Link>
   );
 }
 
-function SetupStatus({ academicYearReady }: { academicYearReady: boolean }) {
+function SetupStatus({
+  academicYearReady,
+  messages,
+}: {
+  academicYearReady: boolean;
+  messages: AppDictionary["shell"];
+}) {
   const setupSteps = [
-    { label: "Yönetici hesabı", ready: true },
-    { label: "Öğretim yılı ve dönem", ready: academicYearReady },
-    { label: "Sınıflar ve dersler", ready: false },
+    { label: messages.adminAccount, ready: true },
+    { label: messages.yearAndTerm, ready: academicYearReady },
+    { label: messages.classesAndSubjects, ready: false },
   ];
   return (
     <div className="rounded-xl border bg-background/60 p-4">
       <p className="flex items-center gap-2 text-xs font-semibold text-foreground">
         <BookOpenCheck className="size-4 text-primary" aria-hidden />
-        Kurulum durumu
+        {messages.setupStatus}
       </p>
       <div className="mt-4 space-y-3">
         {setupSteps.map((step) => (
@@ -183,6 +201,8 @@ export function SchoolAdminShell({
   roleNames,
   permissions,
   academicYearReady,
+  locale,
+  messages,
   children,
 }: {
   schoolName: string;
@@ -193,15 +213,18 @@ export function SchoolAdminShell({
   roleNames: string[];
   permissions: string[];
   academicYearReady: boolean;
+  locale: Locale;
+  messages: Pick<AppDictionary, "language" | "shell">;
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const navigation = createNavigation(messages.shell);
   const allowed = new Set(permissions);
   const items = navigation.filter((item) => allowed.has(item.permission));
   const section =
     items.find(({ href }) =>
       href === "/dashboard" ? pathname === href : pathname.startsWith(href),
-    )?.label ?? "Okul yönetimi";
+    )?.label ?? messages.shell.schoolManagement;
 
   return (
     <div className="min-h-svh bg-background lg:p-5">
@@ -209,16 +232,27 @@ export function SchoolAdminShell({
         href="#school-admin-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded-md focus:bg-primary focus:p-3 focus:text-primary-foreground"
       >
-        İçeriğe geç
+        {messages.shell.skipToContent}
       </a>
       <div className="mx-auto min-h-svh w-full max-w-[1400px] bg-card lg:grid lg:min-h-[calc(100svh-2.5rem)] lg:grid-cols-[252px_minmax(0,1fr)] lg:rounded-2xl lg:border lg:shadow-sm">
         <aside className="hidden border-r bg-sidebar p-5 lg:flex lg:flex-col lg:rounded-l-2xl">
-          <SchoolBrand schoolName={schoolName} primaryColor={primaryColor} />
+          <SchoolBrand
+            schoolName={schoolName}
+            primaryColor={primaryColor}
+            messages={messages.shell}
+          />
           <div className="mt-9">
-            <Navigation items={items} pathname={pathname} />
+            <Navigation
+              items={items}
+              pathname={pathname}
+              label={messages.shell.navigationLabel}
+            />
           </div>
           <div className="mt-7">
-            <SetupStatus academicYearReady={academicYearReady} />
+            <SetupStatus
+              academicYearReady={academicYearReady}
+              messages={messages.shell}
+            />
           </div>
           <div className="mt-auto border-t pt-5">
             <div className="flex items-center gap-3 px-2">
@@ -228,7 +262,7 @@ export function SchoolAdminShell({
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium">{userLabel}</p>
                 <p className="mt-1 truncate text-[11px] text-muted-foreground">
-                  {roleNames.join(" · ") || "Okul kullanıcısı"}
+                  {roleNames.join(" · ") || messages.shell.schoolUser}
                 </p>
               </div>
             </div>
@@ -243,27 +277,45 @@ export function SchoolAdminShell({
                     variant="outline"
                     size="icon"
                     className="lg:hidden"
-                    aria-label="Okul menüsünü aç"
+                    aria-label={messages.shell.openMenu}
                   >
                     <Menu aria-hidden />
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left">
                   <SheetHeader>
-                    <SheetTitle className="sr-only">Okul menüsü</SheetTitle>
+                    <SheetTitle className="sr-only">
+                      {messages.shell.menuTitle}
+                    </SheetTitle>
                     <SheetDescription className="sr-only">
-                      Okul yönetimi sayfaları ve kurulum durumu
+                      {messages.shell.menuDescription}
                     </SheetDescription>
                   </SheetHeader>
                   <SchoolBrand
                     schoolName={schoolName}
                     primaryColor={primaryColor}
+                    messages={messages.shell}
                   />
                   <div className="mt-9">
-                    <Navigation items={items} pathname={pathname} mobile />
+                    <Navigation
+                      items={items}
+                      pathname={pathname}
+                      label={messages.shell.navigationLabel}
+                      mobile
+                    />
                   </div>
                   <div className="mt-7">
-                    <SetupStatus academicYearReady={academicYearReady} />
+                    <SetupStatus
+                      academicYearReady={academicYearReady}
+                      messages={messages.shell}
+                    />
+                  </div>
+                  <div className="mt-7 border-t pt-5 xl:hidden">
+                    <LanguageSwitcher
+                      locale={locale}
+                      messages={messages.language}
+                      compact
+                    />
                   </div>
                 </SheetContent>
               </Sheet>
@@ -275,16 +327,23 @@ export function SchoolAdminShell({
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <div className="hidden xl:block">
+                <LanguageSwitcher
+                  locale={locale}
+                  messages={messages.language}
+                  compact
+                />
+              </div>
               <span className="hidden text-right sm:block">
                 <span className="block text-xs font-medium">{userLabel}</span>
                 <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                  {username ?? "Okul hesabı"}
+                  {username ?? messages.shell.schoolAccount}
                 </span>
               </span>
               <form action={signOut}>
                 <Button variant="ghost" className="text-muted-foreground">
                   <LogOut aria-hidden />
-                  <span className="hidden sm:inline">Çıkış yap</span>
+                  <span className="hidden sm:inline">{messages.shell.signOut}</span>
                 </Button>
               </form>
             </div>
@@ -297,7 +356,7 @@ export function SchoolAdminShell({
           </main>
           <footer className="mx-4 flex flex-wrap justify-between gap-2 border-t py-5 text-xs text-muted-foreground sm:mx-6 lg:mx-8">
             <span>Arsimio · {schoolName}</span>
-            <span>Güvenli okul yönetimi</span>
+            <span>{messages.shell.secureManagement}</span>
           </footer>
         </div>
       </div>

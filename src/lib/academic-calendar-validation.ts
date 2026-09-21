@@ -1,7 +1,13 @@
 import { validRevision, validSchoolId } from "./platform-school-validation";
+import { SUPPORTED_LOCALES, type LocalizedNames } from "@/i18n/config";
+import { tr } from "@/i18n/dictionaries/tr";
+import type { AppDictionary } from "@/i18n/dictionaries/types";
 
 export type AcademicCalendarField =
   | "name"
+  | "nameTr"
+  | "nameSq"
+  | "nameEn"
   | "startDate"
   | "endDate"
   | "sequence"
@@ -25,7 +31,7 @@ export type AcademicTermInput = {
   id: string | null;
   revision: string | null;
   academicYearId: string;
-  name: string;
+  names: LocalizedNames;
   sequence: number;
   startDate: Date;
   endDate: Date;
@@ -33,6 +39,7 @@ export type AcademicTermInput = {
 
 export type AcademicEntity = "year" | "term";
 export type AcademicTransition = "activate" | "close" | "archive" | "restore";
+export type AcademicServerMessages = AppDictionary["academicServer"];
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_MS = 86_400_000;
@@ -81,7 +88,10 @@ function recordIdentity(form: FormData) {
   return { id: rawId, revision: rawRevision };
 }
 
-export function parseAcademicYear(form: FormData):
+export function parseAcademicYear(
+  form: FormData,
+  messages: AcademicServerMessages = tr.academicServer,
+):
   | { success: true; data: AcademicYearInput }
   | { success: false; state: AcademicCalendarState } {
   const identity = recordIdentity(form);
@@ -90,24 +100,23 @@ export function parseAcademicYear(form: FormData):
   const endDate = parseDateOnly(form.get("endDate"));
   const fieldErrors: AcademicCalendarState["fieldErrors"] = {};
 
-  if (!identity) fieldErrors.record = "Kayıt kimliği veya sürümü geçersiz.";
-  if (!name) fieldErrors.name = "Ad 2–40 karakter olmalı.";
-  if (!startDate) fieldErrors.startDate = "Geçerli bir başlangıç tarihi seçin.";
-  if (!endDate) fieldErrors.endDate = "Geçerli bir bitiş tarihi seçin.";
+  if (!identity) fieldErrors.record = messages.invalidRecord;
+  if (!name) fieldErrors.name = messages.invalidYearName;
+  if (!startDate) fieldErrors.startDate = messages.invalidStartDate;
+  if (!endDate) fieldErrors.endDate = messages.invalidEndDate;
   if (
     startDate &&
     endDate &&
     !boundedDateRange(startDate, endDate, 730, false)
   )
-    fieldErrors.endDate =
-      "Bitiş tarihi başlangıçtan sonra ve en fazla iki yıl içinde olmalı.";
+    fieldErrors.endDate = messages.invalidYearRange;
 
   if (!identity || !name || !startDate || !endDate || Object.keys(fieldErrors).length)
     return {
       success: false,
       state: {
         status: "error",
-        message: "Öğretim yılı kaydedilemedi. İşaretli alanları kontrol edin.",
+        message: messages.yearSaveInvalid,
         fieldErrors,
       },
     };
@@ -118,12 +127,19 @@ export function parseAcademicYear(form: FormData):
   };
 }
 
-export function parseAcademicTerm(form: FormData):
+export function parseAcademicTerm(
+  form: FormData,
+  messages: AcademicServerMessages = tr.academicServer,
+):
   | { success: true; data: AcademicTermInput }
   | { success: false; state: AcademicCalendarState } {
   const identity = recordIdentity(form);
   const academicYearId = form.get("academicYearId");
-  const name = normalizedText(form.get("name"), 100);
+  const names = {
+    tr: normalizedText(form.get("nameTr"), 100),
+    sq: normalizedText(form.get("nameSq"), 100),
+    en: normalizedText(form.get("nameEn"), 100),
+  };
   const rawSequence = form.get("sequence");
   const sequence =
     typeof rawSequence === "string" && /^\d{1,2}$/.test(rawSequence)
@@ -134,24 +150,31 @@ export function parseAcademicTerm(form: FormData):
   const fieldErrors: AcademicCalendarState["fieldErrors"] = {};
 
   if (!identity || !validSchoolId(academicYearId))
-    fieldErrors.record = "Kayıt kimliği veya sürümü geçersiz.";
-  if (!name) fieldErrors.name = "Dönem adı 2–100 karakter olmalı.";
+    fieldErrors.record = messages.invalidRecord;
+  for (const locale of SUPPORTED_LOCALES) {
+    if (!names[locale]) {
+      const field = `name${locale[0].toUpperCase()}${locale.slice(1)}` as
+        | "nameTr"
+        | "nameSq"
+        | "nameEn";
+      fieldErrors[field] = messages.invalidTermName;
+    }
+  }
   if (!Number.isInteger(sequence) || sequence < 1 || sequence > 20)
-    fieldErrors.sequence = "Sıra numarası 1–20 arasında olmalı.";
-  if (!startDate) fieldErrors.startDate = "Geçerli bir başlangıç tarihi seçin.";
-  if (!endDate) fieldErrors.endDate = "Geçerli bir bitiş tarihi seçin.";
+    fieldErrors.sequence = messages.invalidSequence;
+  if (!startDate) fieldErrors.startDate = messages.invalidStartDate;
+  if (!endDate) fieldErrors.endDate = messages.invalidEndDate;
   if (
     startDate &&
     endDate &&
     !boundedDateRange(startDate, endDate, 370, true)
   )
-    fieldErrors.endDate =
-      "Bitiş tarihi başlangıçtan önce olamaz ve dönem bir yılı aşamaz.";
+    fieldErrors.endDate = messages.invalidTermRange;
 
   if (
     !identity ||
     !validSchoolId(academicYearId) ||
-    !name ||
+    Object.values(names).some((name) => !name) ||
     !startDate ||
     !endDate ||
     Object.keys(fieldErrors).length
@@ -160,7 +183,7 @@ export function parseAcademicTerm(form: FormData):
       success: false,
       state: {
         status: "error",
-        message: "Dönem kaydedilemedi. İşaretli alanları kontrol edin.",
+        message: messages.termSaveInvalid,
         fieldErrors,
       },
     };
@@ -170,7 +193,7 @@ export function parseAcademicTerm(form: FormData):
     data: {
       ...identity,
       academicYearId,
-      name,
+      names: names as LocalizedNames,
       sequence,
       startDate,
       endDate,

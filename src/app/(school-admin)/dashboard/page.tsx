@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/table";
 import { requireSchoolPermission } from "@/server/authorization/guards";
 import { getAcademicCalendarSummary } from "@/server/academics/academic-calendar";
+import { formatMessage } from "@/i18n/format";
+import { getDictionary, getSchoolLocale } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -28,35 +30,41 @@ export default async function DashboardPage() {
   const { user, tenant, membership, permissions } =
     await requireSchoolPermission("dashboard.read");
   const academic = await getAcademicCalendarSummary(tenant.school.id);
+  const locale = await getSchoolLocale(
+    membership.preferredLocale,
+    tenant.school.defaultLocale,
+  );
+  const dictionary = await getDictionary(locale);
+  const messages = dictionary.dashboard;
   const roleNames = membership.roles.map(({ role }) => role.name);
   const setup = [
     {
-      title: "Okul Admin hesabı",
-      description: "Domain, üyelik ve yönetici rolü hazır.",
-      status: "Hazır",
+      title: messages.adminTitle,
+      description: messages.adminDescription,
+      status: messages.statusReady,
       variant: "success" as const,
       icon: ShieldCheck,
     },
     {
-      title: "Öğretim yılı ve dönemler",
+      title: messages.calendarTitle,
       description: academic.yearCount
-        ? `${academic.yearCount} öğretim yılı tanımlandı.`
-        : "İlk akademik veri tablosu olarak sırada.",
-      status: academic.yearCount ? "Hazır" : "Sıradaki",
+        ? formatMessage(messages.yearsDefined, { count: academic.yearCount })
+        : messages.calendarNext,
+      status: academic.yearCount ? messages.statusReady : messages.statusNext,
       variant: academic.yearCount ? ("success" as const) : ("info" as const),
       icon: CalendarDays,
     },
     {
-      title: "Okul kullanıcıları",
-      description: "Personel ve öğretmen hesapları Okul Admin tarafından açılacak.",
-      status: "Planlandı",
+      title: messages.usersTitle,
+      description: messages.usersDescription,
+      status: messages.statusPlanned,
       variant: "secondary" as const,
       icon: UsersRound,
     },
     {
-      title: "Sınıflar ve dersler",
-      description: "Akademik yıl yapısının ardından açılacak.",
-      status: "Bekliyor",
+      title: messages.classesTitle,
+      description: messages.classesDescription,
+      status: messages.statusWaiting,
       variant: "outline" as const,
       icon: BookOpenCheck,
     },
@@ -65,32 +73,40 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="OKUL YÖNETİMİ"
-        title="Genel bakış"
-        description={`${tenant.school.name} için yönetim alanı hazır. Akademik kurulum küçük ve doğrulanabilir adımlarla ilerleyecek.`}
+        eyebrow={messages.eyebrow}
+        title={messages.title}
+        description={formatMessage(messages.description, {
+          name: tenant.school.name,
+        })}
       />
-      <section className="grid gap-4 md:grid-cols-3" aria-label="Hesap özeti">
+      <section
+        className="grid gap-4 md:grid-cols-3"
+        aria-label={messages.accountSummary}
+      >
         {[
           {
-            label: "Oturum sahibi",
-            value: user.firstName ?? membership.username ?? "Okul kullanıcısı",
-            note: membership.username ?? "Kullanıcı adı tanımlı değil",
+            label: messages.sessionOwner,
+            value:
+              user.firstName ?? membership.username ?? messages.sessionOwner,
+            note: membership.username ?? messages.usernameMissing,
             icon: KeyRound,
           },
           {
-            label: "Yönetim rolü",
-            value: roleNames.join(" · ") || "Rol bulunamadı",
-            note: `${permissions.length} aktif permission`,
+            label: messages.managementRole,
+            value: roleNames.join(" · ") || messages.roleMissing,
+            note: formatMessage(messages.activePermissions, {
+              count: permissions.length,
+            }),
             icon: ShieldCheck,
           },
           {
-            label: "Akademik kurulum",
-            value: academic.activeYear?.name ?? "Başlamaya hazır",
+            label: messages.academicSetup,
+            value: academic.activeYear?.name ?? messages.readyToStart,
             note: academic.activeYear
-              ? "Aktif öğretim yılı"
+              ? messages.activeAcademicYear
               : academic.yearCount
-                ? "Taslak yılı etkinleştirin"
-                : "İlk adım: öğretim yılı ve dönem",
+                ? messages.activateDraft
+                : messages.firstStep,
             icon: Clock3,
           },
         ].map(({ label, value, note, icon: Icon }) => (
@@ -114,25 +130,24 @@ export default async function DashboardPage() {
         </span>
         <div>
           <h2 className="font-medium text-success-foreground">
-            Yönetim hesabınız ve okul kabuğu hazır
+            {messages.readyTitle}
           </h2>
           <p className="mt-1 text-sm leading-6 text-success-foreground/85">
-            Sol menü yalnız kullanılabilir ekranları gösterecek. Yeni modüller
-            permission ve kabul testleri tamamlandıkça menüye eklenecek.
+            {messages.readyDescription}
           </p>
         </div>
       </section>
       <DataTableShell
-        title="Kurulum yol haritası"
-        description="Okulun aktif modülleri ve sıradaki güvenli teslimler."
-        footer="4 kurulum adımı gösteriliyor"
+        title={messages.roadmap}
+        description={messages.roadmapDescription}
+        footer={messages.roadmapFooter}
       >
         <Table className="min-w-[720px]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead scope="col">Adım</TableHead>
-              <TableHead scope="col">Açıklama</TableHead>
-              <TableHead scope="col">Durum</TableHead>
+              <TableHead scope="col">{messages.step}</TableHead>
+              <TableHead scope="col">{messages.descriptionColumn}</TableHead>
+              <TableHead scope="col">{dictionary.common.status}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

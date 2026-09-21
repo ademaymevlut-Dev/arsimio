@@ -18,6 +18,7 @@ Arsimio sıfırdan geliştirilen yeni bir üründür. Eski HorizonEdu/Flask proj
 - [Parolalı giriş](./password-auth.md): Süper Admin e-posta, okul kullanıcı adı politikası; hash/oturum ve terminalden ilk aktivasyon.
 - [Süper Admin çalışma alanı](./platform-workspace.md): İlk yönetim teması, iki mevcut okulun detayları, kaydedilebilir marka renkleri ve ilk Okul Admin hesabı; logo/görseller sonraki aşama.
 - [Ortak tasarım sistemi](./design-system.md): Eski projeden taşınan açık palet, ortak durum renkleri, UI Kit ve bileşen doğrulaması.
+- [Çoklu dil mimarisi](./internationalization.md): Türkçe/Arnavutça/İngilizce UI sözlükleri, okul/üyelik dil tercihi ve tek iş kaydına bağlı DB çeviri tabloları.
 - [Okul Admin faz planı](./school-admin-plan.md): Yerelde tamamlanan `1400px` Faz 0 kabuğu ve tablo temeli; akademik yapıdan servis modülüne uzanan bağımlılık sıralı geliştirme planı.
 - [Denetim, geçmiş ve veri yaşam döngüsü](./audit-history-data-lifecycle.md): İşlem geçmişi, silme, geri alma ve kalıcı silme kuralları.
 - [Yol haritası](./roadmap.md): Tamamlanan, sıradaki ve ileride yapılacak işler.
