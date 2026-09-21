@@ -10,6 +10,8 @@
     "test": "tsx --test tests/*.test.ts",
     "auth:bootstrap": "tsx scripts/bootstrap-admin.mts",
     "db:verify:auth": "tsx scripts/verify-password-auth.mts",
+    "db:verify:platform": "node --conditions=react-server --import tsx scripts/verify-platform-settings.mts",
+    "db:verify:school-admin": "node --conditions=react-server --import tsx scripts/verify-initial-school-admin.mts",
     "db:seed:pilot": "tsx scripts/seed-pilot.mts",
     "postinstall": "prisma generate",
     "db:format": "prisma format",

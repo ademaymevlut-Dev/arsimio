@@ -20,7 +20,7 @@ Oluşturulan 13 uygulama tablosu:
 
 `20260919000200_password_auth` da 2026-09-19'da uygulandı: okul üyeliğine okul kapsamında benzersiz username eklendi, kullanıcı e-postası nullable oldu; `user_credentials`, `auth_sessions`, `auth_throttles` tablolarıyla toplam 16 uygulama tablosuna ulaşıldı. Oturumun kullanıcı/üyelik/okul bağlantısı bileşik FK ile korunur; username, token hash, sayaç ve süre kısıtları SQL'dedir. Önce 18 kontrollü rollback provası, uygulama sonrası 17 auth DB kontrolü geçti. Veri silme/reset yapılmadı; `neon_auth` şemasına dokunulmadı.
 
-Prisma ayrıca uygulanan migration'ları `_prisma_migrations` tablosunda izler. Akademik ve operasyon tabloları ilgili modüller geliştikçe eklenecek. Pilot seed'i iki okul, doğrulanmış domainler, roller/permission'lar ve bir PENDING Süper Admin hesabı oluşturdu. Henüz gerçek parola veya okul kullanıcı hesabı oluşturulmadı.
+Prisma ayrıca uygulanan migration'ları `_prisma_migrations` tablosunda izler. Akademik ve operasyon tabloları ilgili modüller geliştikçe eklenecek. Pilot seed'i iki okul, doğrulanmış domainler, roller/permission'lar ve bir PENDING Süper Admin hesabı oluşturdu. Sonrasında kullanıcı kendi terminalinde ilk parolasını belirledi ve canlı Süper Admin girişini doğruladı. Okul kullanıcı hesapları henüz oluşturulmadı.
 
 ## İncelemede düzeltilen kurallar
 

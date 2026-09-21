@@ -72,6 +72,13 @@ async function check(host, path, status, expectedText, extraHeaders = {}) {
 }
 await check("arsimio.vercel.app", "/login", 200, "Süper Admin");
 await check("arsimio.vercel.app", "/platform", 307);
+await check("arsimio.vercel.app", "/platform/schools", 307);
+await check("arsimio.vercel.app", "/platform/ui", 307);
+await check(
+  "arsimio.vercel.app",
+  "/platform/schools/415710ba-0d83-4d4a-aa3f-f51cb9dff36b",
+  307,
+);
 await check("arsimio.vercel.app", "/setup", 200, "İlk yönetici hesabı");
 for (const [host, name] of [
   ["horizonedu.vercel.app", "HorizonEdu"],
@@ -80,6 +87,13 @@ for (const [host, name] of [
   await check(host, "/login", 200, name);
   await check(host, "/dashboard", 307);
   await check(host, "/platform", 404);
+  await check(host, "/platform/schools", 404);
+  await check(host, "/platform/ui", 404);
+  await check(
+    host,
+    "/platform/schools/415710ba-0d83-4d4a-aa3f-f51cb9dff36b",
+    404,
+  );
   await check(host, "/setup", 404);
   await check(host, "/api/auth/admin/list-users", 404);
 }

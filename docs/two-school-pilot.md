@@ -2,13 +2,13 @@
 
 Tarih: 2026-09-19. Durum: `DEVAM EDİYOR`; okul/domain altyapısı ve ilk giriş ekranları yayında. Tam pilot kabulü henüz tamamlanmadı.
 
-Güncel karar: mail/SMS ve Neon Auth tabanlı aktivasyon ertelendi. Süper Admin e-posta + parola, bütün okul rolleri username + parola kullanır. Kod ve ikinci migration tamamlandı; yeni giriş kodu henüz yayımlanmadı. [Parolalı giriş](./password-auth.md) bu konudaki güncel kaynaktır; çalışma günlüğündeki önceki provider denemeleri tarihsel kayıttır.
+Güncel karar: mail/SMS ve Neon Auth tabanlı aktivasyon ertelendi. Süper Admin e-posta + parola, bütün okul rolleri username + parola kullanır. İlk Okul Admin oluşturma arayüzü ve servisleri yerelde tamamlandı; gerçek okul hesaplarının kullanıcı tarafından oluşturulması ve tam oturumlu pilot kabulü açık. [Parolalı giriş](./password-auth.md) bu konudaki güncel kaynaktır; çalışma günlüğündeki önceki provider denemeleri tarihsel kayıttır.
 
 ## Hedef ve mevcut durum
 
 İlk çalışan ürün dilimi: iki örnek okulun farklı adreslerden, kendi markası ve giriş ekranıyla aynı Arsimio uygulamasını kullanması; kullanıcıların yalnızca yetkili oldukları okulun verilerine erişmesi.
 
-Mevcut 16 uygulama tablosu bu pilotun çekirdeği için yeterlidir. Çekirdek ve parolalı giriş migration'ları, ilişkisel bütünlük ve auth DB testleri tamamlandı. İki okul, doğrulanmış domainler, rol/permission seed'i, hostname çözümleme, markalı giriş, kontrollü terminal bootstrap'ı ve korumalı ilk panel sayfaları uygulandı. Seed, bootstrap ve giriş/çıkış audit üretir. Bu, bütün eğitim/operasyon tablolarının veya aşağıdaki tam kabul senaryosunun tamamlandığı anlamına gelmez. Okul Admin oluşturma, üyelik yönetimi, yönetim yazma akışları ve canlı oturumlu izolasyon testleri bekliyor. Güncel operasyon ve doğrulama kaydı: [pilot kurulum notları](./pilot-setup.md).
+Mevcut 16 uygulama tablosu bu pilotun çekirdeği için yeterlidir. Çekirdek ve parolalı giriş migration'ları, ilişkisel bütünlük ve auth DB testleri tamamlandı. İki okul, doğrulanmış domainler, rol/permission seed'i, hostname çözümleme, markalı giriş, kontrollü terminal bootstrap'ı, ilk Okul Admin oluşturma akışı ve korumalı Okul Admin Faz 0 kabuğu uygulandı. Bu, bütün eğitim/operasyon tablolarının veya aşağıdaki tam kabul senaryosunun tamamlandığı anlamına gelmez. Gerçek ilk hesaplar, sonraki üyelik yönetimi ve canlı oturumlu izolasyon testleri bekliyor. Güncel operasyon ve doğrulama kaydı: [pilot kurulum notları](./pilot-setup.md).
 
 ## Temel kararlar
 
@@ -65,7 +65,7 @@ Vercel tarafında iki uygun `.vercel.app` adı aynı Arsimio projesine domain/al
 
 - Platformda e-posta + atanmış SUPER_ADMIN rolü, okulda `(school_id, username)` üzerinden kimliği çöz. Parola doğrulamasını sunucuda yap. E-posta eşitliği hesap birleştirme veya yetki verme gerekçesi olmasın.
 - İlk Süper Admin parolasını bir defalık yerel operatör komutuyla belirle. İlk kayıt olan kişiyi otomatik Süper Admin yapma; depo/seed içinde parola tutma.
-- Yetkili kullanıcı yönetimi ekranında her okul için bir Okul Admin; ayrıca okul dışı erişimi ve iki okulda farklı rolü sınayan test kimlikleri oluştur. Şu an bu hesaplar henüz oluşturulmadı.
+- Süper Admin okul detayında her okulun yalnız ilk Okul Admin hesabını oluşturur. Akış yerelde hazırdır; gerçek hesaplar henüz oluşturulmadı. Sonraki kullanıcı/üyelik/rol yönetimi Okul Admin alanında geliştirilecek.
 - Mail/SMS ve davet kabulü sonra: token, son kullanma, iptal, alıcı ve okul kapsamı kontrolleriyle tek kullanımlık akış. Davet tabloları bu amaçla korunur.
 - Aktif kullanıcı + aktif okul + aktif üyelik + permission + hedef kayıt okulu kontrollerini merkezi sunucu yardımcılarında uygula. UI'da düğme gizlemek yeterli değil.
 - Rol/üyelik iptalini eski oturumla aşmayı engelle. Yanlış okulda giriş yapan kullanıcıya o okulun özel verilerini göstermeden erişim reddi sun.
@@ -75,7 +75,7 @@ Vercel tarafında iki uygun `.vercel.app` adı aynı Arsimio projesine domain/al
 
 ### 4. Minimum yönetim ekranları ve premium kabuk
 
-- Süper Admin: okul listesi, okul oluşturma, durum değiştirme, domain durumu, marka ayarları ve ilk Okul Admin hesabı oluşturma. İlk pilotta DNS/Vercel doğrulaması kontrollü operasyon adımı olabilir; tam otomatik domain provisioning sonraki geliştirmedir.
+- Süper Admin: okul listesi, marka ayarları ve ilk Okul Admin hesabı yerelde hazırdır. Okul oluşturma, durum/domain yönetimi henüz açıktır. İlk pilotta DNS/Vercel doğrulaması kontrollü operasyon adımı olabilir; tam otomatik domain provisioning sonraki geliştirmedir.
 - Okul tarafı: logo/renklerle markalı giriş, responsive ortak panel kabuğu, profil/çıkış ve izin bazlı menüler. Öğretmen, öğrenci, veli ve şoför için rol uygun boş durumlar; hayali not/yoklama verisi yok.
 - İlk gerçek yazma senaryosu: izinli okul ayarını güncelleme ve yetkili kullanıcı oluşturma/üyelik yönetimi. Okul Admin platform rolü atayamasın veya kendi yetki sınırını yükseltemesin.
 - Marka/domain yönetimi varsayılan olarak Süper Admin'de; Okul Admin'e yalnızca açıkça izin verilirse açılacak.
@@ -121,8 +121,8 @@ Testler yalnız tarayıcı ekranına bakılarak tamamlanmış sayılmayacak: sun
 ## Kesinleştirilecek bilgiler
 
 - İki test hostname'i kesinleşti ve bağlandı; sonraki özel domainler ayrıca doğrulanacak.
-- Süper Admin e-postası kullanıcı onayıyla ortam değişkenine kondu ve `PENDING` hesabı ayrıldı; sahibinin yerel terminalde parola belirlemesi bekliyor. İki Okul Admin test kimliği henüz belirlenmedi; şifreler belgeye yazılmayacak.
-- Parolalı giriş kararı kesinleşti; yeni kodun yayını ve canlı kabul testi bekliyor.
+- Süper Admin sahibi yerel terminalde parolasını belirledi ve canlı girişini doğruladı. İki Okul Admin test kimliği henüz belirlenmedi; bunlar yeni okul detay ekranından kullanıcı tarafından oluşturulacak ve şifreler belgeye yazılmayacak.
+- Parolalı giriş yayında; canlı çıkış/oturum iptali ve iki okul kullanıcısıyla kabul testleri bekliyor.
 - Gerçek özel domain provası için sahip olunan test adresi.
 
 Bu bilgiler olmadan mimari/tenant yardımcıları tasarlanabilir; dış servis bağlantıları ve gerçek hesap davetleri varsayımla yapılmayacak.

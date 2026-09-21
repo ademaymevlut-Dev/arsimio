@@ -1,6 +1,6 @@
 # Pilot kurulumu ve doğrulama
 
-Tarih: 2026-09-19. Durum: `DEVAM EDİYOR`. Üç domain/marka dilimi yayında; yeni parolalı giriş kodu yerelde doğrulandı, GitHub/Vercel yayını ve gerçek hesap aktivasyonu bekliyor.
+Tarih: 2026-09-19. Durum: `DEVAM EDİYOR`. Üç domain/marka dilimi yayında. Kullanıcı yeni deployment'ın ve ilk Süper Admin girişinin başarılı olduğunu bildirdi; Safari ekran görüntüsü ana domainde korumalı platform panelini gösteriyor. Tam iki okul pilotu kabulü henüz tamamlanmadı.
 
 ## Adresler ve giriş biçimi
 
@@ -25,9 +25,9 @@ pnpm auth:bootstrap
 
 Araç hedef hesabı gösterir; sahibi `EVET` yazar ve en az 12 karakterli yeni parolasını iki kez gizli olarak girer. `ARSIMIO_BOOTSTRAP_ADMIN_EMAIL` ile önceden ayrılmış, PENDING ve SUPER_ADMIN rolü mevcut hesap etkinleşir. Aktif hesabın parolasını değiştirmez veya yeni yönetici atamaz. Parola sohbete, `.env` dosyasına veya Git'e konmaz. `/setup` yalnızca bu komutu açıklayan bilgi sayfasıdır.
 
-Yerelde `http://localhost:3000/login` kullanılabilir. Canlıda e-posta/parolayla giriş için yeni kod önce yayımlanmalıdır. Ayrıntılar, güvenlik kuralları ve kurtarma akışının mevcut sınırları [parolalı giriş belgesinde](./password-auth.md).
+Yerelde `http://localhost:3000/login`, canlıda `https://arsimio.vercel.app/login` kullanılır. İlk aktivasyon kullanıcı tarafından tamamlandı; yukarıdaki komut mevcut hesap için tekrar çalıştırılmaz. Ayrıntılar, güvenlik kuralları ve kurtarma akışının mevcut sınırları [parolalı giriş belgesinde](./password-auth.md).
 
-Bu çalışma sırasında gerçek parola oluşturulmadı; DB incelemesi iki okul, bir PENDING kullanıcı, sıfır parola hesabı ve sıfır aktif oturum gösterdi. Başarılı gerçek kullanıcı giriş/çıkış kabulü henüz yapılmadı.
+Geliştirme sonundaki DB incelemesi iki okul, bir PENDING kullanıcı ve sıfır parola hesabı/aktif oturum gösteriyordu. Sonrasında kullanıcı parolasını kendi terminalinde belirledi ve 2026-09-19 09.19 ekran görüntüsüyle canlı Süper Admin girişini doğruladı. Önceki sayımlar güncel DB durumu olarak kullanılmaz; bu teyitte DB veya deployment API'si yeniden sorgulanmadı. Canlı çıkış/oturum iptali testi açık.
 
 ## Güvenlik ve ortam sınırları
 
@@ -89,17 +89,18 @@ Seed Arsimio Vercel proje/team bağlantısını, domain sahipliği ve HTTPS'i ko
 | Prisma validate / TypeScript / lint / build | Geçti |
 | Yerel HTTP | 14 geçti; form türü, yetkisiz panel, bilinmeyen host/header sahteciliği |
 | Yerel tarayıcı | Platform e-posta, iki okul username; hatalı okul girişinde genel hata, console error yok |
-| Gerçek hesap / yeni production oturumu | Bekliyor; parola belirlenmedi, yeni kod gönderilmedi |
+| Gerçek Süper Admin / canlı giriş | Kullanıcı doğruladı; Safari'de platform paneli ve iki okul görüldü |
+| Canlı çıkış / eski oturumun reddi / okul girişleri | Henüz doğrulanmadı |
 
 Tarayıcıda hatalı giriş testi yalnız var olmayan test kullanıcı adıyla yapıldı; hesap veya oturum oluşturulmadı. DB testleri gerçek browser/production oturum testinin yerine geçmez.
 
-Sıradaki işler: gerçek Süper Admin aktivasyonu/yayın kabulü, kullanıcı adıyla Okul Admin oluşturma, okul/üyelik/rol yönetim ekranları, parola değişimi/kurtarma, logo yükleme, audit okuma, arşivleme/geri alma, ortam ayrımı ve kısıtlı DB/RLS, gerçek özel domain/Safari provası. Mail/SMS ve MFA sonraki güvenlik dilimidir.
+Sıradaki işler: kullanıcı adıyla Okul Admin oluşturma, okul/üyelik/rol yönetim ekranları, iki okulda oturumlu yetki/izolasyon ve çıkış testleri, parola değişimi/kurtarma, logo yükleme, audit okuma, arşivleme/geri alma, ortam ayrımı ve kısıtlı DB/RLS, gerçek özel domain/Safari provası. Ana platformda Safari girişi görüldü; bu, farklı kök domain ve okul oturumu testlerinin yerine geçmez. Mail/SMS ve MFA sonraki güvenlik dilimidir.
 
 ## Önceki yayın kaydı
 
 - İlk CLI deployment: `dpl_HRdYztjygGPubEDP5oThsu6N6DQE`, 2026-09-19, READY, Next.js 16.3.5. [Vercel inceleme](https://vercel.com/ademaymevlut-4764s-projects/arsimio/HRdYztjygGPubEDP5oThsu6N6DQE).
 - O sürümde canlı 13 HTTP kontrolü geçti; negatif auth POST'unda Neon origin hatası bulundu. Bunlar eski sağlayıcı akışına ait tarihsel sonuçlardır, yeni girişin canlı kanıtı değildir.
 - Kullanıcı sonrasında Prisma build düzeltmesini gönderdiğini, deployment ve üç domainin çalıştığını bildirdi.
-- GitHub deposu `ademaymevlut-Dev/arsimio`, production dalı `main`. Yeni giriş için bu çalışmada commit/push/deploy yapılmadı; kullanıcı kendi terminalinden gönderecek.
+- GitHub deposu `ademaymevlut-Dev/arsimio`, production dalı `main`. Kullanıcı yeni kodu gönderdikten sonra deployment ve Süper Admin girişinin başarılı olduğunu bildirdi. Bu teyit turunda kod, DB veya yayın ayarı değiştirilmedi; yalnız dokümantasyon güncellendi.
 - Varsayılan Git'in Xcode lisans sorunu için zaten kurulu `/Library/Developer/CommandLineTools/usr/bin/git` kullanılabilir; lisans veya global ayar değiştirilmedi.
 - Önceki production hata taraması boştu; log drain/harici alarm henüz kurulmadı. Sonraki yayında commit/READY eşleşmesi ve üç domain yeniden sınanmalıdır.

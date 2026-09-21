@@ -2,11 +2,26 @@
 
 Bu belge yaşayan plandır. Sıralama, güvenli bir temel üzerinde küçük ama uçtan uca çalışan ürün dilimleri üretmek için tasarlanmıştır.
 
+## Ürün keşfi — Eski okul işleyişinden yeni akademik çekirdeğe
+
+- [x] `TAMAMLANDI` HorizonEdu'nun 46 modeli ve ilgili kayıt, yıl/sınıf, öğretmen, program, yoklama, veli ve finans akışlarının kaynak kod incelemesi; [27 bulgulu rapor](./legacy-data-model-review.md) hazırlandı (2026-09-19). Bu, canlı DB veri kalitesi testi veya yeni modüllerin tamamlanması değildir.
+- [ ] `DEVAM EDİYOR` [Canlı veri doğrulaması](./legacy-live-data-review.md): API/panelde 447 öğrenci, 1.051 yıllık kayıt, 797 görünür atama ve 668 aktif program satırı incelendi; 10 canlı bulgu yazıldı. Seçili API incelemesi tamamlandı; doğrudan DB şema/kısıt denetimi, filtrelerin gizlediği kayıtlar ve diğer modüllerin canlı kontrolü açık.
+- [ ] `ARAŞTIRMA` Okul kademeleri, yıl/dönem, kayıt/yerleşim, toplu sınıf yükseltme, mezuniyet/ayrılma, manuel öğretmen atama UI'si ve birleşik ders kurallarını soru-cevap görüşmeleriyle kesinleştir. Rapordaki kavramsal model taslaktır; mevcut pilot kabul durumlarını değiştirmez.
+- [x] `TAMAMLANDI` İlk yıl geçişi iş kuralı görüşmesi belgelendi: PRF'de manuel öğrenci seçimi ve hedef sınıf/şubeye kayıt; ayrılanlar ayıklandıktan sonra devam eden 1–11 öğrencilerinin tamamının aynı grup/şube numarasıyla otomatik yükseltilmesi (`3 / 2 → 4 / 2`); nadir istisnaların öğrenci detayından manuel düzeltilmesi; 12. sınıflarda “Tümünü seç → Mezuniyet tarihi → Mezun et” ve tekrar edecek öğrenciyi seçimden çıkarma. [Karar ve öneriler](./legacy-data-model-review.md), bölüm 17. Bu madde yalnız görüşme kaydıdır, uygulama teslimi değildir.
+- [x] `TAMAMLANDI` Ayrılma nedeni sözlüğünün ilk beş ana başlığı kullanıcı tarafından onaylandı: aile taşınması, okul ücreti/maliyet, başka okul tercihi, diğer, nedeni belirtilmedi/bilinmiyor. [Karar](./legacy-data-model-review.md), bölüm 18. Bu madde karar kaydıdır; uygulama teslimi değildir. İsteğe bağlı alan ve rapor ayrıntıları tasarım önerisi olarak kalır.
+- [x] `TAMAMLANDI` Öğretmen atamalarının yönü belgelendi: otomatik öğretmen yükseltme/devir yerine profesyonel manuel UI; sınıf/sorumlu öğretmenliği ile ders öğretmenliği ayrı tutulacak. İlkokulda da beden eğitimi, resim, müzik ve dil gibi derslerde branş öğretmenleri bulunduğu doğrulandı; her dersin öğretmeni ayrı seçilebilecek. Bu yalnız ürün kararıdır, uygulama teslimi değildir.
+- [x] `TAMAMLANDI` Haftalık programın mevcut sınıf → atanmış ders/öğretmen → gün → saat akışı belgelendi. Farklı seviyeler veya aynı seviyenin şubeleri dönem boyunca ortak derse girebilir; çok nadir değişiklikler haftalık program ekranından manuel yapılır. Bu ürün görüşmesi kaydıdır; ortak ders özelliği uygulanmadı.
+- [ ] `ARAŞTIRMA` Yıl/dönem bağlamlı sınıf ve öğretmen görünümleri, sorumlu/ders ataması ayrımı, hızlı manuel seçim ve dönemlik ortak ders UI'si. [Karar ve öneriler](./legacy-data-model-review.md), bölüm 19–23. Öğretmen ana sayfasının beş CTA'sı ve aynı hücrede sınıf bazlı ayrı işlemleri koddan incelendi; ortak ders modeli bu ayrımı korumalı. Haftalık hedef ders sayıları ve sınıf sorumlusunun takip paneli açık kalır. UI ve şema henüz uygulanmadı.
+- [ ] `ÖNCELİKLİ / TASARIM` Ders/saat bazlı yoklama: gerçek yok/geliş zamanları, sonraki öğretmene önceki durumun görünmesi, değişiklik yoksa aynı gün devamlılık, geldiğinde Late ve sonradan ayrıldığında ilgili dersten itibaren Absent. Önceki dersler korunmalı; teneffüs gecikmeleri ayrı analiz edilmeli. Temel ihtiyaç kullanıcı tarafından netleştirildi; [ayrıntılar ve kabul senaryoları](./legacy-data-model-review.md), bölüm 14 ve 22. Eski sisteme yeni eklenen veli SMS CTA'sı yalnız kullanıcı beyanıdır, kod/canlı doğrulaması ve yeni uygulama teslimi değildir; otomatik SMS kararı alınmadı.
+- [ ] `ÖNCELİKLİ / TASARIM` Öğretmen UI başlangıç noktası: **Dersi başlat → Yoklama kontrolü → İşlenen konu → Ödev verildi/yok → Ders işlemlerini tamamla** önerisi. Kullanıcı adımlı akış, okulun platform kullanım takibi ve 17:00 günlük e-posta raporundaki eksiklerin azaltılmasını önceliklendirdi. [Bölüm 23](./legacy-data-model-review.md): başlatma/tamamlama ve rapora yetişme ayrı ölçülür; öğretim kalitesiyle karıştırılmaz. Kesin zorunluluklar ve eksik/geç rapor politikası açık; UI, ölçüm, zamanlayıcı veya e-posta entegrasyonu uygulanmadı.
+
 ## Sıradaki teslim — İki okul pilotu
 
 Faz 1 ve Faz 2'nin minimum çalışan kapsamı birlikte teslim edilecek: iki kurgusal okul, aynı Vercel projesine bağlı iki adres, ayrı marka/giriş, okul bazlı yetkiler ve denetlenmiş veri izolasyonu. Ayrıntılı sıra ve kabul testleri [iki okul pilotu planında](./two-school-pilot.md).
 
-Sıra: ortam/domain doğrulaması → iki okul seed'i ve tenant çözümleme → parolalı giriş ve yetki → kullanıcı/okul yönetimi ve audit → DB izolasyonu → iki adreste uçtan uca kabul. Domain/marka dilimi yayında. Süper Admin için e-posta, okul kullanıcıları için username ile parolalı giriş kodu ve migration tamamlandı; henüz gönderilmedi. Hesap aktivasyonu ve tam pilot kabulü açık. Ayrıntılar [kurulum notlarında](./pilot-setup.md) ve [giriş kararında](./password-auth.md).
+Sıra: ortam/domain doğrulaması → iki okul seed'i ve tenant çözümleme → parolalı giriş ve yetki → kullanıcı/okul yönetimi ve audit → DB izolasyonu → iki adreste uçtan uca kabul. Domain/marka ve parolalı giriş dilimi yayında; kullanıcı Süper Admin aktivasyonunu ve canlı girişini doğruladı. İlk Okul Admin oluşturma ve okul kabuğu yerelde hazır; gerçek hesapların kullanıcı tarafından oluşturulması, sonraki okul kullanıcı yönetimi, canlı çıkış/oturum iptali ve tam pilot kabulü açıktır. Ayrıntılar [kurulum notlarında](./pilot-setup.md) ve [giriş kararında](./password-auth.md).
+
+2026-09-19 öncelik güncellemesi: kullanıcı önce Süper Admin temasını ve mevcut iki okulun yönetimini istedi. [İlk çalışma alanı](./platform-workspace.md) yerelde uygulandı. 2026-09-20 kararıyla logo/görseller ve giriş şablonları ortak tasarım daha fazla oturana kadar ertelendi. Süper Admin'e ilk Okul Admin oluşturma, Okul Admin'e de [Faz 0 çalışma alanı](./school-admin-plan.md) yerelde eklendi. Sonraki okul kullanıcılarının yönetimi Faz 2'de açık kalır.
 
 ## Faz 0 — Proje temeli
 
@@ -30,7 +45,8 @@ Sıra: ortam/domain doğrulaması → iki okul seed'i ve tenant çözümleme →
 - [x] `TAMAMLANDI` Doğrulanmış hostname çözümlemesi ve aynı Arsimio projesindeki HorizonEdu/GjimCamEdu domainleri.
 - [x] `TAMAMLANDI` E-posta/username ayrımı, scrypt parola hash'i, DB oturumları ve bir defalık terminalden Süper Admin aktivasyon kodu.
 - [x] `TAMAMLANDI` `password_auth` migration'ı, hesap/okul bazlı rate limit, sunucu origin kontrolü, giriş/çıkış audit ve rollback'li auth DB testleri.
-- [ ] `SIRADAKİ` Yeni kodun GitHub/Vercel yayını; Süper Admin'in kendi terminalinde ilk parolasını belirlemesi ve canlı giriş/çıkış kabul testi.
+- [x] `TAMAMLANDI` Yeni yayın, ilk Süper Admin parola kurulumu ve canlı giriş; kullanıcı bildirimi ve Safari platform paneli ekran görüntüsüyle doğrulandı (2026-09-19).
+- [ ] `SIRADAKİ` Canlı çıkış, eski oturumun reddi ve yeniden giriş kabul testi; okul hesapları oluşturulduğunda iki okulda oturumlu izolasyon kontrolü.
 - [ ] `SIRADAKİ` Development/preview/production DB branch ayrımını kur ve doğrula; şu an ortak başlangıç bağlantısı kullanılıyor.
 - [ ] `PLANLANDI` Gerçek okul kabulünden önce özel test alan adı ve Safari oturum provasını tamamla.
 - [ ] `PLANLANDI` İlk panel guard'larını bütün iş modüllerinin Server Action ve Route Handler'larına genişlet.
@@ -39,15 +55,20 @@ Sıra: ortam/domain doğrulaması → iki okul seed'i ve tenant çözümleme →
 
 ## Faz 2 — Okul kurulumu ve premium uygulama kabuğu
 
-- [ ] `SIRADAKİ` Süper Admin okul oluşturma ve ilk Okul Admin'i kullanıcı adı/parola ile tanımlama ekranı (mail/SMS bağımlılığı yok).
+- [x] `TAMAMLANDI / YEREL` Süper Admin ilk çalışma alanı: ortak açık tema, okul/domain listesi, arama/filtre, okul adı/resmî unvan ve üç marka renginin önizleme/kaydetme akışı. İki mevcut okul doğrulandı; çoğaltılmadı. [Teslim ve test sınırları](./platform-workspace.md). Henüz yayımlanmadı.
+- [x] `TAMAMLANDI / YEREL` Eski CSS light paleti globals.css'e taşındı; primary/secondary/background/accent rolleri, ortak status üçlüleri ve UI Kit oluşturuldu. Dark mod kaldırıldı. Modal, tooltip, checkbox ve temel form bileşenleri eklendi. [Kararlar ve 46 birim / 23 HTTP testi](./design-system.md).
+- [ ] `SIRADAKİ` Süper Admin okul oluşturma ekranı ve kontrollü domain kurulum akışı.
+- [x] `TAMAMLANDI / YEREL` Süper Admin okul detayından ilk Okul Admin'i kullanıcı adı/geçici parola ile tanımlama. User, credential, membership, SCHOOL_ADMIN rolü ve audit tek transaction'da; ikinci ilk yönetici reddedilir, parola/hash audit'e girmez. 6/6 rollback-only DB doğrulaması geçti; gerçek okul hesabı oluşturulmadı.
 - [x] `TAMAMLANDI` İki farklı marka rengiyle responsive giriş ve korumalı ilk panel sayfaları.
 - [ ] `PLANLANDI` Okul alan adı doğrulama ve durum yönetimi.
-- [ ] `PLANLANDI` Logo yükleme ve marka/tema yönetim ekranları (ilk renkler DB'den okunuyor).
-- [ ] `PLANLANDI` Rol bazlı navigasyon, responsive dashboard ve erişilebilir tasarım sistemi.
+- [ ] `DEVAM EDİYOR` Marka yönetimi: üç renk düzenleme ve girişe uygulama yerelde hazır. Logo/ikon/kapak görseli yükleme, kalıcı dosya depolaması ve okul bazlı giriş şablonu seçimi sıradaki dilim.
+- [ ] `DEVAM EDİYOR` Süper Admin responsive navigasyon/dashboard ve Okul Admin Faz 0 kabuğu hazır; öğretmen, öğrenci, veli ve şoför panelleri planlandı.
 - [ ] `PLANLANDI` Okul ayarları, saat dilimi, dil ve akademik takvim başlangıcı.
 - [ ] `PLANLANDI` Denetim geçmişi görüntüleme ekranı.
 
 ## Faz 3 — Kullanıcı ve akademik çekirdek
+
+Okul Admin ekranlarının ayrıntılı uygulama sırası [Okul Admin faz planında](./school-admin-plan.md) tutulur. Yeni akademik şema kurmadan `1400px` kabuk, permission tabanlı menü ve ortak tablo temeli tamamlandı; ilk gerçek veri dilimi öğretim yılları ve dönemlerdir.
 
 - [ ] `PLANLANDI` Pilotun kullanıcı oluşturma/üyelik/rol akışını genişlet; ayrıntılı kullanıcı yönetimi ve kaynak bazlı yetkiler.
 - [ ] `PLANLANDI` Parola değiştirme/sıfırlama ve oturum iptali. Mail/SMS, davet teslimi ve MFA daha sonra eklenecek.

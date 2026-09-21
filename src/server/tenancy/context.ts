@@ -31,7 +31,13 @@ export const getTenantContext = cache(async () => {
           slug: true,
           status: true,
           archivedAt: true,
-          branding: { select: { primaryColor: true, accentColor: true } },
+          branding: {
+            select: {
+              primaryColor: true,
+              secondaryColor: true,
+              accentColor: true,
+            },
+          },
         },
       },
     },

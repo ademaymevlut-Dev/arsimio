@@ -4,6 +4,7 @@ import { GraduationCap, ShieldCheck } from "lucide-react";
 import { getTenantContext } from "@/server/tenancy/context";
 import { LoginForm } from "./login-form";
 import { notFound } from "next/navigation";
+import { readableForeground, resolveBranding } from "@/lib/school-branding";
 
 export async function LoginPage({
   bootstrap = false,
@@ -14,30 +15,33 @@ export async function LoginPage({
   if (bootstrap && tenant.kind !== "platform") notFound();
   const platform = tenant.kind === "platform";
   const name = platform ? "arsimio" : tenant.school.name;
-  const color =
-    !platform &&
-    /^#[0-9a-f]{6}$/i.test(tenant.school.branding?.primaryColor ?? "")
-      ? tenant.school.branding!.primaryColor!
-      : "#2563eb";
+  const colors = resolveBranding(platform ? null : tenant.school.branding);
+  const color = colors.primaryColor;
   return (
     <main
       className="grid min-h-svh flex-1 lg:grid-cols-[1.05fr_1fr]"
       style={
         {
           "--primary": color,
-          "--primary-foreground": "#ffffff",
+          "--primary-foreground": readableForeground(color),
         } as CSSProperties
       }
     >
-      <section className="relative flex flex-col justify-between overflow-hidden bg-slate-950 p-6 text-white lg:min-h-svh lg:p-14">
+      <section className="relative flex flex-col justify-between overflow-hidden bg-background p-6 lg:min-h-svh lg:p-14">
         <div className="flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-white/10">
+          <span
+            className="flex size-11 items-center justify-center rounded-xl"
+            style={{
+              backgroundColor: colors.secondaryColor,
+              color: readableForeground(colors.secondaryColor),
+            }}
+          >
             <GraduationCap className="size-6" aria-hidden />
           </span>
           <span className="text-xl font-semibold tracking-tight">{name}</span>
         </div>
         <div className="relative hidden py-24 lg:block">
-          <p className="mb-5 text-sm font-medium tracking-[0.18em] text-slate-400">
+          <p className="mb-5 text-sm font-medium tracking-[0.18em]">
             {platform ? "PLATFORM YÖNETİMİ" : "OKUL PORTALI"}
           </p>
           <h1 className="max-w-lg text-4xl leading-[1.12] font-semibold tracking-tight sm:text-5xl">
@@ -45,19 +49,22 @@ export async function LoginPage({
               ? "Okullarınız için tek yönetim merkezi."
               : "Okulunuzla bağlantıda kalın."}
           </h1>
-          <p className="mt-6 max-w-md text-base leading-7 text-slate-300">
+          <p className="mt-6 max-w-md text-base leading-7">
             {platform
               ? "Okulların kurulumunu, kimliğini ve erişimlerini Arsimio üzerinden yönetin."
               : `${name} hesabınızla size ait çalışma alanına güvenle giriş yapın.`}
           </p>
-          <div className="mt-10 h-1 w-16 rounded-full bg-primary" />
+          <div
+            className="mt-10 h-1 w-16 rounded-full"
+            style={{ backgroundColor: colors.accentColor }}
+          />
         </div>
-        <div className="hidden items-center justify-between text-sm text-slate-400 lg:flex">
+        <div className="hidden items-center justify-between text-sm lg:flex">
           <span>Arsimio · Eğitim yönetimi</span>
           <span>2026</span>
         </div>
       </section>
-      <section className="flex items-center justify-center bg-background px-6 py-14 sm:px-12">
+      <section className="flex items-center justify-center bg-card px-6 py-14 sm:px-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <ShieldCheck className="size-6" aria-hidden />

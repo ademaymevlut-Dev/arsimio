@@ -3,6 +3,7 @@ import { useActionState } from "react";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { signIn } from "@/app/login/actions";
 
 export function LoginForm({ platform }: { platform: boolean }) {
@@ -40,12 +41,9 @@ export function LoginForm({ platform }: { platform: boolean }) {
         />
       </div>
       {state.error && (
-        <p
-          role="alert"
-          className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
-        >
-          {state.error}
-        </p>
+        <Alert variant="danger" role="alert">
+          <AlertDescription className="mt-0">{state.error}</AlertDescription>
+        </Alert>
       )}
       <Button
         type="submit"

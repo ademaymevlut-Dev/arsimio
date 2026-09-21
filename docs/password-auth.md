@@ -1,6 +1,6 @@
 # Parolalı giriş — güncel karar ve işletim
 
-Tarih: 2026-09-19. Kod, migration ve yerel kontroller tamamlandı; bu değişiklik henüz GitHub/Vercel'e gönderilmedi. Gerçek hesap aktivasyonu ve canlı oturum kabulü bekliyor.
+Tarih: 2026-09-19. Kod, migration ve yerel kontroller tamamlandı. Kullanıcı deployment'ın ve ilk Süper Admin girişinin başarılı olduğunu bildirdi; Safari ekran görüntüsünde ana domainde korumalı platform paneli ve iki okul listesi görüldü. Canlı çıkış/oturum iptali ve okul kullanıcılarıyla kabul testleri henüz açık.
 
 ## Kim nasıl giriş yapar?
 
@@ -27,7 +27,7 @@ Küresel `User` kimliği korunur: aynı kişi iki okulda farklı kullanıcı ad�
 - Girişte önceki host oturumu yenilenir; çıkış DB oturumunu iptal eder ve cookie'yi temizler. Giriş/çıkış ve ilk aktivasyon audit kayıtları aynı transaction içinde yazılır. Parola, hash veya token audit'e yazılmaz.
 - Next.js Server Action korumasına ek olarak Origin/Host eşleşmesi kontrol edilir; production HTTPS gerektirir. Yönlendirmeler sabit uygulama yollarıdır.
 
-Mail, SMS ve e-posta doğrulaması bu geliştirme diliminin parçası değildir. Neon Auth SDK/proxy ve kullanılmayan kurulum script'leri kaldırıldı; **Neon PostgreSQL bağlantısı korunuyor**. Dış servisteki `neon_auth` şeması, entegrasyon ve eski ortam değişkenleri silinmedi. Eski trusted-origin ayarı yeni kod yayımlandığında giriş bağımlılığı olmaktan çıkar.
+Mail, SMS ve e-posta doğrulaması bu geliştirme diliminin parçası değildir. Neon Auth SDK/proxy ve kullanılmayan kurulum script'leri kaldırıldı; **Neon PostgreSQL bağlantısı korunuyor**. Dış servisteki `neon_auth` şeması, entegrasyon ve eski ortam değişkenleri silinmedi. Eski trusted-origin ayarı yeni giriş kodunun bağımlılığı değildir.
 
 ## İlk Süper Admin parolasını belirleme
 
@@ -43,7 +43,7 @@ pnpm auth:bootstrap
 3. PENDING, arşivlenmemiş, provider'a bağlanmamış ve önceden SUPER_ADMIN rolü ayrılmış hesap; credential ve audit ile tek transaction'da ACTIVE olur. Araç yeni yönetici atamaz; etkin hesabın parolasını sıfırlamaz ve tekrar çalıştırılarak yetki geri vermez.
 4. Yeni kod Vercel'e gönderildikten sonra ana domainin `/login` sayfasında e-posta + parola ile giriş/çıkış sınanır. Yayından önce yerelde `http://localhost:3000/login` kullanılabilir.
 
-`/setup` yalnız bu komutu açıklayan bir bilgi sayfasıdır; internetten hesap/parola oluşturmaz. Parola sohbete, Git'e, dokümana veya `.env` dosyasına yazılmaz. Bu geliştirme sırasında gerçek parola belirlenmedi; test kimlikleri transaction sonunda geri alındı. Henüz okul kullanıcıları yoktur; kullanıcı adı/parola ve rol atayan yetkili yönetim ekranı sıradaki iştir.
+`/setup` yalnız bu komutu açıklayan bir bilgi sayfasıdır; internetten hesap/parola oluşturmaz. Parola sohbete, Git'e, dokümana veya `.env` dosyasına yazılmaz. İlk gerçek parolayı kullanıcı kendi terminalinde belirledi ve canlı Süper Admin girişini doğruladı; bootstrap tekrar çalıştırılmaz. Otomatik test kimlikleri transaction sonunda geri alındı. Süper Admin'in okul detayından ilk Okul Admin'i oluşturacağı ekran yerelde hazırdır; gerçek okul hesapları henüz kullanıcı tarafından oluşturulmamıştır.
 
 ## Veri ve kontroller
 
@@ -64,8 +64,9 @@ DB testleri kullanıcı adı/okul ayrımı, parola doğrulama, oturum süresi/ip
 
 ## Sonraki adımlar ve sınırlar
 
-- Süper Admin'in ilk parolasını belirlemesi ve yeni yayında giriş/çıkış kabulü.
-- Yetkili okul kullanıcı oluşturma, üyelik/rol yönetimi; ardından iki gerçek test hesabıyla uçtan uca izolasyon testi.
+- Süper Admin aktivasyonu ve canlı giriş kullanıcı tarafından doğrulandı. Çıkış, eski oturumun reddi ve yeniden giriş kabulü hâlâ yapılmalıdır.
+- İki okulun ilk yöneticisini yeni Süper Admin akışıyla oluştur; ardından iki gerçek hesapla uçtan uca oturum/izolasyon testi.
+- Sonraki personel, öğretmen ve diğer okul kullanıcıları için Okul Admin üyelik/rol yönetimi.
 - Parola değiştirme/sıfırlama akışı: credential sürümü artırılmalı ve mevcut oturumlar geçersizleşmelidir. Henüz public kurtarma endpoint'i yoktur.
 - Gerçek öğrenci/veli verisi öncesi development/preview/production DB branch ayrımı, kısıtlı runtime rolü, RLS ve iş modülü bazlı yetki testleri.
 - Canlı kullanıma hazırlıkta IP/WAF katmanı, çok faktörlü doğrulama, oturum yönetimi ve süresi dolmuş session/throttle kayıtlarının kontrollü temizliği. Mail/SMS daha sonra ayrıca planlanır; temel parola/oturum/tenant kontrolleri ertelenmedi.
