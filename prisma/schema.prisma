@@ -56,6 +56,20 @@ enum AuditSource {
   IMPORT
 }
 
+enum AcademicYearStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+enum AcademicTermStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
 model School {
   id              String       @id @default(uuid()) @db.Uuid
   slug            String       @unique @db.VarChar(80)
@@ -70,14 +84,16 @@ model School {
   createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  createdBy   User?              @relation("SchoolCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  archivedBy  User?              @relation("SchoolArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
-  domains     SchoolDomain[]
-  branding    SchoolBranding?
-  memberships SchoolMembership[]
-  roles       Role[]
-  invitations SchoolInvitation[]
-  auditEvents AuditEvent[]
+  createdBy     User?              @relation("SchoolCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  archivedBy    User?              @relation("SchoolArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+  domains       SchoolDomain[]
+  branding      SchoolBranding?
+  memberships   SchoolMembership[]
+  roles         Role[]
+  invitations   SchoolInvitation[]
+  auditEvents   AuditEvent[]
+  academicYears AcademicYear[]
+  academicTerms AcademicTerm[]
 
   @@index([status])
   @@map("schools")
@@ -139,6 +155,12 @@ model User {
   userRolesAssigned       UserRole[]         @relation("UserRoleAssigner")
   credential              UserCredential?
   sessions                AuthSession[]
+  academicYearsCreated    AcademicYear[]     @relation("AcademicYearCreatedBy")
+  academicYearsUpdated    AcademicYear[]     @relation("AcademicYearUpdatedBy")
+  academicYearsArchived   AcademicYear[]     @relation("AcademicYearArchivedBy")
+  academicTermsCreated    AcademicTerm[]     @relation("AcademicTermCreatedBy")
+  academicTermsUpdated    AcademicTerm[]     @relation("AcademicTermUpdatedBy")
+  academicTermsArchived   AcademicTerm[]     @relation("AcademicTermArchivedBy")
 
   @@unique([authProvider, authProviderUserId])
   @@index([status])
@@ -366,4 +388,60 @@ model AuditEvent {
   @@index([entityType, entityId, createdAt])
   @@index([requestId])
   @@map("audit_events")
+}
+
+model AcademicYear {
+  id           String             @id @default(uuid()) @db.Uuid
+  schoolId     String             @map("school_id") @db.Uuid
+  name         String             @db.VarChar(40)
+  startDate    DateTime           @map("start_date") @db.Date
+  endDate      DateTime           @map("end_date") @db.Date
+  status       AcademicYearStatus @default(DRAFT)
+  createdById  String?            @map("created_by_id") @db.Uuid
+  updatedById  String?            @map("updated_by_id") @db.Uuid
+  archivedAt   DateTime?          @map("archived_at") @db.Timestamptz(6)
+  archivedById String?            @map("archived_by_id") @db.Uuid
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school     School         @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy  User?          @relation("AcademicYearCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  updatedBy  User?          @relation("AcademicYearUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  archivedBy User?          @relation("AcademicYearArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  terms      AcademicTerm[]
+
+  @@unique([schoolId, name])
+  @@unique([id, schoolId])
+  @@index([schoolId, status, startDate])
+  @@map("academic_years")
+}
+
+model AcademicTerm {
+  id             String             @id @default(uuid()) @db.Uuid
+  schoolId       String             @map("school_id") @db.Uuid
+  academicYearId String             @map("academic_year_id") @db.Uuid
+  name           String             @db.VarChar(100)
+  sequence       Int
+  startDate      DateTime           @map("start_date") @db.Date
+  endDate        DateTime           @map("end_date") @db.Date
+  status         AcademicTermStatus @default(DRAFT)
+  createdById    String?            @map("created_by_id") @db.Uuid
+  updatedById    String?            @map("updated_by_id") @db.Uuid
+  archivedAt     DateTime?          @map("archived_at") @db.Timestamptz(6)
+  archivedById   String?            @map("archived_by_id") @db.Uuid
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school       School       @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear AcademicYear @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  createdBy    User?        @relation("AcademicTermCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  updatedBy    User?        @relation("AcademicTermUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  archivedBy   User?        @relation("AcademicTermArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+
+  @@unique([academicYearId, sequence])
+  @@unique([academicYearId, name])
+  @@unique([id, schoolId])
+  @@index([schoolId, status, startDate])
+  @@index([academicYearId, status, sequence])
+  @@map("academic_terms")
 }

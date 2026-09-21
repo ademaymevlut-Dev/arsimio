@@ -20,12 +20,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { requireSchoolPermission } from "@/server/authorization/guards";
+import { getAcademicCalendarSummary } from "@/server/academics/academic-calendar";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const { user, tenant, membership, permissions } =
     await requireSchoolPermission("dashboard.read");
+  const academic = await getAcademicCalendarSummary(tenant.school.id);
   const roleNames = membership.roles.map(({ role }) => role.name);
   const setup = [
     {
@@ -37,9 +39,11 @@ export default async function DashboardPage() {
     },
     {
       title: "Öğretim yılı ve dönemler",
-      description: "İlk akademik veri tablosu olarak sırada.",
-      status: "Sıradaki",
-      variant: "info" as const,
+      description: academic.yearCount
+        ? `${academic.yearCount} öğretim yılı tanımlandı.`
+        : "İlk akademik veri tablosu olarak sırada.",
+      status: academic.yearCount ? "Hazır" : "Sıradaki",
+      variant: academic.yearCount ? ("success" as const) : ("info" as const),
       icon: CalendarDays,
     },
     {
@@ -81,8 +85,12 @@ export default async function DashboardPage() {
           },
           {
             label: "Akademik kurulum",
-            value: "Başlamaya hazır",
-            note: "İlk adım: öğretim yılı ve dönem",
+            value: academic.activeYear?.name ?? "Başlamaya hazır",
+            note: academic.activeYear
+              ? "Aktif öğretim yılı"
+              : academic.yearCount
+                ? "Taslak yılı etkinleştirin"
+                : "İlk adım: öğretim yılı ve dönem",
             icon: Clock3,
           },
         ].map(({ label, value, note, icon: Icon }) => (
@@ -152,4 +160,3 @@ export default async function DashboardPage() {
     </div>
   );
 }
-

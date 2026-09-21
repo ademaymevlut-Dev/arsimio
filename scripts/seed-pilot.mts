@@ -72,6 +72,8 @@ const schoolPermissions = [
   "users.invite",
   "memberships.manage",
   "audit.read",
+  "academics.read",
+  "academics.manage",
 ];
 const platformPermissions = [
   "platform.schools.read",

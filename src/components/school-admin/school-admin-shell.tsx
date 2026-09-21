@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpenCheck,
+  CalendarRange,
   Check,
   Circle,
   LayoutDashboard,
@@ -28,17 +29,19 @@ import { readableForeground, schoolInitials } from "@/lib/school-branding";
 
 const navigation = [
   {
+    group: "GENEL",
     href: "/dashboard",
     label: "Genel bakış",
     icon: LayoutDashboard,
     permission: "dashboard.read",
   },
-];
-
-const setupSteps = [
-  { label: "Yönetici hesabı", ready: true },
-  { label: "Öğretim yılı ve dönem", ready: false },
-  { label: "Sınıflar ve dersler", ready: false },
+  {
+    group: "AKADEMİK YAPI",
+    href: "/academics/years",
+    label: "Öğretim yılları",
+    icon: CalendarRange,
+    permission: "academics.read",
+  },
 ];
 
 function Navigation({
@@ -50,36 +53,48 @@ function Navigation({
   pathname: string;
   mobile?: boolean;
 }) {
+  const groups = [...new Set(items.map((item) => item.group))];
   return (
-    <nav aria-label="Okul yönetimi menüsü" className="space-y-1">
-      {items.map(({ href, label, icon: Icon }) => {
-        const active =
-          href === "/dashboard"
-            ? pathname === href
-            : pathname.startsWith(href);
-        const link = (
-          <Link
-            href={href}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              active
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
-          >
-            <Icon className="size-4" aria-hidden />
-            {label}
-          </Link>
-        );
-        return mobile ? (
-          <SheetClose asChild key={href}>
-            {link}
-          </SheetClose>
-        ) : (
-          <div key={href}>{link}</div>
-        );
-      })}
+    <nav aria-label="Okul yönetimi menüsü">
+      {groups.map((group, groupIndex) => (
+        <div key={group} className={cn(groupIndex > 0 && "mt-7")}>
+          <p className="mb-3 px-3 text-[10px] font-semibold tracking-[0.16em] text-muted-foreground">
+            {group}
+          </p>
+          <div className="space-y-1">
+            {items
+              .filter((item) => item.group === group)
+              .map(({ href, label, icon: Icon }) => {
+                const active =
+                  href === "/dashboard"
+                    ? pathname === href
+                    : pathname.startsWith(href);
+                const link = (
+                  <Link
+                    href={href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      active
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="size-4" aria-hidden />
+                    {label}
+                  </Link>
+                );
+                return mobile ? (
+                  <SheetClose asChild key={href}>
+                    {link}
+                  </SheetClose>
+                ) : (
+                  <div key={href}>{link}</div>
+                );
+              })}
+          </div>
+        </div>
+      ))}
     </nav>
   );
 }
@@ -119,7 +134,12 @@ function SchoolBrand({
   );
 }
 
-function SetupStatus() {
+function SetupStatus({ academicYearReady }: { academicYearReady: boolean }) {
+  const setupSteps = [
+    { label: "Yönetici hesabı", ready: true },
+    { label: "Öğretim yılı ve dönem", ready: academicYearReady },
+    { label: "Sınıflar ve dersler", ready: false },
+  ];
   return (
     <div className="rounded-xl border bg-background/60 p-4">
       <p className="flex items-center gap-2 text-xs font-semibold text-foreground">
@@ -162,6 +182,7 @@ export function SchoolAdminShell({
   username,
   roleNames,
   permissions,
+  academicYearReady,
   children,
 }: {
   schoolName: string;
@@ -171,6 +192,7 @@ export function SchoolAdminShell({
   username: string | null;
   roleNames: string[];
   permissions: string[];
+  academicYearReady: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -192,12 +214,11 @@ export function SchoolAdminShell({
       <div className="mx-auto min-h-svh w-full max-w-[1400px] bg-card lg:grid lg:min-h-[calc(100svh-2.5rem)] lg:grid-cols-[252px_minmax(0,1fr)] lg:rounded-2xl lg:border lg:shadow-sm">
         <aside className="hidden border-r bg-sidebar p-5 lg:flex lg:flex-col lg:rounded-l-2xl">
           <SchoolBrand schoolName={schoolName} primaryColor={primaryColor} />
-          <p className="mt-9 mb-3 px-3 text-[10px] font-semibold tracking-[0.16em] text-muted-foreground">
-            GENEL
-          </p>
-          <Navigation items={items} pathname={pathname} />
-          <div className="mt-8">
-            <SetupStatus />
+          <div className="mt-9">
+            <Navigation items={items} pathname={pathname} />
+          </div>
+          <div className="mt-7">
+            <SetupStatus academicYearReady={academicYearReady} />
           </div>
           <div className="mt-auto border-t pt-5">
             <div className="flex items-center gap-3 px-2">
@@ -238,12 +259,11 @@ export function SchoolAdminShell({
                     schoolName={schoolName}
                     primaryColor={primaryColor}
                   />
-                  <p className="mt-9 mb-3 px-3 text-[10px] font-semibold tracking-[0.16em] text-muted-foreground">
-                    GENEL
-                  </p>
-                  <Navigation items={items} pathname={pathname} mobile />
-                  <div className="mt-8">
-                    <SetupStatus />
+                  <div className="mt-9">
+                    <Navigation items={items} pathname={pathname} mobile />
+                  </div>
+                  <div className="mt-7">
+                    <SetupStatus academicYearReady={academicYearReady} />
                   </div>
                 </SheetContent>
               </Sheet>

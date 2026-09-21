@@ -2,7 +2,7 @@
 
 Bu modelin uygulamadaki ana kaynağı [`prisma/schema.prisma`](../prisma/schema.prisma) dosyasıdır. Şema değişiklikleri Prisma Migrate ile sürümlenir; PostgreSQL RLS ve Prisma'nın doğrudan ifade edemediği kısıtlar migration SQL'ine açıkça eklenir.
 
-2026-09-19 tarihinde 13 çekirdek + 3 parola/oturum tablosu, toplam 16 uygulama tablosu Neon'a uygulandı. [Migration çalışma düzeni](./database-migrations.md) mevcut kısıtları ve henüz uygulanmamış güvenlik katmanlarını ayırır. Aşağıdaki akademik/profil tabloları ve `school_settings` sonraki aşamalar için planlanmıştır.
+2026-09-21 itibarıyla 13 çekirdek + 3 parola/oturum + 2 akademik takvim tablosu, toplam 18 uygulama tablosu Neon'a uygulandı. [Migration çalışma düzeni](./database-migrations.md) mevcut kısıtları ve henüz uygulanmamış güvenlik katmanlarını ayırır. Aşağıdaki profil tabloları, akademik yapının kalan bölümü ve `school_settings` sonraki aşamalar için planlanmıştır.
 
 ## Modelleme standartları
 
@@ -78,6 +78,18 @@ Bir davete birden fazla rol eklenebilir; davet ve roller aynı okula ait olmalı
 
 Değiştirilemeyen işlem geçmişidir. Ayrıntılar [denetim belgesinde](./audit-history-data-lifecycle.md) tanımlanmıştır.
 
+## Akademik takvim
+
+### `academic_years`
+
+Okula ait öğretim yılını ad, başlangıç/bitiş tarihi ve `DRAFT → ACTIVE → CLOSED → ARCHIVED` yaşam döngüsüyle tutar. Okul başına aynı anda yalnız bir aktif yıl olabilir. Kayıt fiziksel olarak silinmez; arşiv actor ve zamanıyla izlenir. Taslak yıl etkinleştirilmeden önce en az bir dönemi olmalıdır.
+
+### `academic_terms`
+
+Bir öğretim yılının sıralı dönemlerini tutar. Dönemin okul kimliği üst yılıyla bileşik foreign key üzerinden eşleşir; tarihleri yıl aralığında kalır ve arşivlenmemiş dönemlerle çakışamaz. Yıl başına yalnız bir aktif dönem bulunur. Kapalı/arşivli yılın geçersiz dönem durumları migration trigger'larıyla reddedilir.
+
+Her iki tablo da oluşturan, güncelleyen ve arşivleyen kullanıcı bağlarını taşır. Uygulama yazmaları okul permission'ı, optimistic revision ve aynı transaction içindeki `audit_events` kaydıyla yürür.
+
 ## Kişi profilleri
 
 Kimlik hesabı ile okul içindeki kişi/profil kavramı ayrılmalıdır:
@@ -99,7 +111,7 @@ users
           └── kişi profili bağlantıları
 
 schools
-  ├── academic_years ── terms
+  ├── academic_years ── academic_terms
   ├── classes / sections
   ├── subjects / courses
   ├── enrollments

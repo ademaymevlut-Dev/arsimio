@@ -1,6 +1,6 @@
 # Pilot kurulumu ve doğrulama
 
-Tarih: 2026-09-19. Durum: `DEVAM EDİYOR`. Üç domain/marka dilimi yayında. Kullanıcı yeni deployment'ın ve ilk Süper Admin girişinin başarılı olduğunu bildirdi; Safari ekran görüntüsü ana domainde korumalı platform panelini gösteriyor. Tam iki okul pilotu kabulü henüz tamamlanmadı.
+Tarih: 2026-09-21. Durum: `DEVAM EDİYOR`. Üç domain/marka dilimi yayında. Kullanıcı Süper Admin ile iki Okul Admin hesabını oluşturdu; iki okulda giriş/çıkışı ve çapraz okul giriş reddini doğruladı. Kaynak bazlı tüm olumsuz izolasyon ve oturum iptal testleri tamamlanmadığı için tam pilot kabulü henüz kapanmadı.
 
 ## Adresler ve giriş biçimi
 
@@ -10,7 +10,7 @@ Tarih: 2026-09-19. Durum: `DEVAM EDİYOR`. Üç domain/marka dilimi yayında. Ku
 | HorizonEdu | `horizonedu.vercel.app/login` | Kullanıcı adı + parola |
 | GjimCamEdu | `gjimcamedu.vercel.app/login` | Kullanıcı adı + parola |
 
-Üç adres aynı `arsimio` Vercel projesindedir. Okul adresleri kalıcı proje domainidir; başka projeden domain taşınmadı. DB'de iki okul ve iki VERIFIED ana okul domaini vardır. Her okulda SCHOOL_ADMIN, TEACHER, STUDENT, GUARDIAN ve DRIVER rolleri; platformda SUPER_ADMIN rolü bulunur. Henüz gerçek Okul Admin üyeliği veya okul kullanıcıları oluşturulmadı.
+Üç adres aynı `arsimio` Vercel projesindedir. Okul adresleri kalıcı proje domainidir; başka projeden domain taşınmadı. DB'de iki okul ve iki VERIFIED ana okul domaini vardır. Her okulda SCHOOL_ADMIN, TEACHER, STUDENT, GUARDIAN ve DRIVER rolleri; platformda SUPER_ADMIN rolü bulunur. Her iki okulun ilk Okul Admin üyeliği kullanıcı tarafından oluşturuldu; parolalar ve kullanıcı adları bu belgeye yazılmaz.
 
 Kullanıcının talebiyle mail/SMS ve doğrulama e-postası bağımlılığı kaldırıldı. Önceki Neon Auth origin hatası yeni kodda kullanılan bir servise ait değildir; yeni yayın için Neon Auth Domains ayarı gerekmez. Dış Neon Auth entegrasyonu, `neon_auth` şeması ve eski ortam değişkenleri silinmedi. Neon PostgreSQL kullanılmaya devam ediyor.
 
@@ -65,6 +65,7 @@ pnpm db:validate
 pnpm db:status
 pnpm db:verify             # Kontrollü DB; fixture'lar rollback edilir
 pnpm db:verify:auth        # Kontrollü DB; fixture'lar rollback edilir
+pnpm db:verify:academic-calendar # Akademik takvim; fixture'lar rollback edilir
 node scripts/inspect-pilot.mjs
 node scripts/verify-pilot-http.mjs               # Yerel sunucu açıkken
 node scripts/verify-pilot-http.mjs --production  # Yeni kod yayımlandıktan sonra
@@ -82,19 +83,20 @@ Seed Arsimio Vercel proje/team bağlantısını, domain sahipliği ve HTTPS'i ko
 
 | Kontrol | Yeni parolalı giriş sonucu |
 | --- | --- |
-| Birim test | 36 geçti |
+| Birim test | 55 geçti |
 | Çekirdek DB bütünlüğü | 36 geçti; fixture'lar rollback |
 | Auth DB testleri | Migration öncesi 18 prova, uygulama sonrası 17 geçti; fixture'lar rollback |
-| Migration | İki migration uygulandı; güncel |
+| Migration | Üç migration uygulandı; akademik takvim dahil güncel |
 | Prisma validate / TypeScript / lint / build | Geçti |
-| Yerel HTTP | 14 geçti; form türü, yetkisiz panel, bilinmeyen host/header sahteciliği |
+| Yerel HTTP | 25 geçti; yeni akademik route, form türü, yetkisiz panel, bilinmeyen host/header sahteciliği |
 | Yerel tarayıcı | Platform e-posta, iki okul username; hatalı okul girişinde genel hata, console error yok |
 | Gerçek Süper Admin / canlı giriş | Kullanıcı doğruladı; Safari'de platform paneli ve iki okul görüldü |
-| Canlı çıkış / eski oturumun reddi / okul girişleri | Henüz doğrulanmadı |
+| Okul giriş/çıkış ve yanlış okul girişi | Kullanıcı iki okulda doğruladı; HorizonEdu hesabı GjimCamEdu'da reddedildi |
+| Eski/iptal edilmiş oturumun reddi | Henüz doğrulanmadı |
 
 Tarayıcıda hatalı giriş testi yalnız var olmayan test kullanıcı adıyla yapıldı; hesap veya oturum oluşturulmadı. DB testleri gerçek browser/production oturum testinin yerine geçmez.
 
-Sıradaki işler: kullanıcı adıyla Okul Admin oluşturma, okul/üyelik/rol yönetim ekranları, iki okulda oturumlu yetki/izolasyon ve çıkış testleri, parola değişimi/kurtarma, logo yükleme, audit okuma, arşivleme/geri alma, ortam ayrımı ve kısıtlı DB/RLS, gerçek özel domain/Safari provası. Ana platformda Safari girişi görüldü; bu, farklı kök domain ve okul oturumu testlerinin yerine geçmez. Mail/SMS ve MFA sonraki güvenlik dilimidir.
+Sıradaki işler: okul/üyelik/rol yönetim ekranları, kaynak kimliğiyle çapraz okul okuma/yazma ve eski oturum reddi testleri, parola değişimi/kurtarma, logo yükleme, audit okuma, ortam ayrımı ve kısıtlı DB/RLS, gerçek özel domain/Safari provası. Akademik takvimin öğretim yılı/dönem CRUD'u hazırdır; Faz 1'in sonraki adımı seviye ve sınıf/şubelerdir. Mail/SMS ve MFA sonraki güvenlik dilimidir.
 
 ## Önceki yayın kaydı
 

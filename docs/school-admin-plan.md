@@ -1,8 +1,8 @@
 # Okul Admin çalışma alanı — analiz ve fazlı uygulama planı
 
 Tarih: 2026-09-20  
-Durum: `FAZ 0 TAMAMLANDI / YEREL`  
-Kapsam: Okul Admin uygulama kabuğu, bilgi mimarisi, ortak tablo düzeni ve modüllerin bağımlılık sırasına göre teslim planı. Faz 0 yerelde uygulanmıştır; Faz 1 ve sonrası hâlâ plan kapsamındadır.
+Durum: `FAZ 0 TAMAMLANDI · FAZ 1 / ADIM 1 TAMAMLANDI`
+Kapsam: Okul Admin uygulama kabuğu, bilgi mimarisi, ortak tablo düzeni ve modüllerin bağımlılık sırasına göre teslim planı. Faz 0 ile Faz 1'in öğretim yılı/dönem CRUD'u uygulanmıştır; Faz 1'in diğer akademik yapı adımları plan kapsamındadır.
 
 ## 1. Sonuç ve çalışma yöntemi
 
@@ -13,7 +13,7 @@ Okul Admin alanını bütünüyle yukarıdan aşağı ya da bütünüyle aşağ�
 3. **Her modülü dikey dilim olarak bitir:** Yalnız tablo şeması veya yalnız liste ekranı bırakılmaz. Listeleme, filtreleme, oluşturma, düzenleme, arşivleme, permission, tenant izolasyonu, audit ve test aynı dilimde tamamlanır.
 4. **Eski programı kaynak olarak kullan, ekranlarını kopyalama:** Alan bilgisi, kullanıcı alışkanlıkları ve iş kuralları korunur; güvenlik, veri modeli, dağınık modal akışı ve eski teknik kısıtlar taşınmaz.
 
-İlk geliştirme dilimi **Faz 0 — Okul kabuğu ve tablo temeli** tamamlandı. Sıradaki gerçek veri dilimi **Faz 1 — Akademik yapı** olmalıdır.
+İlk geliştirme dilimi **Faz 0 — Okul kabuğu ve tablo temeli** tamamlandı. **Faz 1 — Akademik yapı** içindeki ilk dikey dilim olan öğretim yılı ve dönem yönetimi de tamamlandı.
 
 ## 2. İncelenen eski yapı
 
@@ -170,6 +170,8 @@ Her yönetim listesinde, ihtiyaca göre şu parçalar bulunur:
 
 **Amaç:** Öğrenci, öğretmen, program ve yoklamanın bağlanacağı okul/yıl omurgasını kurmak.
 
+**Durum:** `ADIM 1 TAMAMLANDI` — Öğretim yılı ve dönem CRUD'u; tenant kapsamlı okuma/yazma, yaşam döngüsü, audit, optimistic concurrency ve DB kısıtlarıyla uygulandı. Seviye, sınıf/şube, ders, ders saati ve takvim adımları henüz başlamadı.
+
 **Önerilen kavramlar:**
 
 - Öğretim yılı ve dönemler.
@@ -181,7 +183,7 @@ Her yönetim listesinde, ihtiyaca göre şu parçalar bulunur:
 
 **İlk ekran sırası:**
 
-1. Öğretim yılları ve dönemler.
+1. ~~Öğretim yılları ve dönemler.~~ `TAMAMLANDI — 2026-09-21`
 2. Seviyeler ile sınıf/şubeler.
 3. Dersler.
 4. Sınıf/şube–ders planı.
@@ -190,7 +192,7 @@ Her yönetim listesinde, ihtiyaca göre şu parçalar bulunur:
 
 **Şema yönü:** `academic_years`, `academic_terms`, `grade_levels`, `class_sections`, `subjects`, `course_offerings`, `lesson_periods` ve takvim kayıtları. Nihai adlar migration tasarımında kesinleşir. Bütün benzersizlikler `school_id` ve gerekli yıl/dönem kapsamıyla kurulur.
 
-**Kabul:** Bir okulun yılı/sınıfı diğer okulda görünmez; aynı okulda tek aktif yıl kuralı güvenli yönetilir; geçmiş yıl düzenlenirken bugünkü yapı bozulmaz; kullanılan kayıt kalıcı silinmez.
+**Kabul:** Öğretim yılı/dönem diliminde bir okulun kaydı başka okul kapsamıyla değiştirilemez; aynı okulda tek aktif yıl ve yıl içinde tek aktif dönem DB seviyesinde korunur; tarihler yıl içinde ve çakışmasızdır; kayıtlar silinmez, kapatılır/arşivlenir ve bütün kritik değişiklikler audit üretir. Sınıf/şube kabulü kendi adımında tamamlanacaktır.
 
 ### Faz 2 — Personel, öğretmen ve okul kullanıcıları
 
@@ -322,7 +324,7 @@ Personel-öğretmen          Öğrenci-veli-yıllık kayıt
 
 Finans, akademik temel ve öğrenci kimliğinden sonra; servis ise öğrenci ve kullanıcı çekirdeğinden sonra paralel ürün dilimi olabilir. Buna rağmen aynı anda birden fazla yarım modül açılmamalıdır.
 
-## 8. Faz 0 teslim kaydı ve sıradaki backlog
+## 8. Faz 0 ve Faz 1 ilk dilim teslim kaydı
 
 Faz 0'da tamamlanan maddeler:
 
@@ -331,11 +333,12 @@ Faz 0'da tamamlanan maddeler:
 3. Ortak `PageHeader`, `DataTableShell`, `Table`, empty/loading/error temelleri eklendi. Gerçek filtre/sayfalama ve satır işlemleri ilk CRUD tablosuyla tamamlanacak.
 4. Dashboard'a yalnız mevcut okul/üyelik/permission bilgisi ve akademik kurulum kontrol listesi eklendi; sahte akademik metrik üretilmedi.
 5. Süper Admin okul detayına, ilk yöneticiyi kullanıcı adı ve geçici parola ile atomik olarak oluşturan form eklendi. İkinci “ilk yönetici” reddedilir; parola/hash audit'e yazılmaz.
-6. TypeScript, ESLint, 50 birim testi, production webpack build ve 6 rollback-only DB servis kontrolü başarılıdır. Gerçek okul yöneticisi oluşturulmadığı için korumalı okul kabuğunun tam oturumlu tarayıcı kabulü açık kalır.
+6. TypeScript, ESLint, 50 birim testi, production webpack build ve 6 rollback-only DB servis kontrolü başarılıdır.
+7. Kullanıcı iki okulun ilk yöneticilerini oluşturdu; iki okulda giriş/çıkışı ve HorizonEdu hesabıyla GjimCamEdu girişinin reddedilmesini doğruladı.
 
-Sıradaki geliştirme dilimi **Faz 1 — Öğretim Yılları ve Dönemler** CRUD'udur. Okul Admin'in sonraki kullanıcıları oluşturacağı ayrıntılı kullanıcı/rol yönetimi Faz 2'de kalır.
+Faz 1'in ilk diliminde `/academics/years` ekranı; öğretim yılı ve dönem oluşturma, taslak düzenleme, etkinleştirme, kapatma, arşivleme ve geri alma akışlarıyla eklendi. `academic_years` ve `academic_terms` migration'ı uygulandı; `academics.read/manage` izinleri mevcut okul yöneticilerine bağlandı. Bir sonraki Faz 1 dilimi **seviyeler ile sınıf/şubeler**dir. Okul Admin'in sonraki kullanıcıları oluşturacağı ayrıntılı kullanıcı/rol yönetimi Faz 2'de kalır.
 
-Faz 0 yeni akademik migration içermez. Böylece henüz kararı kesinleşmemiş öğrenci, finans veya servis alanlarına erken şema borcu eklenmemiştir.
+Bu dilimde yalnız kesinleşmiş akademik takvim omurgası eklendi; öğrenci, finans veya servis alanlarına erken şema borcu eklenmedi.
 
 ## 9. Uygulama boyunca geçerli güvenlik ve veri kuralları
 

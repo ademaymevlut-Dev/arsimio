@@ -19,7 +19,7 @@ Bu belge yaşayan plandır. Sıralama, güvenli bir temel üzerinde küçük ama
 
 Faz 1 ve Faz 2'nin minimum çalışan kapsamı birlikte teslim edilecek: iki kurgusal okul, aynı Vercel projesine bağlı iki adres, ayrı marka/giriş, okul bazlı yetkiler ve denetlenmiş veri izolasyonu. Ayrıntılı sıra ve kabul testleri [iki okul pilotu planında](./two-school-pilot.md).
 
-Sıra: ortam/domain doğrulaması → iki okul seed'i ve tenant çözümleme → parolalı giriş ve yetki → kullanıcı/okul yönetimi ve audit → DB izolasyonu → iki adreste uçtan uca kabul. Domain/marka ve parolalı giriş dilimi yayında; kullanıcı Süper Admin aktivasyonunu ve canlı girişini doğruladı. İlk Okul Admin oluşturma ve okul kabuğu yerelde hazır; gerçek hesapların kullanıcı tarafından oluşturulması, sonraki okul kullanıcı yönetimi, canlı çıkış/oturum iptali ve tam pilot kabulü açıktır. Ayrıntılar [kurulum notlarında](./pilot-setup.md) ve [giriş kararında](./password-auth.md).
+Sıra: ortam/domain doğrulaması → iki okul seed'i ve tenant çözümleme → parolalı giriş ve yetki → kullanıcı/okul yönetimi ve audit → DB izolasyonu → iki adreste uçtan uca kabul. Domain/marka ve parolalı giriş dilimi yayında; kullanıcı Süper Admin aktivasyonunu, iki okulun ilk yöneticisini, iki okulda giriş/çıkışı ve çapraz okul giriş reddini doğruladı. Sonraki okul kullanıcı yönetimi, eski oturum iptali, kaynak bazlı olumsuz izolasyon ve tam pilot kabulü açıktır. Ayrıntılar [kurulum notlarında](./pilot-setup.md) ve [giriş kararında](./password-auth.md).
 
 2026-09-19 öncelik güncellemesi: kullanıcı önce Süper Admin temasını ve mevcut iki okulun yönetimini istedi. [İlk çalışma alanı](./platform-workspace.md) yerelde uygulandı. 2026-09-20 kararıyla logo/görseller ve giriş şablonları ortak tasarım daha fazla oturana kadar ertelendi. Süper Admin'e ilk Okul Admin oluşturma, Okul Admin'e de [Faz 0 çalışma alanı](./school-admin-plan.md) yerelde eklendi. Sonraki okul kullanıcılarının yönetimi Faz 2'de açık kalır.
 
@@ -46,7 +46,7 @@ Sıra: ortam/domain doğrulaması → iki okul seed'i ve tenant çözümleme →
 - [x] `TAMAMLANDI` E-posta/username ayrımı, scrypt parola hash'i, DB oturumları ve bir defalık terminalden Süper Admin aktivasyon kodu.
 - [x] `TAMAMLANDI` `password_auth` migration'ı, hesap/okul bazlı rate limit, sunucu origin kontrolü, giriş/çıkış audit ve rollback'li auth DB testleri.
 - [x] `TAMAMLANDI` Yeni yayın, ilk Süper Admin parola kurulumu ve canlı giriş; kullanıcı bildirimi ve Safari platform paneli ekran görüntüsüyle doğrulandı (2026-09-19).
-- [ ] `SIRADAKİ` Canlı çıkış, eski oturumun reddi ve yeniden giriş kabul testi; okul hesapları oluşturulduğunda iki okulda oturumlu izolasyon kontrolü.
+- [ ] `DEVAM EDİYOR` İki okulda giriş/çıkış ve yanlış okul girişi kullanıcı tarafından doğrulandı. Eski/iptal edilmiş oturumun reddi, üyelik askıya alma ve kaynak kimliğiyle çapraz okul okuma/yazma kabulü açık.
 - [ ] `SIRADAKİ` Development/preview/production DB branch ayrımını kur ve doğrula; şu an ortak başlangıç bağlantısı kullanılıyor.
 - [ ] `PLANLANDI` Gerçek okul kabulünden önce özel test alan adı ve Safari oturum provasını tamamla.
 - [ ] `PLANLANDI` İlk panel guard'larını bütün iş modüllerinin Server Action ve Route Handler'larına genişlet.
@@ -58,7 +58,7 @@ Sıra: ortam/domain doğrulaması → iki okul seed'i ve tenant çözümleme →
 - [x] `TAMAMLANDI / YEREL` Süper Admin ilk çalışma alanı: ortak açık tema, okul/domain listesi, arama/filtre, okul adı/resmî unvan ve üç marka renginin önizleme/kaydetme akışı. İki mevcut okul doğrulandı; çoğaltılmadı. [Teslim ve test sınırları](./platform-workspace.md). Henüz yayımlanmadı.
 - [x] `TAMAMLANDI / YEREL` Eski CSS light paleti globals.css'e taşındı; primary/secondary/background/accent rolleri, ortak status üçlüleri ve UI Kit oluşturuldu. Dark mod kaldırıldı. Modal, tooltip, checkbox ve temel form bileşenleri eklendi. [Kararlar ve 46 birim / 23 HTTP testi](./design-system.md).
 - [ ] `SIRADAKİ` Süper Admin okul oluşturma ekranı ve kontrollü domain kurulum akışı.
-- [x] `TAMAMLANDI / YEREL` Süper Admin okul detayından ilk Okul Admin'i kullanıcı adı/geçici parola ile tanımlama. User, credential, membership, SCHOOL_ADMIN rolü ve audit tek transaction'da; ikinci ilk yönetici reddedilir, parola/hash audit'e girmez. 6/6 rollback-only DB doğrulaması geçti; gerçek okul hesabı oluşturulmadı.
+- [x] `TAMAMLANDI` Süper Admin okul detayından ilk Okul Admin'i kullanıcı adı/geçici parola ile tanımlama. User, credential, membership, SCHOOL_ADMIN rolü ve audit tek transaction'da; ikinci ilk yönetici reddedilir, parola/hash audit'e girmez. 6/6 rollback-only DB doğrulaması geçti; kullanıcı iki pilot okul hesabını oluşturup giriş davranışını doğruladı.
 - [x] `TAMAMLANDI` İki farklı marka rengiyle responsive giriş ve korumalı ilk panel sayfaları.
 - [ ] `PLANLANDI` Okul alan adı doğrulama ve durum yönetimi.
 - [ ] `DEVAM EDİYOR` Marka yönetimi: üç renk düzenleme ve girişe uygulama yerelde hazır. Logo/ikon/kapak görseli yükleme, kalıcı dosya depolaması ve okul bazlı giriş şablonu seçimi sıradaki dilim.
@@ -68,13 +68,13 @@ Sıra: ortam/domain doğrulaması → iki okul seed'i ve tenant çözümleme →
 
 ## Faz 3 — Kullanıcı ve akademik çekirdek
 
-Okul Admin ekranlarının ayrıntılı uygulama sırası [Okul Admin faz planında](./school-admin-plan.md) tutulur. Yeni akademik şema kurmadan `1400px` kabuk, permission tabanlı menü ve ortak tablo temeli tamamlandı; ilk gerçek veri dilimi öğretim yılları ve dönemlerdir.
+Okul Admin ekranlarının ayrıntılı uygulama sırası [Okul Admin faz planında](./school-admin-plan.md) tutulur. `1400px` kabuk, permission tabanlı menü ve ortak tablo temelinden sonra ilk gerçek veri dilimi olan öğretim yılları/dönemler tamamlandı.
 
 - [ ] `PLANLANDI` Pilotun kullanıcı oluşturma/üyelik/rol akışını genişlet; ayrıntılı kullanıcı yönetimi ve kaynak bazlı yetkiler.
 - [ ] `PLANLANDI` Parola değiştirme/sıfırlama ve oturum iptali. Mail/SMS, davet teslimi ve MFA daha sonra eklenecek.
 - [ ] `PLANLANDI` Çalışan ve öğretmen profilleri.
 - [ ] `PLANLANDI` Öğrenci ve veli profilleri ile doğrulanmış bağlantılar.
-- [ ] `PLANLANDI` Akademik yıl, dönem, sınıf, şube ve dersler.
+- [ ] `DEVAM EDİYOR` Akademik yapı: öğretim yılı/dönem CRUD'u tamamlandı; seviye, sınıf/şube ve dersler sırada. Tek aktif yıl/dönem, tarihler, lifecycle, tenant permission ve audit DB/servis seviyesinde korunur.
 - [ ] `PLANLANDI` Öğrenci kayıtları ve öğretmen atamaları.
 - [ ] `PLANLANDI` Toplu içe aktarma için doğrulama ve hata raporu.
 

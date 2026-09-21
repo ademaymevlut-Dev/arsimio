@@ -86,6 +86,7 @@ for (const [host, name] of [
 ]) {
   await check(host, "/login", 200, name);
   await check(host, "/dashboard", 307);
+  await check(host, "/academics/years", 307);
   await check(host, "/platform", 404);
   await check(host, "/platform/schools", 404);
   await check(host, "/platform/ui", 404);

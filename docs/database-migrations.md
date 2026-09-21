@@ -20,7 +20,9 @@ Oluşturulan 13 uygulama tablosu:
 
 `20260919000200_password_auth` da 2026-09-19'da uygulandı: okul üyeliğine okul kapsamında benzersiz username eklendi, kullanıcı e-postası nullable oldu; `user_credentials`, `auth_sessions`, `auth_throttles` tablolarıyla toplam 16 uygulama tablosuna ulaşıldı. Oturumun kullanıcı/üyelik/okul bağlantısı bileşik FK ile korunur; username, token hash, sayaç ve süre kısıtları SQL'dedir. Önce 18 kontrollü rollback provası, uygulama sonrası 17 auth DB kontrolü geçti. Veri silme/reset yapılmadı; `neon_auth` şemasına dokunulmadı.
 
-Prisma ayrıca uygulanan migration'ları `_prisma_migrations` tablosunda izler. Akademik ve operasyon tabloları ilgili modüller geliştikçe eklenecek. Pilot seed'i iki okul, doğrulanmış domainler, roller/permission'lar ve bir PENDING Süper Admin hesabı oluşturdu. Sonrasında kullanıcı kendi terminalinde ilk parolasını belirledi ve canlı Süper Admin girişini doğruladı. Okul kullanıcı hesapları henüz oluşturulmadı.
+`20260921000100_add_academic_calendar`, 2026-09-21'de uygulandı. `academic_years` ve `academic_terms` ile uygulama tablo sayısı 18'e çıktı; `academics.read` ve `academics.manage` izinleri eklenip mevcut `SCHOOL_ADMIN` rollerine bağlandı. Okul/yıl bileşik foreign key'i çapraz okul dönem ilişkisini engeller. Kısmi unique indexler okul başına tek aktif yıl ve yıl başına tek aktif dönem sağlar. Trigger'lar yaşam döngüsünü, dönemlerin yıl sınırında kalmasını, tarih çakışmamasını ve kapalı/arşivli yıl durumlarını korur. Beş rollback-only gerçek DB kontrolü geçti; test verisi tutulmadı.
+
+Prisma ayrıca uygulanan migration'ları `_prisma_migrations` tablosunda izler. Diğer akademik ve operasyon tabloları ilgili modüller geliştikçe eklenecek. Pilot seed'i iki okul, doğrulanmış domainler, roller/permission'lar ve bir PENDING Süper Admin hesabı oluşturdu. Sonrasında kullanıcı kendi terminalinde Süper Admin parolasını belirledi; iki okul için ilk yöneticileri oluşturup giriş/çıkış ve çapraz okul giriş reddini doğruladı. Parolalar belgelere yazılmaz.
 
 ## İncelemede düzeltilen kurallar
 
@@ -91,6 +93,8 @@ pnpm db:status
 İlk uygulama öncesi `node scripts/verify-core-schema.mjs --preview-migration` kullanıldı. Bu seçenek yalnızca `public` şeması boşken ilk migration'ın tamamını rollback içinde dener; artık oluşturulmuş veritabanında normal `pnpm db:verify` kullanılır.
 
 `pnpm db:verify:auth` parola/oturum, çapraz okul/hostname, üyelik ve credential iptali, rate limit ve bir defalık bootstrap için 17 kontrol çalıştırır. Test kayıtları rollback edilir; gerçek kullanıcının parolası değiştirilmez. HTTP/tarayıcı ve production kabulü ayrı test katmanlarıdır. Güncel kurulum [parolalı giriş belgesindedir](./password-auth.md).
+
+`pnpm db:verify:academic-calendar` akademik izinleri, dönem çakışmasını, tek aktif yıl geçişini, otomatik kapanan dönemin audit'ini ve çapraz okul yazma reddini gerçek servisler üzerinden kontrol eder. Bütün fixture ve yazmalar transaction sonunda rollback edilir.
 
 ## Kaynaklar
 

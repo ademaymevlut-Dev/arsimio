@@ -2,7 +2,7 @@
 
 Tarih: 2026-09-19. Durum: `DEVAM EDİYOR`; okul/domain altyapısı ve ilk giriş ekranları yayında. Tam pilot kabulü henüz tamamlanmadı.
 
-Güncel karar: mail/SMS ve Neon Auth tabanlı aktivasyon ertelendi. Süper Admin e-posta + parola, bütün okul rolleri username + parola kullanır. İlk Okul Admin oluşturma arayüzü ve servisleri yerelde tamamlandı; gerçek okul hesaplarının kullanıcı tarafından oluşturulması ve tam oturumlu pilot kabulü açık. [Parolalı giriş](./password-auth.md) bu konudaki güncel kaynaktır; çalışma günlüğündeki önceki provider denemeleri tarihsel kayıttır.
+Güncel karar: mail/SMS ve Neon Auth tabanlı aktivasyon ertelendi. Süper Admin e-posta + parola, bütün okul rolleri username + parola kullanır. İlk Okul Admin oluşturma arayüzü ve servisleri tamamlandı; kullanıcı iki okulun yöneticilerini oluşturup giriş/çıkışı ve bir okul hesabının diğer okul girişinde reddedilmesini 2026-09-21'de doğruladı. [Parolalı giriş](./password-auth.md) bu konudaki güncel kaynaktır; çalışma günlüğündeki önceki provider denemeleri tarihsel kayıttır.
 
 ## Hedef ve mevcut durum
 
@@ -65,7 +65,7 @@ Vercel tarafında iki uygun `.vercel.app` adı aynı Arsimio projesine domain/al
 
 - Platformda e-posta + atanmış SUPER_ADMIN rolü, okulda `(school_id, username)` üzerinden kimliği çöz. Parola doğrulamasını sunucuda yap. E-posta eşitliği hesap birleştirme veya yetki verme gerekçesi olmasın.
 - İlk Süper Admin parolasını bir defalık yerel operatör komutuyla belirle. İlk kayıt olan kişiyi otomatik Süper Admin yapma; depo/seed içinde parola tutma.
-- Süper Admin okul detayında her okulun yalnız ilk Okul Admin hesabını oluşturur. Akış yerelde hazırdır; gerçek hesaplar henüz oluşturulmadı. Sonraki kullanıcı/üyelik/rol yönetimi Okul Admin alanında geliştirilecek.
+- Süper Admin okul detayında her okulun yalnız ilk Okul Admin hesabını oluşturur. İki pilot hesabı kullanıcı tarafından oluşturuldu ve okul kapsamlı giriş davranışı doğrulandı. Sonraki kullanıcı/üyelik/rol yönetimi Okul Admin alanında geliştirilecek.
 - Mail/SMS ve davet kabulü sonra: token, son kullanma, iptal, alıcı ve okul kapsamı kontrolleriyle tek kullanımlık akış. Davet tabloları bu amaçla korunur.
 - Aktif kullanıcı + aktif okul + aktif üyelik + permission + hedef kayıt okulu kontrollerini merkezi sunucu yardımcılarında uygula. UI'da düğme gizlemek yeterli değil.
 - Rol/üyelik iptalini eski oturumla aşmayı engelle. Yanlış okulda giriş yapan kullanıcıya o okulun özel verilerini göstermeden erişim reddi sun.
@@ -121,8 +121,8 @@ Testler yalnız tarayıcı ekranına bakılarak tamamlanmış sayılmayacak: sun
 ## Kesinleştirilecek bilgiler
 
 - İki test hostname'i kesinleşti ve bağlandı; sonraki özel domainler ayrıca doğrulanacak.
-- Süper Admin sahibi yerel terminalde parolasını belirledi ve canlı girişini doğruladı. İki Okul Admin test kimliği henüz belirlenmedi; bunlar yeni okul detay ekranından kullanıcı tarafından oluşturulacak ve şifreler belgeye yazılmayacak.
-- Parolalı giriş yayında; canlı çıkış/oturum iptali ve iki okul kullanıcısıyla kabul testleri bekliyor.
+- Süper Admin sahibi yerel terminalde parolasını belirledi ve canlı girişini doğruladı. İki Okul Admin test kimliği okul detay ekranından oluşturuldu; kimlik ve şifreler belgeye yazılmadı.
+- Kullanıcı iki okul için giriş/çıkışı ve HorizonEdu hesabının GjimCamEdu girişinde reddedilmesini doğruladı. Eski/iptal edilmiş oturum, üyelik askıya alma ve kaynak kimliğiyle çapraz okul okuma/yazma gibi olumsuz kabul testleri hâlâ açıktır.
 - Gerçek özel domain provası için sahip olunan test adresi.
 
 Bu bilgiler olmadan mimari/tenant yardımcıları tasarlanabilir; dış servis bağlantıları ve gerçek hesap davetleri varsayımla yapılmayacak.
