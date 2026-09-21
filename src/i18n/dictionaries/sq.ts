@@ -142,27 +142,20 @@ const sq = {
     translationsHelp:
       "Plotësoni të tre emrat e shfaqjes për këtë regjistrim të vetëm të semestrit.",
     createTerm: "Krijo semestrin",
-    activateTerm: "Aktivizo semestrin",
-    closeTerm: "Mbyll semestrin",
     closeYear: "Mbyll vitin",
     restoreDraft: "Rikthe si draft",
     activateYearTitle: "Të aktivizohet {name}?",
     activateYearDescription:
-      "Nëse ka një vit tjetër aktiv, ai dhe semestrat e tij mbyllen. Ky vit bëhet konteksti akademik aktiv.",
+      "Të gjithë semestrat e paarkivuar të këtij viti aktivizohen së bashku. Nëse ka një vit tjetër aktiv, ai dhe semestrat e tij mbyllen.",
     closeYearTitle: "Të mbyllet {name}?",
     closeYearDescription:
-      "Edhe semestri aktiv mbyllet. Të dhënat historike ruhen dhe viti nuk riaktivizohet.",
+      "Të gjithë semestrat e vitit mbyllen së bashku. Të dhënat historike ruhen dhe viti nuk riaktivizohet.",
     archiveYearTitle: "Të arkivohet {name}?",
     archiveYearDescription:
       "Viti dhe semestrat e paarkivuar mbeten si të dhëna historike. Viti aktiv duhet mbyllur më parë.",
     restoreYearTitle: "Të rikthehet {name}?",
     restoreYearDescription:
       "Viti bëhet draft. Semestrat e arkivuar nuk rikthehen automatikisht; rikthejini veçmas.",
-    activateTermTitle: "Të aktivizohet {name}?",
-    activateTermDescription:
-      "Çdo semestër tjetër aktiv në këtë vit mbyllet automatikisht.",
-    closeTermTitle: "Të mbyllet {name}?",
-    closeTermDescription: "Semestri mbyllet dhe të dhënat historike ruhen.",
     archiveTermTitle: "Të arkivohet {name}?",
     archiveTermDescription:
       "Semestri nuk fshihet përgjithmonë; ruhet si e dhënë historike.",
@@ -191,7 +184,8 @@ const sq = {
     createFirstYear: "Krijo vitin e parë shkollor",
     termsTitle: "Semestrat e {name}",
     termsDescription:
-      "Renditja dhe datat krijojnë kontekstin e semestrit për mësimet, regjistrimin dhe orarin.",
+      "Semestrat menaxhohen së bashku me vitin. Notat, komentet dhe veprimet e tjera lidhen automatikisht me semestrin e duhur sipas datës së regjistrimit.",
+    termLifecycleWithYear: "Menaxhohet së bashku me vitin",
     termsFooter: "Shfaqen {count} semestra",
     noTerms: "Nuk ka semestra për këtë vit",
     noTermsDraft: "Krijoni të paktën një semestër para aktivizimit të vitit.",
@@ -218,14 +212,13 @@ const sq = {
     overlapMessage: "Periudha mbivendoset me “{name}”.",
     overlapField: "Semestrat nuk mund të mbivendosen.",
     yearNeedsTerm: "Shtoni të paktën një semestër para aktivizimit të vitit.",
-    activeTermRule: "Mund të aktivizohet vetëm një semestër draft në vitin aktiv.",
+    termLifecycleManagedByYear:
+      "Semestrat nuk aktivizohen ose mbyllen veçmas; menaxhohen së bashku me vitin shkollor.",
     restoreTermRule: "Semestri mund të rikthehet vetëm kur viti është draft.",
     yearActivated: "Viti shkollor u aktivizua.",
     yearClosed: "Viti shkollor u mbyll.",
     yearArchived: "Viti shkollor u arkivua.",
     yearRestored: "Viti shkollor u rikthye si draft.",
-    termActivated: "Semestri u aktivizua.",
-    termClosed: "Semestri u mbyll.",
     termArchived: "Semestri u arkivua.",
     termRestored: "Semestri u rikthye si draft.",
     invalidRecord: "Identiteti ose versioni i regjistrimit është i pavlefshëm.",

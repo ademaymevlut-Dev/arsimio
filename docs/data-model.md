@@ -86,7 +86,7 @@ Okula ait öğretim yılını ad, başlangıç/bitiş tarihi ve `DRAFT → ACTIV
 
 ### `academic_terms`
 
-Bir öğretim yılının sıralı dönemlerini tutar. Dönemin okul kimliği üst yılıyla bileşik foreign key üzerinden eşleşir; tarihleri yıl aralığında kalır ve arşivlenmemiş dönemlerle çakışamaz. Yıl başına yalnız bir aktif dönem bulunur. Kapalı/arşivli yılın geçersiz dönem durumları migration trigger'larıyla reddedilir.
+Bir öğretim yılının sıralı dönemlerini tutar. Dönemin okul kimliği üst yılıyla bileşik foreign key üzerinden eşleşir; tarihleri yıl aralığında kalır ve arşivlenmemiş dönemlerle çakışamaz. Dönemler ayrı ayrı etkinleştirilmez: yıl etkinleşince arşivlenmemiş dönemlerin tamamı etkinleşir, yıl kapanınca birlikte kapanırlar. Not, yorum, yoklama ve benzeri tarihli bir kaydın dönemi; okulun saat dilimindeki işlem tarihi ile dönem başlangıç/bitiş aralığından otomatik çözülür. Kapalı/arşivli yılın geçersiz dönem durumları migration trigger'larıyla reddedilir.
 
 ### `academic_term_translations`
 

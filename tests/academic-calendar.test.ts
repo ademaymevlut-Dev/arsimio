@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  dateOnlyInTimeZone,
   dateOnlyValue,
   parseAcademicTerm,
   parseAcademicTransition,
@@ -21,6 +22,18 @@ test("date-only values reject rollover dates and round-trip in UTC", () => {
   assert.equal(parseDateOnly("2026-02-30"), null);
   assert.equal(parseDateOnly("21/09/2026"), null);
   assert.equal(dateOnlyValue(parseDateOnly("2026-09-21")!), "2026-09-21");
+});
+
+test("academic dates use the school's local calendar day", () => {
+  const instant = new Date("2026-09-20T22:30:00.000Z");
+  assert.equal(
+    dateOnlyValue(dateOnlyInTimeZone(instant, "Europe/Belgrade")),
+    "2026-09-21",
+  );
+  assert.equal(
+    dateOnlyValue(dateOnlyInTimeZone(instant, "America/New_York")),
+    "2026-09-20",
+  );
 });
 
 test("academic year accepts create and update identities with bounded dates", () => {

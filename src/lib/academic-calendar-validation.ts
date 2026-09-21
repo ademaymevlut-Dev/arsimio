@@ -68,6 +68,23 @@ export function dateOnlyValue(value: Date) {
   return value.toISOString().slice(0, 10);
 }
 
+export function dateOnlyInTimeZone(value: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    calendar: "gregory",
+    numberingSystem: "latn",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const values = Object.fromEntries(
+    parts
+      .filter(({ type }) => type === "year" || type === "month" || type === "day")
+      .map(({ type, value: partValue }) => [type, Number(partValue)]),
+  );
+  return new Date(Date.UTC(values.year, values.month - 1, values.day));
+}
+
 function boundedDateRange(
   startDate: Date | null,
   endDate: Date | null,

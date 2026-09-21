@@ -141,27 +141,20 @@ const en = {
     translationsHelp:
       "Enter all three display names for this single term record.",
     createTerm: "Create term",
-    activateTerm: "Activate term",
-    closeTerm: "Close term",
     closeYear: "Close year",
     restoreDraft: "Restore as draft",
     activateYearTitle: "Activate {name}?",
     activateYearDescription:
-      "If another academic year is active, it and its terms will be closed. This year becomes the active academic context.",
+      "All non-archived terms in this year become active together. If another academic year is active, it and its terms will be closed.",
     closeYearTitle: "Close {name}?",
     closeYearDescription:
-      "The active term will also be closed. Historical records are retained and the year cannot be reactivated.",
+      "All terms in the year will be closed together. Historical records are retained and the year cannot be reactivated.",
     archiveYearTitle: "Archive {name}?",
     archiveYearDescription:
       "The year and its non-archived terms remain as historical records. An active year must be closed first.",
     restoreYearTitle: "Restore {name}?",
     restoreYearDescription:
       "The year becomes a draft. Archived terms are not restored automatically; restore the required terms individually.",
-    activateTermTitle: "Activate {name}?",
-    activateTermDescription:
-      "Any other active term in this year will be closed automatically.",
-    closeTermTitle: "Close {name}?",
-    closeTermDescription: "The term is closed and its historical records are retained.",
     archiveTermTitle: "Archive {name}?",
     archiveTermDescription:
       "The term is not permanently deleted; it remains as a historical record.",
@@ -190,7 +183,8 @@ const en = {
     createFirstYear: "Create first academic year",
     termsTitle: "Terms for {name}",
     termsDescription:
-      "Order and dates establish the term context for lessons, enrollment, and scheduling modules.",
+      "Terms follow the academic year. Grades, comments, and other records are linked to the correct term automatically by their record date.",
+    termLifecycleWithYear: "Managed with the year",
     termsFooter: "{count} terms shown",
     noTerms: "No terms for this year",
     noTermsDraft: "Create at least one term before activating the academic year.",
@@ -217,14 +211,13 @@ const en = {
     overlapMessage: "The date range overlaps with “{name}”.",
     overlapField: "Terms cannot overlap.",
     yearNeedsTerm: "Add at least one term before activating the academic year.",
-    activeTermRule: "Only a draft term in the active academic year can be activated.",
+    termLifecycleManagedByYear:
+      "Terms are not activated or closed separately; they are managed together with the academic year.",
     restoreTermRule: "A term can only be restored while its academic year is a draft.",
     yearActivated: "Academic year activated.",
     yearClosed: "Academic year closed.",
     yearArchived: "Academic year archived.",
     yearRestored: "Academic year restored as a draft.",
-    termActivated: "Term activated.",
-    termClosed: "Term closed.",
     termArchived: "Term archived.",
     termRestored: "Term restored as a draft.",
     invalidRecord: "The record identity or version is invalid.",

@@ -192,7 +192,7 @@ Her yönetim listesinde, ihtiyaca göre şu parçalar bulunur:
 
 **Şema yönü:** `academic_years`, `academic_terms`, `academic_term_translations`, `grade_levels`, `class_sections`, `subjects`, `subject_translations`, `course_offerings`, `lesson_periods` ve takvim kayıtları. Dile göre ayrı iş kaydı/ID üretilmez; çevrilebilir katalog adları `(entity_id, locale)` tablolarında tutulur. Nihai adlar migration tasarımında kesinleşir. Bütün benzersizlikler `school_id` ve gerekli yıl/dönem kapsamıyla kurulur.
 
-**Kabul:** Öğretim yılı/dönem diliminde bir okulun kaydı başka okul kapsamıyla değiştirilemez; aynı okulda tek aktif yıl ve yıl içinde tek aktif dönem DB seviyesinde korunur; tarihler yıl içinde ve çakışmasızdır; kayıtlar silinmez, kapatılır/arşivlenir ve bütün kritik değişiklikler audit üretir. Sınıf/şube kabulü kendi adımında tamamlanacaktır.
+**Kabul:** Öğretim yılı/dönem diliminde bir okulun kaydı başka okul kapsamıyla değiştirilemez; aynı okulda tek aktif yıl DB seviyesinde korunur. Yıl etkinleşince arşivlenmemiş dönemlerin tamamı birlikte etkinleşir; dönemler elle etkinleştirilip kapatılmaz. Tarihli kayıtlar okul saat dilimindeki tarihe ve çakışmasız dönem aralıklarına göre doğru döneme otomatik bağlanır. Kayıtlar silinmez, yıl ile birlikte kapatılır/arşivlenir ve bütün kritik değişiklikler audit üretir. Sınıf/şube kabulü kendi adımında tamamlanacaktır.
 
 ### Faz 2 — Personel, öğretmen ve okul kullanıcıları
 
@@ -336,7 +336,7 @@ Faz 0'da tamamlanan maddeler:
 6. TypeScript, ESLint, 50 birim testi, production webpack build ve 6 rollback-only DB servis kontrolü başarılıdır.
 7. Kullanıcı iki okulun ilk yöneticilerini oluşturdu; iki okulda giriş/çıkışı ve HorizonEdu hesabıyla GjimCamEdu girişinin reddedilmesini doğruladı.
 
-Faz 1'in ilk diliminde `/academics/years` ekranı; öğretim yılı ve dönem oluşturma, taslak düzenleme, etkinleştirme, kapatma, arşivleme ve geri alma akışlarıyla eklendi. `academic_years` ve `academic_terms` migration'ı uygulandı; `academics.read/manage` izinleri mevcut okul yöneticilerine bağlandı. Bir sonraki Faz 1 dilimi **seviyeler ile sınıf/şubeler**dir. Okul Admin'in sonraki kullanıcıları oluşturacağı ayrıntılı kullanıcı/rol yönetimi Faz 2'de kalır.
+Faz 1'in ilk diliminde `/academics/years` ekranı; öğretim yılı ve dönem oluşturma, taslak düzenleme, yıl bazında etkinleştirme/kapatma, arşivleme ve geri alma akışlarıyla eklendi. Dönem yaşam döngüsü yıl ile birlikte ilerler; dönem seçimi tarihli iş kaydının okul saat dilimindeki tarihinden çözülür. `academic_years` ve `academic_terms` migration'ı uygulandı; `academics.read/manage` izinleri mevcut okul yöneticilerine bağlandı. Bir sonraki Faz 1 dilimi **seviyeler ile sınıf/şubeler**dir. Okul Admin'in sonraki kullanıcıları oluşturacağı ayrıntılı kullanıcı/rol yönetimi Faz 2'de kalır.
 
 Bu dilimde yalnız kesinleşmiş akademik takvim omurgası eklendi; öğrenci, finans veya servis alanlarına erken şema borcu eklenmedi.
 

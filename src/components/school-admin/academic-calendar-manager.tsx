@@ -14,7 +14,6 @@ import {
   CalendarClock,
   CalendarDays,
   CheckCircle2,
-  CircleDot,
   LockKeyhole,
   Pencil,
   Plus,
@@ -686,9 +685,15 @@ function TermActions({
     return (
       <span className="text-xs text-muted-foreground">{common.readOnly}</span>
     );
+  if (year.status !== "DRAFT")
+    return (
+      <span className="text-xs text-muted-foreground">
+        {academic.termLifecycleWithYear}
+      </span>
+    );
   return (
     <div className="flex flex-wrap justify-end gap-2">
-      {year.status === "DRAFT" && term.status === "DRAFT" && (
+      {term.status === "DRAFT" && (
         <TermFormDialog
           key={term.revision}
           year={year}
@@ -700,40 +705,7 @@ function TermActions({
           }
         />
       )}
-      {year.status === "ACTIVE" && term.status === "DRAFT" && (
-        <LifecycleDialog
-          entity="term"
-          transition="activate"
-          id={term.id}
-          revision={term.revision}
-          title={formatMessage(academic.activateTermTitle, { name: term.name })}
-          description={academic.activateTermDescription}
-          confirmLabel={academic.activateTerm}
-          confirmVariant="success"
-          trigger={
-            <Button variant="success" size="sm">
-              <CircleDot aria-hidden /> {common.activate}
-            </Button>
-          }
-        />
-      )}
-      {term.status === "ACTIVE" && (
-        <LifecycleDialog
-          entity="term"
-          transition="close"
-          id={term.id}
-          revision={term.revision}
-          title={formatMessage(academic.closeTermTitle, { name: term.name })}
-          description={academic.closeTermDescription}
-          confirmLabel={academic.closeTerm}
-          trigger={
-            <Button variant="outline" size="sm">
-              <LockKeyhole aria-hidden /> {common.close}
-            </Button>
-          }
-        />
-      )}
-      {(term.status === "DRAFT" || term.status === "CLOSED") && (
+      {term.status === "DRAFT" && (
         <LifecycleDialog
           entity="term"
           transition="archive"
@@ -750,7 +722,7 @@ function TermActions({
           }
         />
       )}
-      {year.status === "DRAFT" && term.status === "ARCHIVED" && (
+      {term.status === "ARCHIVED" && (
         <LifecycleDialog
           entity="term"
           transition="restore"

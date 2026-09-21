@@ -141,28 +141,20 @@ export const tr = {
     translationsHelp:
       "Tek bir dönem kaydı için üç dilde görünen adı eksiksiz girin.",
     createTerm: "Dönem oluştur",
-    activateTerm: "Dönemi etkinleştir",
-    closeTerm: "Dönemi kapat",
     closeYear: "Yılı kapat",
     restoreDraft: "Taslağa geri al",
     activateYearTitle: "{name} etkinleştirilsin mi?",
     activateYearDescription:
-      "Okulda başka bir aktif öğretim yılı varsa dönemleriyle birlikte kapatılır. Bu yıl aktif akademik bağlam olur.",
+      "Bu yılın arşivlenmemiş bütün dönemleri birlikte etkinleşir. Okulda başka bir aktif öğretim yılı varsa dönemleriyle birlikte kapatılır.",
     closeYearTitle: "{name} kapatılsın mı?",
     closeYearDescription:
-      "Aktif dönem de kapatılır. Geçmiş kayıtlar korunur; yıl yeniden etkinleştirilmez.",
+      "Yılın bütün dönemleri birlikte kapatılır. Geçmiş kayıtlar korunur; yıl yeniden etkinleştirilmez.",
     archiveYearTitle: "{name} arşivlensin mi?",
     archiveYearDescription:
       "Yıl ve arşivlenmemiş dönemleri listede geçmiş kayıt olarak kalır. Etkin yıl önce kapatılmalıdır.",
     restoreYearTitle: "{name} geri alınsın mı?",
     restoreYearDescription:
       "Yıl taslak olur. Arşivlenmiş dönemler otomatik geri alınmaz; gerekli dönemleri ayrı ayrı seçebilirsiniz.",
-    activateTermTitle: "{name} etkinleştirilsin mi?",
-    activateTermDescription:
-      "Bu yılda başka bir aktif dönem varsa otomatik kapatılır.",
-    closeTermTitle: "{name} kapatılsın mı?",
-    closeTermDescription:
-      "Dönem kapalı duruma alınır ve geçmiş kayıtları korunur.",
     archiveTermTitle: "{name} arşivlensin mi?",
     archiveTermDescription:
       "Dönem kalıcı olarak silinmez; geçmiş kayıt olarak korunur.",
@@ -191,7 +183,8 @@ export const tr = {
     createFirstYear: "İlk öğretim yılını oluştur",
     termsTitle: "{name} dönemleri",
     termsDescription:
-      "Sıra ve tarihler ders, kayıt ve program modüllerinin dönem bağlamını oluşturacak.",
+      "Dönemler yıl ile birlikte yönetilir. Not, yorum ve diğer işlemler kayıt tarihine göre doğru döneme otomatik bağlanır.",
+    termLifecycleWithYear: "Yılla birlikte yönetilir",
     termsFooter: "{count} dönem gösteriliyor",
     noTerms: "Bu yıl için dönem yok",
     noTermsDraft:
@@ -222,14 +215,13 @@ export const tr = {
     overlapMessage: "Tarih aralığı “{name}” ile çakışıyor.",
     overlapField: "Dönemler çakışamaz.",
     yearNeedsTerm: "Öğretim yılını etkinleştirmeden önce en az bir dönem ekleyin.",
-    activeTermRule: "Yalnız aktif öğretim yılındaki taslak dönem etkinleştirilebilir.",
+    termLifecycleManagedByYear:
+      "Dönemler ayrı ayrı etkinleştirilmez veya kapatılmaz; öğretim yılıyla birlikte yönetilir.",
     restoreTermRule: "Dönem yalnız öğretim yılı taslak durumundayken geri alınabilir.",
     yearActivated: "Öğretim yılı etkinleştirildi.",
     yearClosed: "Öğretim yılı kapatıldı.",
     yearArchived: "Öğretim yılı arşivlendi.",
     yearRestored: "Öğretim yılı taslak olarak geri alındı.",
-    termActivated: "Dönem etkinleştirildi.",
-    termClosed: "Dönem kapatıldı.",
     termArchived: "Dönem arşivlendi.",
     termRestored: "Dönem taslak olarak geri alındı.",
     invalidRecord: "Kayıt kimliği veya sürümü geçersiz.",

@@ -88,12 +88,18 @@ async function auditTermStatusChange(
   tx: Prisma.TransactionClient,
   actor: ActorContext,
   term: Parameters<typeof termSnapshot>[0] & { id: string },
-  nextStatus: "CLOSED" | "ARCHIVED",
+  nextStatus: "ACTIVE" | "CLOSED" | "ARCHIVED",
   reason: string,
 ) {
   const beforeData = termSnapshot(term);
   await audit(tx, actor, {
-    action: `academic.term.${nextStatus === "CLOSED" ? "closed" : "archived"}`,
+    action: `academic.term.${
+      nextStatus === "ACTIVE"
+        ? "activated"
+        : nextStatus === "CLOSED"
+          ? "closed"
+          : "archived"
+    }`,
     entityType: "AcademicTerm",
     entityId: term.id,
     beforeData,
@@ -397,6 +403,7 @@ export async function transitionAcademicYear(
   let archivedAt: Date | null = null;
   let archivedById: string | null = null;
   let reason: string;
+  let previousActiveYear: typeof current | null = null;
 
   if (input.transition === "activate") {
     if (current.status !== "DRAFT")
@@ -406,7 +413,7 @@ export async function transitionAcademicYear(
         status: "error",
         message: actor.messages.yearNeedsTerm,
       };
-    const previous = await tx.academicYear.findFirst({
+    previousActiveYear = await tx.academicYear.findFirst({
       where: {
         schoolId: actor.schoolId,
         status: "ACTIVE",
@@ -415,97 +422,23 @@ export async function transitionAcademicYear(
       },
       include: {
         terms: {
-          where: { status: "ACTIVE" },
+          where: { status: { not: "ARCHIVED" } },
           include: { translations: true },
         },
       },
     });
-    if (previous) {
-      await tx.academicTerm.updateMany({
-        where: {
-          schoolId: actor.schoolId,
-          academicYearId: previous.id,
-          status: "ACTIVE",
-        },
-        data: { status: "CLOSED", updatedById: actor.actorUserId },
-      });
-      await tx.academicYear.update({
-        where: { id: previous.id },
-        data: { status: "CLOSED", updatedById: actor.actorUserId },
-      });
-      for (const term of previous.terms) {
-        await auditTermStatusChange(
-          tx,
-          actor,
-          term,
-          "CLOSED",
-          `Closed automatically when ${current.name} became active.`,
-        );
-      }
-      await audit(tx, actor, {
-        action: "academic.year.closed",
-        entityType: "AcademicYear",
-        entityId: previous.id,
-        beforeData: yearSnapshot(previous),
-        afterData: { ...yearSnapshot(previous), status: "CLOSED" },
-        changedFields: ["status"],
-        reason: `Closed automatically when ${current.name} became active.`,
-      });
-    }
     nextStatus = "ACTIVE";
-    reason = "Academic year activated by school administrator.";
+    reason =
+      "Academic year activated; all non-archived terms activated with it.";
   } else if (input.transition === "close") {
     if (current.status !== "ACTIVE")
       return academicCalendarConflict(actor.messages);
-    await tx.academicTerm.updateMany({
-      where: {
-        schoolId: actor.schoolId,
-        academicYearId: current.id,
-        status: "ACTIVE",
-      },
-      data: { status: "CLOSED", updatedById: actor.actorUserId },
-    });
-    for (const term of current.terms.filter(
-      (term) => term.status === "ACTIVE",
-    )) {
-      await auditTermStatusChange(
-        tx,
-        actor,
-        term,
-        "CLOSED",
-        `Closed automatically with academic year ${current.name}.`,
-      );
-    }
     nextStatus = "CLOSED";
-    reason = "Academic year closed by school administrator.";
+    reason = "Academic year and all non-archived terms closed together.";
   } else if (input.transition === "archive") {
     if (!(["DRAFT", "CLOSED"] as string[]).includes(current.status))
       return academicCalendarConflict(actor.messages);
     const archivedOn = new Date();
-    await tx.academicTerm.updateMany({
-      where: {
-        schoolId: actor.schoolId,
-        academicYearId: current.id,
-        status: { in: ["DRAFT", "CLOSED"] },
-      },
-      data: {
-        status: "ARCHIVED",
-        archivedAt: archivedOn,
-        archivedById: actor.actorUserId,
-        updatedById: actor.actorUserId,
-      },
-    });
-    for (const term of current.terms.filter((term) =>
-      (["DRAFT", "CLOSED"] as string[]).includes(term.status),
-    )) {
-      await auditTermStatusChange(
-        tx,
-        actor,
-        term,
-        "ARCHIVED",
-        `Archived automatically with academic year ${current.name}.`,
-      );
-    }
     nextStatus = "ARCHIVED";
     archivedAt = archivedOn;
     archivedById = actor.actorUserId;
@@ -515,6 +448,41 @@ export async function transitionAcademicYear(
       return academicCalendarConflict(actor.messages);
     nextStatus = "DRAFT";
     reason = "Academic year restored as draft; archived terms remain archived.";
+  }
+
+  if (previousActiveYear) {
+    await tx.academicYear.update({
+      where: { id: previousActiveYear.id },
+      data: { status: "CLOSED", updatedById: actor.actorUserId },
+    });
+    await tx.academicTerm.updateMany({
+      where: {
+        schoolId: actor.schoolId,
+        academicYearId: previousActiveYear.id,
+        status: { notIn: ["CLOSED", "ARCHIVED"] },
+      },
+      data: { status: "CLOSED", updatedById: actor.actorUserId },
+    });
+    for (const term of previousActiveYear.terms.filter(
+      (term) => term.status !== "CLOSED",
+    )) {
+      await auditTermStatusChange(
+        tx,
+        actor,
+        term,
+        "CLOSED",
+        `Closed automatically when ${current.name} became active.`,
+      );
+    }
+    await audit(tx, actor, {
+      action: "academic.year.closed",
+      entityType: "AcademicYear",
+      entityId: previousActiveYear.id,
+      beforeData: yearSnapshot(previousActiveYear),
+      afterData: { ...yearSnapshot(previousActiveYear), status: "CLOSED" },
+      changedFields: ["status"],
+      reason: `Closed automatically when ${current.name} became active.`,
+    });
   }
 
   const result = await tx.academicYear.updateMany({
@@ -532,6 +500,77 @@ export async function transitionAcademicYear(
     },
   });
   if (result.count !== 1) return academicCalendarConflict(actor.messages);
+
+  if (input.transition === "activate") {
+    const termsToActivate = current.terms.filter(
+      (term) => term.status !== "ACTIVE",
+    );
+    await tx.academicTerm.updateMany({
+      where: {
+        schoolId: actor.schoolId,
+        academicYearId: current.id,
+        status: { not: "ARCHIVED" },
+      },
+      data: {
+        status: "ACTIVE",
+        updatedById: actor.actorUserId,
+      },
+    });
+    for (const term of termsToActivate) {
+      await auditTermStatusChange(
+        tx,
+        actor,
+        term,
+        "ACTIVE",
+        `Activated automatically with academic year ${current.name}.`,
+      );
+    }
+  } else if (input.transition === "close") {
+    const termsToClose = current.terms.filter(
+      (term) => term.status !== "CLOSED",
+    );
+    await tx.academicTerm.updateMany({
+      where: {
+        schoolId: actor.schoolId,
+        academicYearId: current.id,
+        status: { not: "ARCHIVED" },
+      },
+      data: { status: "CLOSED", updatedById: actor.actorUserId },
+    });
+    for (const term of termsToClose) {
+      await auditTermStatusChange(
+        tx,
+        actor,
+        term,
+        "CLOSED",
+        `Closed automatically with academic year ${current.name}.`,
+      );
+    }
+  } else if (input.transition === "archive") {
+    await tx.academicTerm.updateMany({
+      where: {
+        schoolId: actor.schoolId,
+        academicYearId: current.id,
+        status: { not: "ARCHIVED" },
+      },
+      data: {
+        status: "ARCHIVED",
+        archivedAt,
+        archivedById,
+        updatedById: actor.actorUserId,
+      },
+    });
+    for (const term of current.terms) {
+      await auditTermStatusChange(
+        tx,
+        actor,
+        term,
+        "ARCHIVED",
+        `Archived automatically with academic year ${current.name}.`,
+      );
+    }
+  }
+
   await audit(tx, actor, {
     action: `academic.year.${input.transition}d`,
     entityType: "AcademicYear",
@@ -578,50 +617,23 @@ export async function transitionAcademicTerm(
   if (current.updatedAt.toISOString() !== input.revision)
     return academicCalendarConflict(actor.messages);
   const beforeData = termSnapshot(current);
-  let nextStatus: "DRAFT" | "ACTIVE" | "CLOSED" | "ARCHIVED";
+  let nextStatus: "DRAFT" | "ARCHIVED";
   let archivedAt: Date | null = null;
   let archivedById: string | null = null;
   let reason: string;
 
-  if (input.transition === "activate") {
-    if (current.status !== "DRAFT" || current.academicYear.status !== "ACTIVE")
-      return {
-        status: "error",
-        message: actor.messages.activeTermRule,
-      };
-    const previous = await tx.academicTerm.findFirst({
-      where: {
-        schoolId: actor.schoolId,
-        academicYearId: current.academicYearId,
-        status: "ACTIVE",
-        id: { not: current.id },
-      },
-      include: { translations: true },
-    });
-    if (previous) {
-      await tx.academicTerm.update({
-        where: { id: previous.id },
-        data: { status: "CLOSED", updatedById: actor.actorUserId },
-      });
-      await audit(tx, actor, {
-        action: "academic.term.closed",
-        entityType: "AcademicTerm",
-        entityId: previous.id,
-        beforeData: termSnapshot(previous),
-        afterData: { ...termSnapshot(previous), status: "CLOSED" },
-        changedFields: ["status"],
-        reason: `Closed automatically when ${current.name} became active.`,
-      });
-    }
-    nextStatus = "ACTIVE";
-    reason = "Academic term activated by school administrator.";
-  } else if (input.transition === "close") {
-    if (current.status !== "ACTIVE")
-      return academicCalendarConflict(actor.messages);
-    nextStatus = "CLOSED";
-    reason = "Academic term closed by school administrator.";
-  } else if (input.transition === "archive") {
-    if (!(["DRAFT", "CLOSED"] as string[]).includes(current.status))
+  if (input.transition === "activate" || input.transition === "close") {
+    return {
+      status: "error",
+      message: actor.messages.termLifecycleManagedByYear,
+    };
+  }
+
+  if (input.transition === "archive") {
+    if (
+      current.status !== "DRAFT" ||
+      current.academicYear.status !== "DRAFT"
+    )
       return academicCalendarConflict(actor.messages);
     archivedAt = new Date();
     archivedById = actor.actorUserId;
@@ -675,12 +687,8 @@ export async function transitionAcademicTerm(
   return {
     status: "success",
     message:
-      input.transition === "activate"
-        ? actor.messages.termActivated
-        : input.transition === "close"
-          ? actor.messages.termClosed
-          : input.transition === "archive"
-            ? actor.messages.termArchived
-            : actor.messages.termRestored,
+      input.transition === "archive"
+        ? actor.messages.termArchived
+        : actor.messages.termRestored,
   };
 }

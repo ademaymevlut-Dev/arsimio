@@ -195,16 +195,33 @@ try {
       const firstTerm = await tx.academicTerm.findFirstOrThrow({
         where: { academicYearId: firstYear.id, sequence: 1 },
       });
+      const activeTerms = await tx.academicTerm.findMany({
+        where: { academicYearId: firstYear.id, status: "ACTIVE" },
+        orderBy: { sequence: "asc" },
+      });
+      assert.equal(activeTerms.length, 2);
+      assert.deepEqual(
+        activeTerms.map(({ sequence }) => sequence),
+        [1, 2],
+      );
+      pass("activating a year activates all of its non-archived terms together");
+
       assert.equal(
         (
           await transitionAcademicTerm(tx, actorContext, {
             id: firstTerm.id,
             revision: firstTerm.updatedAt.toISOString(),
-            transition: "activate",
+            transition: "close",
           })
         ).status,
-        "success",
+        "error",
       );
+      assert.equal(
+        (await tx.academicTerm.findUniqueOrThrow({ where: { id: firstTerm.id } }))
+          .status,
+        "ACTIVE",
+      );
+      pass("a term cannot be activated or closed independently from its year");
 
       assert.equal(
         (
@@ -265,7 +282,13 @@ try {
           .status,
         "CLOSED",
       );
-      pass("activating a new year closes the previous active year and term");
+      assert.equal(
+        await tx.academicTerm.count({
+          where: { academicYearId: firstYear.id, status: "CLOSED" },
+        }),
+        2,
+      );
+      pass("activating a new year closes the previous year and all of its terms");
 
       const otherYear = await tx.academicYear.create({
         data: {
@@ -299,6 +322,13 @@ try {
           (event) =>
             event.actorUserId === actor.id &&
             event.actorMembershipId === membership.id,
+        ),
+      );
+      assert.ok(
+        events.some(
+          (event) =>
+            event.action === "academic.term.activated" &&
+            event.reason?.includes("automatically"),
         ),
       );
       assert.ok(

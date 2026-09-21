@@ -32,6 +32,8 @@ academic_terms
 
 Mevcut `academic_terms.name` alanı ilk i18n migration'ında kaldırılmadı. Uygulama deploy'undan önce migration'ın güvenle uygulanabilmesi için okulun varsayılan dilindeki ad bu alana da yazılır. Alanın kaldırılması ancak bütün okuyucu/yazıcı sürümler çeviri tablosunu kullandıktan sonra ayrı bir daraltma migration'ı ile değerlendirilecektir.
 
+Dönem dili ile dönem seçimi ayrı konulardır. Aynı dönem üç çevrilmiş ada sahip olur; not, yorum, yoklama gibi bir iş kaydı ise kullanıcının seçtiği dile göre değil okulun saat dilimindeki kayıt tarihine göre bu tek dönem ID'sine bağlanır. Aktif öğretim yılının bütün arşivlenmemiş dönemleri birlikte kullanılabilir durumdadır.
+
 Eski iki dönem adı, anlamı tahmin edilmeden yalnız okulun mevcut varsayılan dili olan `tr` için çeviri satırına taşındı. Eksik Arnavutça ve İngilizce adlar yönetici tarafından gerçek karşılıklarıyla tamamlanmalıdır; sistem otomatik çeviri uydurmaz.
 
 ## Sonraki çevrilebilir kataloglar

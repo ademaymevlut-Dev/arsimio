@@ -1,7 +1,10 @@
 import "server-only";
 import { cache } from "react";
 import { getPrisma } from "@/lib/db";
-import { dateOnlyValue } from "@/lib/academic-calendar-validation";
+import {
+  dateOnlyInTimeZone,
+  dateOnlyValue,
+} from "@/lib/academic-calendar-validation";
 import {
   SUPPORTED_LOCALES,
   normalizeLocale,
@@ -113,3 +116,60 @@ export const getAcademicCalendarSummary = cache(async (schoolId: string) => {
   ]);
   return { yearCount, activeYear };
 });
+
+export type AcademicDateContext = {
+  calendarDate: string;
+  timeZone: string;
+  academicYearId: string;
+  academicTermId: string | null;
+};
+
+/**
+ * Resolves the academic owner of a timestamp from the school's local calendar
+ * date. Grades, comments, attendance and future dated records should use this
+ * function instead of storing or selecting a global "current term".
+ */
+export async function getAcademicDateContext(
+  schoolId: string,
+  occurredAt: Date = new Date(),
+): Promise<AcademicDateContext | null> {
+  const prisma = getPrisma();
+  const school = await prisma.school.findUnique({
+    where: { id: schoolId },
+    select: { timezone: true },
+  });
+  if (!school) return null;
+
+  const calendarDate = dateOnlyInTimeZone(occurredAt, school.timezone);
+  const year = await prisma.academicYear.findFirst({
+    where: {
+      schoolId,
+      status: "ACTIVE",
+      archivedAt: null,
+      startDate: { lte: calendarDate },
+      endDate: { gte: calendarDate },
+    },
+    select: {
+      id: true,
+      terms: {
+        where: {
+          status: "ACTIVE",
+          archivedAt: null,
+          startDate: { lte: calendarDate },
+          endDate: { gte: calendarDate },
+        },
+        orderBy: { sequence: "asc" },
+        take: 1,
+        select: { id: true },
+      },
+    },
+  });
+  if (!year) return null;
+
+  return {
+    calendarDate: dateOnlyValue(calendarDate),
+    timeZone: school.timezone,
+    academicYearId: year.id,
+    academicTermId: year.terms[0]?.id ?? null,
+  };
+}

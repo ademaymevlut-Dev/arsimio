@@ -75,7 +75,7 @@ Okul Admin ekranlarının ayrıntılı uygulama sırası [Okul Admin faz planın
 - [ ] `PLANLANDI` Parola değiştirme/sıfırlama ve oturum iptali. Mail/SMS, davet teslimi ve MFA daha sonra eklenecek.
 - [ ] `PLANLANDI` Çalışan ve öğretmen profilleri.
 - [ ] `PLANLANDI` Öğrenci ve veli profilleri ile doğrulanmış bağlantılar.
-- [ ] `DEVAM EDİYOR` Akademik yapı: öğretim yılı/dönem CRUD'u ve üç dilli dönem adları tamamlandı; seviye, sınıf/şube ve dersler sırada. Tek aktif yıl/dönem, tarihler, lifecycle, tenant permission ve audit DB/servis seviyesinde korunur.
+- [ ] `DEVAM EDİYOR` Akademik yapı: öğretim yılı/dönem CRUD'u ve üç dilli dönem adları tamamlandı; seviye, sınıf/şube ve dersler sırada. Okulda tek aktif yıl korunur; o yılın bütün dönemleri birlikte etkinleşir ve tarihli kayıtlar okul saat dilimindeki tarihe göre doğru döneme otomatik bağlanır. Tarihler, lifecycle, tenant permission ve audit DB/servis seviyesinde korunur.
 - [ ] `PLANLANDI` Öğrenci kayıtları ve öğretmen atamaları.
 - [ ] `PLANLANDI` Toplu içe aktarma için doğrulama ve hata raporu.
 
