@@ -26,6 +26,8 @@ Oluşturulan 13 uygulama tablosu:
 
 `20260921000300_sync_term_lifecycle_with_year`, dönem yaşam döngüsünü okul işleyişiyle düzeltti. Yıl başına tek aktif dönem index'i kaldırıldı. Bir yıl etkinleştiğinde arşivlenmemiş bütün dönemler birlikte `ACTIVE`, yıl kapandığında birlikte `CLOSED` olur; dönem için ayrı etkinleştir/kapat işlemi yoktur. Önceki akışın aktif yılda kapattığı dönemler migration sırasında veri kaybetmeden tekrar `ACTIVE` yapıldı. Tarihli iş kayıtlarının dönem bağı bundan sonra okul saat dilimindeki kayıt tarihi ile dönem tarih aralığından çözülecektir.
 
+`20260922000100_add_academic_structure`, 2026-09-22'de uygulandı. Dokuz tablo eklenerek uygulama tablo sayısı 28'e çıktı: `education_stages`, `education_stage_translations`, `grade_levels`, `class_sections`, `subjects`, `subject_translations`, `course_offerings`, `lesson_periods`, `lesson_period_translations`. Kademe, seviye, şube, sınıf–ders planı ve ders saati seçili okul/yıl bileşik foreign key'leriyle; ders kataloğu okul kapsamıyla korunur. Kademe, ders ve ders saati adları tek iş kimliği altında `tr/sq/en` çeviri satırlarıdır. Ders saati bitişinin başlangıçtan sonra olması CHECK, aynı yıldaki arşivlenmemiş saatlerin çakışmaması trigger ile zorunludur. Dokuz rollback-only gerçek DB kontrolü tenant sınırı, çeviriler, tekrarlar, bağımlı arşivleme, geri alma ve audit'i doğruladı; test verisi tutulmadı. Okul takvimi/çalışma günü tablosu bu migration'a eklenmedi.
+
 Prisma ayrıca uygulanan migration'ları `_prisma_migrations` tablosunda izler. Diğer akademik ve operasyon tabloları ilgili modüller geliştikçe eklenecek. Pilot seed'i iki okul, doğrulanmış domainler, roller/permission'lar ve bir PENDING Süper Admin hesabı oluşturdu. Sonrasında kullanıcı kendi terminalinde Süper Admin parolasını belirledi; iki okul için ilk yöneticileri oluşturup giriş/çıkış ve çapraz okul giriş reddini doğruladı. Parolalar belgelere yazılmaz.
 
 ## İncelemede düzeltilen kurallar
@@ -99,6 +101,8 @@ pnpm db:status
 `pnpm db:verify:auth` parola/oturum, çapraz okul/hostname, üyelik ve credential iptali, rate limit ve bir defalık bootstrap için 17 kontrol çalıştırır. Test kayıtları rollback edilir; gerçek kullanıcının parolası değiştirilmez. HTTP/tarayıcı ve production kabulü ayrı test katmanlarıdır. Güncel kurulum [parolalı giriş belgesindedir](./password-auth.md).
 
 `pnpm db:verify:academic-calendar` akademik izinleri, tek dönem ID'si altındaki üç tenant-kapsamlı çeviriyi, dönem çakışmasını, tek aktif yıl geçişini, yıl etkinleşince bütün dönemlerin birlikte etkinleşmesini, dönemlerin tek başına kapatılamamasını, otomatik lifecycle audit'ini ve çapraz okul yazma reddini gerçek servisler üzerinden kontrol eder. Bütün fixture ve yazmalar transaction sonunda rollback edilir.
+
+`pnpm db:verify:academic-structure` kademe/seviye/şube kapsamını, tek ders ID'si altındaki üç çeviriyi, sınıf–ders tekrar engelini, ders saati çakışmasını, bağımlı kayıt arşivleme/geri alma kurallarını ve tenant actor audit'ini gerçek servisler üzerinden kontrol eder. Bütün fixture ve yazmalar transaction sonunda rollback edilir.
 
 ## Kaynaklar
 

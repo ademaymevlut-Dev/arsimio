@@ -13,6 +13,7 @@
     "db:verify:platform": "node --conditions=react-server --import tsx scripts/verify-platform-settings.mts",
     "db:verify:school-admin": "node --conditions=react-server --import tsx scripts/verify-initial-school-admin.mts",
     "db:verify:academic-calendar": "node --conditions=react-server --import tsx scripts/verify-academic-calendar.mts",
+    "db:verify:academic-structure": "node --conditions=react-server --import tsx scripts/verify-academic-structure.mts",
     "db:seed:pilot": "tsx scripts/seed-pilot.mts",
     "postinstall": "prisma generate",
     "db:format": "prisma format",

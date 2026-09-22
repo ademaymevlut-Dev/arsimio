@@ -8,6 +8,7 @@ import {
   CalendarRange,
   Check,
   Circle,
+  LibraryBig,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -45,6 +46,13 @@ function createNavigation(messages: AppDictionary["shell"]) {
     href: "/academics/years",
     label: messages.academicYears,
     icon: CalendarRange,
+    permission: "academics.read",
+  },
+  {
+    group: messages.academics,
+    href: "/academics/structure",
+    label: messages.academicStructure,
+    icon: LibraryBig,
     permission: "academics.read",
   },
   ];
@@ -148,15 +156,17 @@ function SchoolBrand({
 
 function SetupStatus({
   academicYearReady,
+  academicStructureReady,
   messages,
 }: {
   academicYearReady: boolean;
+  academicStructureReady: boolean;
   messages: AppDictionary["shell"];
 }) {
   const setupSteps = [
     { label: messages.adminAccount, ready: true },
     { label: messages.yearAndTerm, ready: academicYearReady },
-    { label: messages.classesAndSubjects, ready: false },
+    { label: messages.classesAndSubjects, ready: academicStructureReady },
   ];
   return (
     <div className="rounded-xl border bg-background/60 p-4">
@@ -201,6 +211,7 @@ export function SchoolAdminShell({
   roleNames,
   permissions,
   academicYearReady,
+  academicStructureReady,
   locale,
   messages,
   children,
@@ -213,6 +224,7 @@ export function SchoolAdminShell({
   roleNames: string[];
   permissions: string[];
   academicYearReady: boolean;
+  academicStructureReady: boolean;
   locale: Locale;
   messages: Pick<AppDictionary, "language" | "shell">;
   children: ReactNode;
@@ -251,6 +263,7 @@ export function SchoolAdminShell({
           <div className="mt-7">
             <SetupStatus
               academicYearReady={academicYearReady}
+              academicStructureReady={academicStructureReady}
               messages={messages.shell}
             />
           </div>
@@ -307,6 +320,7 @@ export function SchoolAdminShell({
                   <div className="mt-7">
                     <SetupStatus
                       academicYearReady={academicYearReady}
+                      academicStructureReady={academicStructureReady}
                       messages={messages.shell}
                     />
                   </div>

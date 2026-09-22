@@ -37,6 +37,7 @@ export default async function SchoolAdminLayout({
       roleNames={roleNames}
       permissions={permissions}
       academicYearReady={academic.yearCount > 0}
+      academicStructureReady={academic.academicStructureReady}
       locale={locale}
       messages={{ language: dictionary.language, shell: dictionary.shell }}
     >

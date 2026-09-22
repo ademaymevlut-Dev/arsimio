@@ -1,6 +1,6 @@
 # Çoklu dil mimarisi
 
-Arsimio'nun desteklediği uygulama dilleri `tr`, `sq` ve `en` olarak sabittir. İlk dilim okul girişini, Okul Admin kabuğunu, genel bakışı ve öğretim yılı/dönem çalışma alanını kapsar. Yönetim URL'leri dile göre çoğaltılmaz; `/dashboard` ve `/academics/years` aynı kalır.
+Arsimio'nun desteklediği uygulama dilleri `tr`, `sq` ve `en` olarak sabittir. Okul girişi, Okul Admin kabuğu, genel bakış, öğretim yılı/dönem ve Akademik Yapı çalışma alanı bu sözlükleri kullanır. Yönetim URL'leri dile göre çoğaltılmaz; `/dashboard`, `/academics/years` ve `/academics/structure` aynı kalır.
 
 ## Dil çözümleme sırası
 
@@ -36,9 +36,9 @@ Dönem dili ile dönem seçimi ayrı konulardır. Aynı dönem üç çevrilmiş 
 
 Eski iki dönem adı, anlamı tahmin edilmeden yalnız okulun mevcut varsayılan dili olan `tr` için çeviri satırına taşındı. Eksik Arnavutça ve İngilizce adlar yönetici tarafından gerçek karşılıklarıyla tamamlanmalıdır; sistem otomatik çeviri uydurmaz.
 
-## Sonraki çevrilebilir kataloglar
+## Uygulanan diğer çevrilebilir kataloglar
 
-Ders, kademe etiketi ve merkezi ayrılma nedeni gibi kullanıcıya gösterilen sözlükler aynı tek-kimlik + çeviri-tablosu standardını kullanır. Öğretim yılı `2026 / 2027` gibi dile bağlı olmayan bir tanımlayıcı olduğu için bu aşamada çeviri tablosuna ayrılmaz. Öğrenci/öğretmen adı gibi kişi verileri çevrilebilir katalog değildir.
+`education_stage_translations`, `subject_translations` ve `lesson_period_translations` aynı tek-kimlik + çeviri-tablosu standardıyla uygulanmıştır. Böylece bir dersin, kademenin veya ders saati bloğunun dil başına ayrı ID'si yoktur. Üç ad aynı transaction içinde zorunludur; okul ve gerekli yerde öğretim yılı bileşik foreign key ile korunur. Öğretim yılı `2026 / 2027`, seviye kodu `4` ve şube kodu `1` gibi dile bağlı olmayan tanımlayıcılar çeviri tablosuna ayrılmaz. Merkezi ayrılma nedeni sözlüğü ileride aynı standardı kullanacaktır. Öğrenci/öğretmen adı gibi kişi verileri çevrilebilir katalog değildir.
 
 ## Doğrulama
 
@@ -47,3 +47,4 @@ Ders, kademe etiketi ve merkezi ayrılma nedeni gibi kullanıcıya gösterilen s
 - Bir dil eksikse dönem formu kaydedilmez.
 - Dil cookie'si iki okul hostname'i arasında paylaşılmaz.
 - Dil değişince UI, `<html lang>`, tarih biçimi ve Server Action mesajları birlikte değişir.
+- Kademe, ders ve ders saati için üç çeviri tek iş kimliğini paylaşır; bir dil eksikse form kaydedilmez.

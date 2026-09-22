@@ -1,8 +1,8 @@
 # Okul Admin çalışma alanı — analiz ve fazlı uygulama planı
 
-Tarih: 2026-09-20  
-Durum: `FAZ 0 TAMAMLANDI · FAZ 1 / ADIM 1 TAMAMLANDI`
-Kapsam: Okul Admin uygulama kabuğu, bilgi mimarisi, ortak tablo düzeni ve modüllerin bağımlılık sırasına göre teslim planı. Faz 0 ile Faz 1'in öğretim yılı/dönem CRUD'u uygulanmıştır; Faz 1'in diğer akademik yapı adımları plan kapsamındadır.
+Tarih: 2026-09-22<br>
+Durum: `FAZ 0 TAMAMLANDI · FAZ 1 / ADIM 1–5 TAMAMLANDI · ADIM 6 KARAR BEKLİYOR`
+Kapsam: Okul Admin uygulama kabuğu, bilgi mimarisi, ortak tablo düzeni ve modüllerin bağımlılık sırasına göre teslim planı. Faz 0 ile Faz 1'in öğretim yılı/dönem, kademe/seviye, sınıf/şube, üç dilli ders kataloğu, sınıf–ders planı ve ders saati dilimleri uygulanmıştır. Okul takvimi ve çalışma günleri kullanıcıyla ürün görüşmesi yapılana kadar bilinçli olarak durdurulmuştur.
 
 ## 1. Sonuç ve çalışma yöntemi
 
@@ -13,7 +13,7 @@ Okul Admin alanını bütünüyle yukarıdan aşağı ya da bütünüyle aşağ�
 3. **Her modülü dikey dilim olarak bitir:** Yalnız tablo şeması veya yalnız liste ekranı bırakılmaz. Listeleme, filtreleme, oluşturma, düzenleme, arşivleme, permission, tenant izolasyonu, audit ve test aynı dilimde tamamlanır.
 4. **Eski programı kaynak olarak kullan, ekranlarını kopyalama:** Alan bilgisi, kullanıcı alışkanlıkları ve iş kuralları korunur; güvenlik, veri modeli, dağınık modal akışı ve eski teknik kısıtlar taşınmaz.
 
-İlk geliştirme dilimi **Faz 0 — Okul kabuğu ve tablo temeli** tamamlandı. **Faz 1 — Akademik yapı** içindeki ilk dikey dilim olan öğretim yılı ve dönem yönetimi de tamamlandı.
+İlk geliştirme dilimi **Faz 0 — Okul kabuğu ve tablo temeli** tamamlandı. **Faz 1 — Akademik yapı** içinde okul takvimi/çalışma günlerinden önceki bütün dikey dilimler de tamamlandı.
 
 ## 2. İncelenen eski yapı
 
@@ -170,29 +170,29 @@ Her yönetim listesinde, ihtiyaca göre şu parçalar bulunur:
 
 **Amaç:** Öğrenci, öğretmen, program ve yoklamanın bağlanacağı okul/yıl omurgasını kurmak.
 
-**Durum:** `ADIM 1 TAMAMLANDI` — Öğretim yılı ve dönem CRUD'u; tenant kapsamlı okuma/yazma, yaşam döngüsü, audit, optimistic concurrency, üç dilli dönem adları ve DB kısıtlarıyla uygulandı. Seviye, sınıf/şube, ders, ders saati ve takvim adımları henüz başlamadı.
+**Durum:** `ADIM 1–5 TAMAMLANDI` — Öğretim yılı/dönem; kademe/seviye; sınıf/şube; ders kataloğu; sınıf–ders planı ve ders saatleri tenant kapsamlı okuma/yazma, arşivleme, audit, optimistic concurrency, üç dilli adlar ve DB kısıtlarıyla uygulandı. `ADIM 6 — Okul takvimi ve çalışma günleri` kullanıcı talebiyle durduruldu; ürün görüşmesi yapılmadan şema veya UI geliştirilmeyecek.
 
 **Önerilen kavramlar:**
 
 - Öğretim yılı ve dönemler.
-- Kademe/seviye: PRF ve okulun kullandığı 1–12 seviyeleri.
+- Kademe/seviye: kademe kaydı ile PRF ve okulun kullandığı 1–12 gibi seviye kodları ayrı tutulur. Seviye formunun iki ana girdisi kademe + seviye kodudur; teknik sıra alanı farklı ülke sistemlerinin doğru dizilmesi içindir.
 - Yıla bağlı sınıf/şube: örneğin `4 / 1`; yalnız metin olarak kalmaz.
-- Ders kataloğu ve sınıf/şube için dönemlik ders sunumu.
+- Okul genelinde tekrar kullanılan üç dilli ders kataloğu ve sınıf/şube için yıllık ders planı. Dönemlik öğretmen görevlendirmesi Faz 4'te bu yıllık planın üzerine kurulur.
 - Ders saati blokları.
 - Okul takvimi/çalışma günleri ve dönem haftaları.
 
 **İlk ekran sırası:**
 
 1. ~~Öğretim yılları ve dönemler.~~ `TAMAMLANDI — 2026-09-21`
-2. Seviyeler ile sınıf/şubeler.
-3. Dersler.
-4. Sınıf/şube–ders planı.
-5. Ders saatleri.
-6. Takvim ve okul haftaları.
+2. ~~Kademe/seviyeler ile sınıf/şubeler.~~ `TAMAMLANDI — 2026-09-22`
+3. ~~Üç dilli ders kataloğu.~~ `TAMAMLANDI — 2026-09-22`
+4. ~~Sınıf/şube–ders planı.~~ `TAMAMLANDI — 2026-09-22`
+5. ~~Ders saatleri.~~ `TAMAMLANDI — 2026-09-22`
+6. `KARAR BEKLİYOR` Takvim, çalışma günleri ve okul haftaları; kullanıcıyla fikir alışverişinden sonra devam edilecek.
 
-**Şema yönü:** `academic_years`, `academic_terms`, `academic_term_translations`, `grade_levels`, `class_sections`, `subjects`, `subject_translations`, `course_offerings`, `lesson_periods` ve takvim kayıtları. Dile göre ayrı iş kaydı/ID üretilmez; çevrilebilir katalog adları `(entity_id, locale)` tablolarında tutulur. Nihai adlar migration tasarımında kesinleşir. Bütün benzersizlikler `school_id` ve gerekli yıl/dönem kapsamıyla kurulur.
+**Uygulanan şema:** `academic_years`, `academic_terms`, `academic_term_translations`, `education_stages`, `education_stage_translations`, `grade_levels`, `class_sections`, `subjects`, `subject_translations`, `course_offerings`, `lesson_periods`, `lesson_period_translations`. Dile göre ayrı iş kaydı/ID üretilmez; çevrilebilir adlar `(entity_id, locale)` tablolarında tutulur. Ders kataloğu okul kapsamlıdır; diğer yapı seçili öğretim yılı kapsamındadır. Bütün ilişkiler `school_id` ve gerekli yıl kapsamıyla DB foreign key'leri üzerinden korunur. Takvim kayıtları henüz yoktur.
 
-**Kabul:** Öğretim yılı/dönem diliminde bir okulun kaydı başka okul kapsamıyla değiştirilemez; aynı okulda tek aktif yıl DB seviyesinde korunur. Yıl etkinleşince arşivlenmemiş dönemlerin tamamı birlikte etkinleşir; dönemler elle etkinleştirilip kapatılmaz. Tarihli kayıtlar okul saat dilimindeki tarihe ve çakışmasız dönem aralıklarına göre doğru döneme otomatik bağlanır. Kayıtlar silinmez, yıl ile birlikte kapatılır/arşivlenir ve bütün kritik değişiklikler audit üretir. Sınıf/şube kabulü kendi adımında tamamlanacaktır.
+**Kabul:** Bir okulun akademik kaydı başka okul/yıl kapsamıyla değiştirilemez; aynı okulda tek aktif yıl DB seviyesinde korunur. Yıl etkinleşince arşivlenmemiş dönemlerin tamamı birlikte etkinleşir; dönemler elle etkinleştirilip kapatılmaz. Tarihli kayıtlar okul saat dilimindeki tarihe ve çakışmasız dönem aralıklarına göre doğru döneme otomatik bağlanır. Kademe, seviye, şube ve ders planı bağlı kayıt varken üstten arşivlenemez. Ders/etiket çevirileri tek iş kimliğini paylaşır. Ders saatleri aynı yıl içinde çakışamaz. Kayıtlar fiziksel olarak silinmez ve bütün kritik değişiklikler audit üretir.
 
 ### Faz 2 — Personel, öğretmen ve okul kullanıcıları
 

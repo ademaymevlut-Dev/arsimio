@@ -2,7 +2,7 @@
 
 Bu modelin uygulamadaki ana kaynağı [`prisma/schema.prisma`](../prisma/schema.prisma) dosyasıdır. Şema değişiklikleri Prisma Migrate ile sürümlenir; PostgreSQL RLS ve Prisma'nın doğrudan ifade edemediği kısıtlar migration SQL'ine açıkça eklenir.
 
-2026-09-21 itibarıyla 13 çekirdek + 3 parola/oturum + 2 akademik takvim + 1 dönem çeviri tablosu, toplam 19 uygulama tablosu Neon'a uygulandı. [Migration çalışma düzeni](./database-migrations.md) mevcut kısıtları ve henüz uygulanmamış güvenlik katmanlarını ayırır. Aşağıdaki profil tabloları, akademik yapının kalan bölümü ve `school_settings` sonraki aşamalar için planlanmıştır.
+2026-09-22 itibarıyla 13 çekirdek + 3 parola/oturum + 2 akademik takvim + 1 dönem çeviri + 9 akademik yapı tablosu, toplam 28 uygulama tablosu Neon'a uygulandı. [Migration çalışma düzeni](./database-migrations.md) mevcut kısıtları ve henüz uygulanmamış güvenlik katmanlarını ayırır. Aşağıdaki profil tabloları, okul takvimi/çalışma günleri ve `school_settings` sonraki aşamalar için planlanmıştır.
 
 ## Modelleme standartları
 
@@ -94,6 +94,34 @@ Tek bir dönemin `tr`, `sq` ve `en` görünen adlarını tutar. `(academic_term_
 
 Her iki tablo da oluşturan, güncelleyen ve arşivleyen kullanıcı bağlarını taşır. Uygulama yazmaları okul permission'ı, optimistic revision ve aynı transaction içindeki `audit_events` kaydıyla yürür.
 
+## Akademik yapı
+
+### `education_stages`, `education_stage_translations`
+
+Anaokulu, ilkokul, ortaokul ve lise gibi okulun seçili öğretim yılında kullandığı kademeleri tutar. Kademe kodu ve sırası okul/yıl kapsamında benzersizdir. Görünen adlar tek kademe kimliği altında `tr`, `sq` ve `en` çeviri satırlarıdır; ülke sistemi enum olarak uygulamaya gömülmez.
+
+### `grade_levels`
+
+`PRF`, `1` … `12` veya başka bir ülke sistemindeki seviye kodlarını bir kademeye bağlar. Ana kullanıcı girdileri kademe ve seviye kodudur; `sequence` dil bağımsız doğru sıralama ve gelecekteki yıl geçişi eşlemesi için tutulur. Seviye seçili öğretim yılına aittir; aynı kod ve sıra aynı yılda tekrarlanamaz.
+
+### `class_sections`
+
+Seviyenin yıllık şubesini tutar. `grade_level=4` ve `code=1` birlikte ekranda `4 / 1` olarak gösterilir. Şube üst seviyenin okul ve öğretim yılıyla bileşik foreign key üzerinden eşleşir; aynı seviye içinde şube kodu tekrarlanamaz.
+
+### `subjects`, `subject_translations`
+
+Okulun yıllar arasında tekrar kullanabildiği ders kataloğudur. Bir dersin tek UUID'si, üç dilde görünen adı vardır; dil başına ayrı ders kaydı oluşturulmaz. Dil/ad eşsizliği okul kapsamında korunur. Dersin belirli yılda hangi sınıfta okutulduğu katalog kaydına yazılmaz.
+
+### `course_offerings`
+
+Bir dersin seçili öğretim yılında hangi sınıf/şubede okutulacağını belirleyen yıllık plandır. Aynı sınıf–ders çifti bir yılda yalnız bir kez bulunur. Öğretmen veya dönem ataması bu tabloya gömülmez; Faz 4'te dönemlik öğretmen görevlendirmeleri bu planı referans alacaktır.
+
+### `lesson_periods`, `lesson_period_translations`
+
+Seçili öğretim yılının günlük zaman dilimlerini sıra, başlangıç ve bitiş saatiyle tutar. `1. Ders`, `Ora e 1-rë`, `Period 1` aynı zaman diliminin çevirileridir. Bitiş başlangıçtan sonra olmalı; arşivlenmemiş zaman dilimleri aynı yıl içinde çakışmamalıdır. Çakışma hem servis sorgusu hem PostgreSQL trigger'ı ile korunur.
+
+Bu kayıtların tamamı kalıcı silme yerine arşivleme/geri alma kullanır. Aktif alt kayıt varken kademe, seviye, şube veya ders arşivlenemez; geri alma sırasında üst ilişkilerin kullanımda olması gerekir. Yazmalar `academics.manage`, origin doğrulaması, Serializable transaction, optimistic revision ve audit kaydıyla yürür.
+
 ## Kişi profilleri
 
 Kimlik hesabı ile okul içindeki kişi/profil kavramı ayrılmalıdır:
@@ -116,8 +144,10 @@ users
 
 schools
   ├── academic_years ── academic_terms ── academic_term_translations
-  ├── classes / sections
-  ├── subjects / courses
+  │       ├── education_stages ── education_stage_translations
+  │       │       └── grade_levels ── class_sections ── course_offerings
+  │       └── lesson_periods ── lesson_period_translations
+  ├── subjects ── subject_translations ── course_offerings
   ├── enrollments
   ├── teaching_assignments
   ├── attendance
