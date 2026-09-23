@@ -1,4 +1,5 @@
 import "server-only";
+import type { SubjectTrack } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/db";
 import {
   SUPPORTED_LOCALES,
@@ -62,6 +63,7 @@ export type SubjectRecord = {
   id: string;
   name: string;
   names: LocalizedNames;
+  track: SubjectTrack;
   archived: boolean;
   revision: string;
 };
@@ -216,6 +218,7 @@ export async function getAcademicStructure(
     subjects: subjects.map((subject) => ({
       id: subject.id,
       ...localized(subject.translations, locale, defaultLocale, subject.name),
+      track: subject.track,
       archived: Boolean(subject.archivedAt),
       revision: subject.updatedAt.toISOString(),
     })),

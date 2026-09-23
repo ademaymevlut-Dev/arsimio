@@ -2,7 +2,7 @@
 
 Bu modelin uygulamadaki ana kaynağı [`prisma/schema.prisma`](../prisma/schema.prisma) dosyasıdır. Şema değişiklikleri Prisma Migrate ile sürümlenir; PostgreSQL RLS ve Prisma'nın doğrudan ifade edemediği kısıtlar migration SQL'ine açıkça eklenir.
 
-2026-09-22 itibarıyla 13 çekirdek + 3 parola/oturum + 2 akademik takvim + 1 dönem çeviri + 9 akademik yapı tablosu, toplam 28 uygulama tablosu Neon'a uygulandı. [Migration çalışma düzeni](./database-migrations.md) mevcut kısıtları ve henüz uygulanmamış güvenlik katmanlarını ayırır. Aşağıdaki profil tabloları, okul takvimi/çalışma günleri ve `school_settings` sonraki aşamalar için planlanmıştır.
+2026-09-23 itibarıyla 13 çekirdek + 3 parola/oturum + 2 akademik takvim + 1 dönem çeviri + 9 akademik yapı tablosu, toplam 28 uygulama tablosu Neon'a uygulandı. Ders kataloğuna ayrıca `track` alanı eklendi. [Migration çalışma düzeni](./database-migrations.md) mevcut kısıtları ve henüz uygulanmamış güvenlik katmanlarını ayırır. Aşağıdaki profil tabloları, okul takvimi/çalışma günleri ve `school_settings` sonraki aşamalar için planlanmıştır.
 
 ## Modelleme standartları
 
@@ -111,6 +111,8 @@ Seviyenin yıllık şubesini tutar. `grade_level=4` ve `code=1` birlikte ekranda
 ### `subjects`, `subject_translations`
 
 Okulun yıllar arasında tekrar kullanabildiği ders kataloğudur. Bir dersin tek UUID'si, üç dilde görünen adı vardır; dil başına ayrı ders kaydı oluşturulmaz. Dil/ad eşsizliği okul kapsamında korunur. Dersin belirli yılda hangi sınıfta okutulduğu katalog kaydına yazılmaz.
+
+`subjects.track` `GENERAL`, `ELECTIVE` veya `IGCSE` değerini taşır. Programdaki ayrı seçmeli ve IGCSE adları ayrı ders ID'leridir; not modülündeki ortak hane ilişkisi daha sonra kurulacaktır. Yeni yıl için sınıf/şube tekrar kullanımı ihtiyacı ve önerilen katalog/yıllık ilişki [ayrı incelemede](./legacy-subject-seed-and-year-reuse.md) tutulur.
 
 ### `course_offerings`
 

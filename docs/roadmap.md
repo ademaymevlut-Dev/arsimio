@@ -76,6 +76,7 @@ Okul Admin ekranlarının ayrıntılı uygulama sırası [Okul Admin faz planın
 - [ ] `PLANLANDI` Çalışan ve öğretmen profilleri.
 - [ ] `PLANLANDI` Öğrenci ve veli profilleri ile doğrulanmış bağlantılar.
 - [ ] `DEVAM EDİYOR` Akademik yapı: öğretim yılı/dönem, esnek kademe/seviye, yıllık sınıf/şube, üç dilli ders kataloğu, yıllık sınıf–ders planı ve üç dilli/çakışmasız ders saatleri tamamlandı. Okulda tek aktif yıl korunur; o yılın bütün dönemleri birlikte etkinleşir ve tarihli kayıtlar okul saat dilimindeki tarihe göre doğru döneme otomatik bağlanır. Takvim/çalışma günleri kullanıcıyla ürün görüşmesi yapılana kadar bilinçli olarak durduruldu.
+- [ ] `DEVAM EDİYOR` Eski HorizonEdu görselindeki 49 ders, üç dilli ve `GENERAL`/`ELECTIVE`/`IGCSE` türüyle HorizonEdu'ya seed edildi. Seçmeli ve IGCSE için ayrı ortak not haneleri not modülünde uygulanacak. Sınıf/şube ve planın yeni yılda elle tekrar girilmesini kaldıracak global katalog + yıllık seçim akışı [incelendi](./legacy-subject-seed-and-year-reuse.md); henüz uygulanmadı.
 - [ ] `PLANLANDI` Öğrenci kayıtları ve öğretmen atamaları.
 - [ ] `PLANLANDI` Toplu içe aktarma için doğrulama ve hata raporu.
 

@@ -1,4 +1,5 @@
 import { SUPPORTED_LOCALES, type LocalizedNames } from "@/i18n/config";
+import type { SubjectTrack } from "@/generated/prisma/client";
 import { tr } from "@/i18n/dictionaries/tr";
 import type { AppDictionary } from "@/i18n/dictionaries/types";
 import { validRevision, validSchoolId } from "./platform-school-validation";
@@ -15,6 +16,7 @@ export type AcademicStructureField =
   | "gradeLevelId"
   | "classSectionId"
   | "subjectId"
+  | "track"
   | "startTime"
   | "endTime";
 
@@ -49,7 +51,10 @@ export type ClassSectionInput = RecordIdentity & {
   code: string;
 };
 
-export type SubjectInput = RecordIdentity & { names: LocalizedNames };
+export type SubjectInput = RecordIdentity & {
+  names: LocalizedNames;
+  track: SubjectTrack;
+};
 
 export type CourseOfferingInput = {
   academicYearId: string;
@@ -247,10 +252,14 @@ export function parseSubject(
 ): Parsed<SubjectInput> {
   const record = identity(form);
   const localized = localizedNames(form, 150, messages);
+  const track = form.get("track");
   const fieldErrors = { ...localized.fieldErrors };
   if (!record) fieldErrors.record = messages.invalidRecord;
-  if (!record || !localized.names) return invalidState(messages, fieldErrors);
-  return { success: true, data: { ...record, names: localized.names } };
+  if (track !== "GENERAL" && track !== "ELECTIVE" && track !== "IGCSE")
+    fieldErrors.track = messages.invalidTrack;
+  if (!record || !localized.names || fieldErrors.track)
+    return invalidState(messages, fieldErrors);
+  return { success: true, data: { ...record, names: localized.names, track: track as SubjectTrack } };
 }
 
 export function parseCourseOffering(

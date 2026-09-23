@@ -70,6 +70,12 @@ enum AcademicTermStatus {
   ARCHIVED
 }
 
+enum SubjectTrack {
+  GENERAL
+  ELECTIVE
+  IGCSE
+}
+
 model School {
   id              String       @id @default(uuid()) @db.Uuid
   slug            String       @unique @db.VarChar(80)
@@ -568,6 +574,7 @@ model Subject {
   id         String    @id @default(uuid()) @db.Uuid
   schoolId   String    @map("school_id") @db.Uuid
   name       String    @db.VarChar(150)
+  track      SubjectTrack @default(GENERAL)
   archivedAt DateTime? @map("archived_at") @db.Timestamptz(6)
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -578,6 +585,7 @@ model Subject {
 
   @@unique([id, schoolId])
   @@index([schoolId, archivedAt, name])
+  @@index([schoolId, track, archivedAt])
   @@map("subjects")
 }
 

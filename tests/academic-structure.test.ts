@@ -98,13 +98,17 @@ test("levels and sections require year-scoped parent UUIDs", () => {
 
 test("subject catalog requires Turkish, Albanian and English on one record", () => {
   assert.equal(
-    parseSubject(form({ id: "new", revision: "new", ...names })).success,
+    parseSubject(form({ id: "new", revision: "new", track: "ELECTIVE", ...names })).success,
     true,
   );
   assert.equal(
     parseSubject(
-      form({ id: "new", revision: "new", ...names, nameSq: "" }),
+      form({ id: "new", revision: "new", track: "ELECTIVE", ...names, nameSq: "" }),
     ).success,
+    false,
+  );
+  assert.equal(
+    parseSubject(form({ id: "new", revision: "new", track: "UNKNOWN", ...names })).success,
     false,
   );
 });

@@ -317,12 +317,13 @@ export async function persistSubject(
   actor: AcademicStructureActor,
   input: SubjectInput,
 ): Promise<AcademicStructureState> {
-  const snapshot = { names: input.names };
+  const snapshot = { names: input.names, track: input.track };
   if (!input.id) {
     const created = await tx.subject.create({
       data: {
         schoolId: actor.schoolId,
         name: input.names[actor.defaultLocale],
+        track: input.track,
         translations: { create: translationData(actor, input.names) },
       },
     });
@@ -331,7 +332,7 @@ export async function persistSubject(
       entityType: "Subject",
       entityId: created.id,
       afterData: snapshot,
-      changedFields: ["names"],
+      changedFields: ["names", "track"],
     });
     return { status: "success", message: actor.messages.subjectCreated };
   }
@@ -344,7 +345,7 @@ export async function persistSubject(
     return error(actor.messages.conflict);
   const updated = await tx.subject.updateMany({
     where: { id: current.id, schoolId: actor.schoolId, updatedAt: current.updatedAt },
-    data: { name: input.names[actor.defaultLocale] },
+    data: { name: input.names[actor.defaultLocale], track: input.track },
   });
   if (updated.count !== 1) return error(actor.messages.conflict);
   await updateTranslations(tx, actor, "subject", current.id, null, input.names);
@@ -354,9 +355,10 @@ export async function persistSubject(
     entityId: current.id,
     beforeData: {
       names: Object.fromEntries(current.translations.map((item) => [item.locale, item.name])),
+      track: current.track,
     },
     afterData: snapshot,
-    changedFields: ["names"],
+    changedFields: ["names", "track"],
   });
   return { status: "success", message: actor.messages.subjectUpdated };
 }

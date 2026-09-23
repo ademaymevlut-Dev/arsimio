@@ -21,6 +21,7 @@ Arsimio sıfırdan geliştirilen yeni bir üründür. Eski HorizonEdu/Flask proj
 - [Çoklu dil mimarisi](./internationalization.md): Türkçe/Arnavutça/İngilizce UI sözlükleri, okul/üyelik dil tercihi ve tek iş kaydına bağlı DB çeviri tabloları.
 - [Okul Admin faz planı](./school-admin-plan.md): Yerelde tamamlanan `1400px` Faz 0 kabuğu ve tablo temeli; akademik yapıdan servis modülüne uzanan bağımlılık sıralı geliştirme planı.
 - [Faz 1 akademik yapı teslimi](./academic-structure.md): Kademe/seviye, sınıf/şube, üç dilli ders kataloğu, sınıf–ders planı ve ders saatleri; takvim/çalışma günlerinden önceki bilinçli durma noktası.
+- [Eski ders seed'i ve yıl tekrar kullanımı](./legacy-subject-seed-and-year-reuse.md): Görseldeki 49 dersin üç dil/tür envanteri, seed komutu ve yeni yılda sınıf/şube seçimi için veri modeli incelemesi.
 - [Denetim, geçmiş ve veri yaşam döngüsü](./audit-history-data-lifecycle.md): İşlem geçmişi, silme, geri alma ve kalıcı silme kuralları.
 - [Yol haritası](./roadmap.md): Tamamlanan, sıradaki ve ileride yapılacak işler.
 - [Çalışma günlüğü](./work-log.md): Tarih sırasıyla alınan kararlar ve yapılan işlemler.

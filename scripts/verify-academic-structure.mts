@@ -166,6 +166,7 @@ try {
           await persistSubject(tx, actorContext, {
             id: null,
             revision: null,
+            track: "GENERAL",
             names: {
               tr: "Matematik",
               sq: "Matematikë",
@@ -183,6 +184,7 @@ try {
         subject.translations.map(({ locale }) => locale).sort(),
         ["en", "sq", "tr"],
       );
+      assert.equal(subject.track, "GENERAL");
       pass("subject catalog stores three translations under one subject id");
 
       assert.equal(

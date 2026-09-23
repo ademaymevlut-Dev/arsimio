@@ -656,6 +656,21 @@ function SubjectDialog({
             state={state}
             pending={pending}
           />
+          <div>
+            <Label htmlFor="subject-track">{structure.subjectTrack}</Label>
+            <NativeSelect
+              id="subject-track"
+              name="track"
+              defaultValue={subject?.track ?? "GENERAL"}
+              disabled={pending}
+              className="mt-2"
+            >
+              <option value="GENERAL">{structure.subjectTrackGeneral}</option>
+              <option value="ELECTIVE">{structure.subjectTrackElective}</option>
+              <option value="IGCSE">{structure.subjectTrackIgcse}</option>
+            </NativeSelect>
+            <FieldError state={state} field="track" id="subject-track-error" />
+          </div>
         </>
       )}
     </RecordDialog>
@@ -878,8 +893,8 @@ export function AcademicStructureManager({
         <TabsContent value="subjects">
           <DataTableShell title={text.subjectsTitle} description={text.subjectsDescription} toolbar={canManage ? <SubjectDialog messages={messages} trigger={<Button><Plus aria-hidden />{text.newSubject}</Button>} /> : undefined} footer={formatMessage(text.recordsFooter, { count: structure.subjects.length })}>
             {structure.subjects.length === 0 ? <Empty title={text.noSubjects} description={text.noSubjectsDescription} /> : (
-              <Table><TableHeader><TableRow><TableHead>{text.subjectNameTr}</TableHead><TableHead>{text.subjectNameSq}</TableHead><TableHead>{text.subjectNameEn}</TableHead><TableHead>{messages.common.status}</TableHead><TableHead className="text-right">{messages.common.actions}</TableHead></TableRow></TableHeader><TableBody>{structure.subjects.map((subject) => (
-                <TableRow key={subject.id} className={subject.archived ? "opacity-65" : undefined}><TableCell>{subject.names.tr}</TableCell><TableCell>{subject.names.sq}</TableCell><TableCell>{subject.names.en}</TableCell><TableCell><StatusBadge archived={subject.archived} messages={messages} /></TableCell><TableCell><div className="flex justify-end gap-2">{canManage && !subject.archived && <SubjectDialog subject={subject} messages={messages} trigger={editButton(messages.common.edit)} />}{canManage && <LifecycleButton entity="subject" id={subject.id} revision={subject.revision} name={subject.name} archived={subject.archived} messages={messages} />}</div></TableCell></TableRow>
+              <Table><TableHeader><TableRow><TableHead>{text.subjectNameTr}</TableHead><TableHead>{text.subjectNameSq}</TableHead><TableHead>{text.subjectNameEn}</TableHead><TableHead>{text.subjectTrack}</TableHead><TableHead>{messages.common.status}</TableHead><TableHead className="text-right">{messages.common.actions}</TableHead></TableRow></TableHeader><TableBody>{structure.subjects.map((subject) => (
+                <TableRow key={subject.id} className={subject.archived ? "opacity-65" : undefined}><TableCell>{subject.names.tr}</TableCell><TableCell>{subject.names.sq}</TableCell><TableCell>{subject.names.en}</TableCell><TableCell>{subject.track === "ELECTIVE" ? text.subjectTrackElective : subject.track === "IGCSE" ? text.subjectTrackIgcse : text.subjectTrackGeneral}</TableCell><TableCell><StatusBadge archived={subject.archived} messages={messages} /></TableCell><TableCell><div className="flex justify-end gap-2">{canManage && !subject.archived && <SubjectDialog subject={subject} messages={messages} trigger={editButton(messages.common.edit)} />}{canManage && <LifecycleButton entity="subject" id={subject.id} revision={subject.revision} name={subject.name} archived={subject.archived} messages={messages} />}</div></TableCell></TableRow>
               ))}</TableBody></Table>
             )}
           </DataTableShell>

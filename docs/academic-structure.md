@@ -39,6 +39,8 @@ Bu yaklaşım aynı okulun sonraki öğretim yılında farklı kademe/seviye dü
 
 Ders kataloğu okul genelindedir ve yıllar arasında tekrar kullanılabilir. Türkçe, Arnavutça ve İngilizce adlar ayrı dersler değil aynı `subject_id` kaydının çevirileridir.
 
+2026-09-23 incelemesinde, sınıf/şube ve kademe/seviyenin hâlen yıl kapsamında ayrı ayrı oluşturulması gerektiği doğrulandı. Eski HorizonEdu'nun global sınıf/şube seçme işleyişine dönüş için [yıl tekrar kullanımı önerisi](./legacy-subject-seed-and-year-reuse.md) açıldı. Ders kataloğuna ayrıca `GENERAL`, `ELECTIVE`, `IGCSE` türü eklendi; tür ile not hanesi aynı kavram değildir.
+
 `course_offerings`, seçili yılda bir sınıf/şubede okutulacak dersleri belirler. Bu yıllık plan öğretmen veya dönem ataması içermez. Faz 4'teki dönemlik öğretmen görevlendirmeleri bu planı referans alacaktır. Aynı sınıf–ders çifti aynı yılda ikinci kez eklenemez.
 
 ## Ders saatleri

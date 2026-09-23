@@ -1,0 +1,60 @@
+export type SeedSubject = {
+  sq: string;
+  tr: string;
+  en: string;
+  track: "GENERAL" | "ELECTIVE" | "IGCSE";
+};
+
+// Albanian names are transcribed from the legacy HorizonEdu subject list.
+// Keep them verbatim so an existing entry can be detected without guessing.
+export const LEGACY_SUBJECT_CATALOG = [
+  { sq: "Art figurativ", tr: "Görsel Sanatlar", en: "Visual Arts", track: "GENERAL" },
+  { sq: "Edukatë muzikore", tr: "Müzik Eğitimi", en: "Music Education", track: "GENERAL" },
+  { sq: "Astronomi", tr: "Astronomi", en: "Astronomy", track: "GENERAL" },
+  { sq: "Biologji", tr: "Biyoloji", en: "Biology", track: "GENERAL" },
+  { sq: "Edukatë fizike", tr: "Beden Eğitimi", en: "Physical Education", track: "GENERAL" },
+  { sq: "Edukatë qytetare", tr: "Vatandaşlık Eğitimi", en: "Civic Education", track: "GENERAL" },
+  { sq: "Filozofi dhe logjikë", tr: "Felsefe ve Mantık", en: "Philosophy and Logic", track: "GENERAL" },
+  { sq: "Fizikë", tr: "Fizik", en: "Physics", track: "GENERAL" },
+  { sq: "Gjeografi", tr: "Coğrafya", en: "Geography", track: "GENERAL" },
+  { sq: "Gjuhë shqipe", tr: "Arnavutça", en: "Albanian Language", track: "GENERAL" },
+  { sq: "Gjuhë amtare", tr: "Ana Dili", en: "Mother Tongue", track: "GENERAL" },
+  { sq: "Gjuhë angleze", tr: "İngilizce", en: "English Language", track: "GENERAL" },
+  { sq: "Gjuhë gjermane", tr: "Almanca", en: "German Language", track: "GENERAL" },
+  { sq: "Histori", tr: "Tarih", en: "History", track: "GENERAL" },
+  { sq: "Kimi", tr: "Kimya", en: "Chemistry", track: "GENERAL" },
+  { sq: "Matematikë", tr: "Matematik", en: "Mathematics", track: "GENERAL" },
+  { sq: "Njeriu dhe natyra", tr: "İnsan ve Doğa", en: "Humans and Nature", track: "GENERAL" },
+  { sq: "Psikologji", tr: "Psikoloji", en: "Psychology", track: "GENERAL" },
+  { sq: "Shkathtësi për jetë", tr: "Yaşam Becerileri", en: "Life Skills", track: "GENERAL" },
+  { sq: "Shoqëria dhe mjedisi", tr: "Toplum ve Çevre", en: "Society and Environment", track: "GENERAL" },
+  { sq: "TIK", tr: "Bilgi ve İletişim Teknolojileri", en: "Information and Communication Technology", track: "GENERAL" },
+  { sq: "Mësim zgjedhor Gjuhë angleze", tr: "Seçmeli İngilizce", en: "Elective English", track: "ELECTIVE" },
+  { sq: "Mësim zgjedhor Matematikë", tr: "Seçmeli Matematik", en: "Elective Mathematics", track: "ELECTIVE" },
+  { sq: "Mësim zgjedhor Fizikë", tr: "Seçmeli Fizik", en: "Elective Physics", track: "ELECTIVE" },
+  { sq: "Mësim zgjedhor Kimi", tr: "Seçmeli Kimya", en: "Elective Chemistry", track: "ELECTIVE" },
+  { sq: "Mësim zgjedhor Biologji", tr: "Seçmeli Biyoloji", en: "Elective Biology", track: "ELECTIVE" },
+  { sq: "Kodim", tr: "Kodlama", en: "Coding", track: "GENERAL" },
+  { sq: "Lojë e lirë", tr: "Serbest Oyun", en: "Free Play", track: "GENERAL" },
+  { sq: "Mësim zgjedhor", tr: "Seçmeli Ders", en: "Elective Course", track: "ELECTIVE" },
+  { sq: "Aktivitet", tr: "Etkinlik", en: "Activity", track: "GENERAL" },
+  { sq: "Menaxhimi i zemërimit", tr: "Öfke Yönetimi", en: "Anger Management", track: "GENERAL" },
+  { sq: "Mësim plotësues", tr: "Destekleyici Eğitim", en: "Supplementary Instruction", track: "GENERAL" },
+  { sq: "Ora e detyrave", tr: "Ödev Saati", en: "Homework Hour", track: "GENERAL" },
+  { sq: "Mësim zgjedhor IQ Brain Training", tr: "Seçmeli IQ Beyin Eğitimi", en: "Elective IQ Brain Training", track: "ELECTIVE" },
+  { sq: "Lojë në natyrë", tr: "Doğada Oyun", en: "Outdoor Play", track: "GENERAL" },
+  { sq: "MZ. Secondary Kimi", tr: "Seçmeli Secondary Kimya", en: "Elective Secondary Chemistry", track: "ELECTIVE" },
+  { sq: "MZ. AS/A Level Math", tr: "Seçmeli AS/A Level Matematik", en: "Elective AS/A Level Mathematics", track: "ELECTIVE" },
+  { sq: "Global Prospektive (IGCSE)", tr: "Küresel Perspektifler (IGCSE)", en: "Global Perspectives (IGCSE)", track: "IGCSE" },
+  { sq: "MZ. AS/A Level Kimi", tr: "Seçmeli AS/A Level Kimya", en: "Elective AS/A Level Chemistry", track: "ELECTIVE" },
+  { sq: "MZ. AS/A Level Biologji", tr: "Seçmeli AS/A Level Biyoloji", en: "Elective AS/A Level Biology", track: "ELECTIVE" },
+  { sq: "MZ. Secondary Fizikë", tr: "Seçmeli Secondary Fizik", en: "Elective Secondary Physics", track: "ELECTIVE" },
+  { sq: "MZ. Secondary Biologji", tr: "Seçmeli Secondary Biyoloji", en: "Elective Secondary Biology", track: "ELECTIVE" },
+  { sq: "Klub", tr: "Kulüp", en: "Club", track: "GENERAL" },
+  { sq: "Lexim - Kuptim", tr: "Okuduğunu Anlama", en: "Reading Comprehension", track: "GENERAL" },
+  { sq: "200 Problema për mua", tr: "Benim İçin 200 Problem", en: "200 Problems for Me", track: "GENERAL" },
+  { sq: "Matematikë (IGCSE)", tr: "Matematik (IGCSE)", en: "Mathematics (IGCSE)", track: "IGCSE" },
+  { sq: "Fizikë (IGCSE)", tr: "Fizik (IGCSE)", en: "Physics (IGCSE)", track: "IGCSE" },
+  { sq: "Kimi (IGCSE)", tr: "Kimya (IGCSE)", en: "Chemistry (IGCSE)", track: "IGCSE" },
+  { sq: "Biologji (IGCSE)", tr: "Biyoloji (IGCSE)", en: "Biology (IGCSE)", track: "IGCSE" },
+] as const satisfies readonly SeedSubject[];

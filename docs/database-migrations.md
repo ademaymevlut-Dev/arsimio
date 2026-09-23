@@ -28,6 +28,8 @@ Oluşturulan 13 uygulama tablosu:
 
 `20260922000100_add_academic_structure`, 2026-09-22'de uygulandı. Dokuz tablo eklenerek uygulama tablo sayısı 28'e çıktı: `education_stages`, `education_stage_translations`, `grade_levels`, `class_sections`, `subjects`, `subject_translations`, `course_offerings`, `lesson_periods`, `lesson_period_translations`. Kademe, seviye, şube, sınıf–ders planı ve ders saati seçili okul/yıl bileşik foreign key'leriyle; ders kataloğu okul kapsamıyla korunur. Kademe, ders ve ders saati adları tek iş kimliği altında `tr/sq/en` çeviri satırlarıdır. Ders saati bitişinin başlangıçtan sonra olması CHECK, aynı yıldaki arşivlenmemiş saatlerin çakışmaması trigger ile zorunludur. Dokuz rollback-only gerçek DB kontrolü tenant sınırı, çeviriler, tekrarlar, bağımlı arşivleme, geri alma ve audit'i doğruladı; test verisi tutulmadı. Okul takvimi/çalışma günü tablosu bu migration'a eklenmedi.
 
+`20260923000100_add_subject_track`, 2026-09-23'te bağlı Neon'a uygulandı. Ders kataloğuna `GENERAL`/`ELECTIVE`/`IGCSE` türünü ekler, mevcut dersleri `GENERAL` varsayılanıyla korur ve okul+tür indeksi oluşturur. Migration ders eklemez; ayrı seed komutu HorizonEdu'ya 49 ders ve 147 çeviri oluşturdu. GjimCamEdu değişmedi.
+
 Prisma ayrıca uygulanan migration'ları `_prisma_migrations` tablosunda izler. Diğer akademik ve operasyon tabloları ilgili modüller geliştikçe eklenecek. Pilot seed'i iki okul, doğrulanmış domainler, roller/permission'lar ve bir PENDING Süper Admin hesabı oluşturdu. Sonrasında kullanıcı kendi terminalinde Süper Admin parolasını belirledi; iki okul için ilk yöneticileri oluşturup giriş/çıkış ve çapraz okul giriş reddini doğruladı. Parolalar belgelere yazılmaz.
 
 ## İncelemede düzeltilen kurallar
