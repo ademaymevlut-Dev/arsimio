@@ -74,6 +74,14 @@ const schoolPermissions = [
   "audit.read",
   "academics.read",
   "academics.manage",
+  "persons.read",
+  "persons.manage",
+  "persons.identity.read",
+  "persons.identity.manage",
+  "students.read",
+  "students.manage",
+  "guardians.read",
+  "guardians.manage",
 ];
 const platformPermissions = [
   "platform.schools.read",

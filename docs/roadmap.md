@@ -71,10 +71,13 @@ Sıra: ortam/domain doğrulaması → iki okul seed'i ve tenant çözümleme →
 
 Okul Admin ekranlarının ayrıntılı uygulama sırası [Okul Admin faz planında](./school-admin-plan.md) tutulur. `1400px` kabuk, permission tabanlı menü ve ortak tablo temelinden sonra ilk gerçek veri dilimi olan öğretim yılları/dönemler tamamlandı.
 
+- [x] `TAMAMLANDI / TASARIM` Kişi, öğrenci, veli, personel, öğretmen, hesap ve okul üyeliği sınırları kullanıcı yanıtlarıyla kesinleştirildi. Tek Person'a bağlı ayrı portal hesapları, kalıcı okul numarası, tek primary veli, yıllık enrollment/placement ve parçalı HR yaklaşımı [teknik tasarımda](./04-kisi-ogrenci-veli-personel-teknik-tasarim.md) belgelendi.
+- [x] `TAMAMLANDI / YEREL KOD + DB` Paket 1 öğrenci kayıt omurgası: tenant kapsamlı Person/kimlik/iletişim, kalıcı okul numarası, StudentProfile, GuardianRelationship/tek primary, Enrollment, StudentGroupPlacement ve lifecycle tabloları uygulandı. Okul Admin öğrenci liste–kayıt–detay, mevcut/yeni anne-baba ve primary seçimi ile pasif/aktif durum akışları eklendi. Additive migration Neon'a uygulandı; 10 rollback DB kontrolü ve 70 birim testi geçti. Vercel yayını ve kullanıcı kabulü açık.
+- [ ] `SIRADAKİ` Paket 1 canlı kabulü: `PERSON_IDENTITY_ENCRYPTION_KEY` ortam sırrını tanımla, Vercel yayını yap ve iki pilot okuldan birinde küçük deneme öğrenci/veli kaydıyla liste–detay–primary–pasif akışını doğrula.
 - [ ] `PLANLANDI` Pilotun kullanıcı oluşturma/üyelik/rol akışını genişlet; ayrıntılı kullanıcı yönetimi ve kaynak bazlı yetkiler.
 - [ ] `PLANLANDI` Parola değiştirme/sıfırlama ve oturum iptali. Mail/SMS, davet teslimi ve MFA daha sonra eklenecek.
 - [ ] `PLANLANDI` Çalışan ve öğretmen profilleri.
-- [ ] `PLANLANDI` Öğrenci ve veli profilleri ile doğrulanmış bağlantılar.
+- [x] `TAMAMLANDI / YEREL KOD + DB` Temel öğrenci profili ve anne/baba bağlantıları Paket 1 kapsamında tamamlandı. Öğrenci/veli portal hesapları Paket 2'de ayrı kalır.
 - [ ] `DEVAM EDİYOR` Akademik yapı: öğretim yılı/dönem, esnek kademe/seviye, yıllık sınıf/şube, üç dilli ders kataloğu, yıllık sınıf–ders planı ve üç dilli/çakışmasız ders saatleri tamamlandı. Okulda tek aktif yıl korunur; o yılın bütün dönemleri birlikte etkinleşir ve tarihli kayıtlar okul saat dilimindeki tarihe göre doğru döneme otomatik bağlanır. Takvim/çalışma günleri kullanıcıyla ürün görüşmesi yapılana kadar bilinçli olarak durduruldu.
 - [ ] `DEVAM EDİYOR` Eski HorizonEdu görselindeki 49 ders, üç dilli ve `GENERAL`/`ELECTIVE`/`IGCSE` türüyle HorizonEdu'ya seed edildi. Seçmeli ve IGCSE için ayrı ortak not haneleri not modülünde uygulanacak. Sınıf/şube ve planın yeni yılda elle tekrar girilmesini kaldıracak global katalog + yıllık seçim akışı [incelendi](./legacy-subject-seed-and-year-reuse.md); henüz uygulanmadı.
 - [ ] `PLANLANDI` Öğrenci kayıtları ve öğretmen atamaları.

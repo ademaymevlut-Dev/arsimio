@@ -2,6 +2,34 @@
 
 Bu günlük yapılan teknik ve ürün çalışmalarını tarih sırasıyla kaydeder. Gizli anahtarlar, parolalar ve bağlantı dizeleri bu belgeye yazılmaz.
 
+## 2026-09-30 — Paket 1 öğrenci kayıt omurgası
+
+- Onaylanan kişi mimarisi uygulamaya geçirildi. Tenant kapsamlı `Person`, şifreli/aranabilir `PersonIdentity`, çoklu `PersonContactPoint`, okul numarası dizisi, `StudentProfile`, `GuardianRelationship`, `Enrollment`, `StudentGroupPlacement` ve `StudentLifecycleEvent` modelleri eklendi.
+- Okul numarası öğretim yılı içermeyen okul-kapsamlı artan değer olarak transaction içinde ayrılıyor. Resmî kimlik isteğe bağlıdır; AES-256-GCM ile saklanır, normalize HMAC ile aynı okulda tekrar engellenir ve DTO'da yalnız son dört karakter gösterilir. Açık kimlik, telefon ve e-posta audit JSON'una yazılmaz.
+- Aynı `Person` mevcut kişi seçicisinden anne/baba olarak bağlanabildiği için ileride öğretmen/personel olan kişi ikinci kez oluşturulmayacak. Bir öğrenci için tek aktif primary veli partial unique index ve atomik primary değişimiyle korunuyor.
+- Okul Admin için permission tabanlı `/students`, `/students/new` ve `/students/[studentId]` ekranları eklendi. Kesin kayıt kişi+öğrenci+yıllık kayıt+sınıf yerleşimini tek işlemde oluşturuyor; detay ekranı anne/baba ekleme/seçme, primary değiştirme ve geçmişi koruyarak pasif/aktif durum hareketini yönetiyor.
+- `persons.*`, `persons.identity.*`, `students.*` ve `guardians.*` izinleri eklendi. Kimlik ve veli verileri kendi okuma/yönetme permission'ları olmadan sorguya dahil edilmiyor; bütün yazmalar origin, tenant, permission, Serializable transaction ve audit kontrolünden geçiyor.
+- `20260930000300_add_student_records` additive migration'ı bağlı Neon veritabanına uygulandı; mevcut auth/akademik tablolar ve veriler silinmedi. `pnpm db:verify:students` ile 10 gerçek servis/DB kontrolü geçti ve bütün fixture'lar rollback edildi.
+- Prisma validate/generate, TypeScript, lint, 70/70 birim testi ve Next.js 16 production build'i Webpack ile geçti. Yerel Turbopack build'i çalışma ortamının alt süreç için port bağlama kısıtı nedeniyle kod derlenmeden durdu; Webpack derlemesi bütün öğrenci route'larını başarıyla üretti.
+- `PERSON_IDENTITY_ENCRYPTION_KEY` örnek ortama eklendi fakat sır üretilip Git'e yazılmadı. Vercel/yerel ortam sırrı kullanıcı tarafından tanımlanmalı; anahtar yokken kimlik alanı boş bırakılarak kayıt yapılabilir ve dolu kimlik isteği güvenli hata verir.
+- Commit, push ve Vercel deployment yapılmadı. Sıradaki kontrollü adım ortam sırrı, kullanıcı push/deploy'u ve küçük canlı kabul kaydıdır; portal hesapları, HR, fotoğraf ve eski veri seed'i bu pakete eklenmedi.
+
+## 2026-09-30 — Kişi mimarisi kararlarının tamamlanması ve teknik paketleme
+
+- Kullanıcı son beş netleştirmeyi tamamladı: aynı gerçek kişi tekrar oluşturulmadan ayrı portal hesapları taşıyacak; okul numarası yıl içermeyen kalıcı düz değer olacak; ücretli otomatik SMS/e-posta yalnız primary veliye gidecek; HR adım adım geliştirilecek; eski veri seed kapsamı ürün ekranları tamamlandıktan sonra belirlenecek.
+- [03 numaralı karar belgesi](./03-kisi-ogrenci-personel-veli-veri-mimarisi.md) tamamlandı durumuna getirildi. P01–P20 yanıtları değiştirilmeden korundu ve takip kararları ayrı bölümde kaydedildi.
+- [04 numaralı teknik tasarım](./04-kisi-ogrenci-veli-personel-teknik-tasarim.md) oluşturuldu. Nihai kavram/ER sınırları, `PersonAccount` ile ayrı giriş bağlamları, öğrenci numarası ve isteğe bağlı resmî kimlik, tek primary veli, enrollment/placement, personel sözleşme revizyonları, permission/audit sınırları, DB kısıtları ve kabul testleri tanımlandı.
+- Uygulama yedi kontrollü pakete ayrıldı. Sıradaki tek teslim; Person + StudentProfile + GuardianRelationship + Enrollment + StudentGroupPlacement kullanan öğrenci kayıt omurgasıdır. Profil hesapları ve HR sonraki bağımsız paketlerdir.
+- Yalnız dokümantasyon değişti; Prisma şeması, migration, uygulama kodu, canlı veri, Vercel Blob veya eski veri seed'i değiştirilmedi.
+
+## 2026-09-30 — Kişi, öğrenci, veli, personel ve öğretmen mimarisi keşfi
+
+- Akademik ana veri düzenlemesinden sonraki faz için güncel Arsimio kimlik/üyelik/rol/audit şeması ile eski HorizonEdu öğrenci, yıllık kayıt, veli, personel, yönetici ve mobil giriş akışları salt okunur incelendi.
+- Eski yapıda kişi, profil, giriş hesabı, durum ve görev bilgilerinin aynı tablolarda karıştığı; öğrenci mobil akışında `admin.id` ile `student_tbl.id` kimliklerinin farklı yerlerde kullanıldığı; personel tablosunun öğretmen ve diğer çalışan rollerini birlikte taşıdığı belgelendi.
+- Tenant kapsamlı `Person`; isteğe bağlı platform `User` bağlantısı; ayrı `StudentProfile`, `Employment`, `TeacherProfile`, `GuardianRelationship`, yıllık `Enrollment` ve `StudentGroupPlacement` modeli önerildi. Bu öneriler henüz kesin şema veya migration değildir.
+- İsim, kimlik numarası, iletişim, veli yetkisi, hesap açma zamanı, çalışma türleri, özlük verisi, öğrenci yaşam döngüsü, belge yönetimi ve eski veri aktarımı için 20 karar sorusu [03 numaralı çalışma belgesine](./03-kisi-ogrenci-personel-veli-veri-mimarisi.md) yazıldı. Kullanıcı yanıtlarından sonra teknik ER, constraint, permission, migration ve ekran akışı hazırlanacak.
+- Depodaki 1 Ağustos 2024 tarihli SQLite kopyası yalnız tarihsel karşılaştırma için okundu; canlı aktarım kaynağı sayılmadı. Kişisel veri belgeye taşınmadı; uygulama kodu, Prisma şeması, migration veya canlı veritabanı değiştirilmedi.
+
 ## 2026-09-18
 
 ### Proje kurulumu

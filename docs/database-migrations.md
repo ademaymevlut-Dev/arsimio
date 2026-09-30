@@ -30,6 +30,10 @@ Oluşturulan 13 uygulama tablosu:
 
 `20260923000100_add_subject_track`, 2026-09-23'te bağlı Neon'a uygulandı. Ders kataloğuna `GENERAL`/`ELECTIVE`/`IGCSE` türünü ekler, mevcut dersleri `GENERAL` varsayılanıyla korur ve okul+tür indeksi oluşturur. Migration ders eklemez; ayrı seed komutu HorizonEdu'ya 49 ders ve 147 çeviri oluşturdu. GjimCamEdu değişmedi.
 
+`20260930000100_rebuild_academic_structure` ve `20260930000200_allow_schedule_period_names_across_versions`, tekrar kullanılabilir kademe/seviye/şube ana verisi, sürümlü müfredat ve saat profilleri ile yıllık sınıf/ders açılımlarını kurdu; saat adlarının farklı profil sürümlerinde tekrar kullanılmasını güvenli hale getirdi.
+
+`20260930000300_add_student_records`, 2026-09-30'da bağlı Neon'a uygulandı. Dokuz tablo eklenerek uygulama tablo sayısı 46'ya çıktı: `persons`, `person_identities`, `person_contact_points`, `school_number_sequences`, `student_profiles`, `guardian_relationships`, `enrollments`, `student_group_placements`, `student_lifecycle_events`. Tenant bileşik foreign key'leri kişi/öğrenci/yıl/sınıf ilişkilerini aynı okulda tutar; partial unique index öğrenci başına tek primary veliyi, tarih trigger'ı sınıf yerleşimlerinin yıl içinde ve çakışmasız olmasını korur. Sekiz atomik permission mevcut `SCHOOL_ADMIN` rollerine bağlandı. Migration eski öğrenci verisi seed etmedi ve mevcut tablo/veri silmedi.
+
 Prisma ayrıca uygulanan migration'ları `_prisma_migrations` tablosunda izler. Diğer akademik ve operasyon tabloları ilgili modüller geliştikçe eklenecek. Pilot seed'i iki okul, doğrulanmış domainler, roller/permission'lar ve bir PENDING Süper Admin hesabı oluşturdu. Sonrasında kullanıcı kendi terminalinde Süper Admin parolasını belirledi; iki okul için ilk yöneticileri oluşturup giriş/çıkış ve çapraz okul giriş reddini doğruladı. Parolalar belgelere yazılmaz.
 
 ## İncelemede düzeltilen kurallar
@@ -105,6 +109,8 @@ pnpm db:status
 `pnpm db:verify:academic-calendar` akademik izinleri, tek dönem ID'si altındaki üç tenant-kapsamlı çeviriyi, dönem çakışmasını, tek aktif yıl geçişini, yıl etkinleşince bütün dönemlerin birlikte etkinleşmesini, dönemlerin tek başına kapatılamamasını, otomatik lifecycle audit'ini ve çapraz okul yazma reddini gerçek servisler üzerinden kontrol eder. Bütün fixture ve yazmalar transaction sonunda rollback edilir.
 
 `pnpm db:verify:academic-structure` kademe/seviye/şube kapsamını, tek ders ID'si altındaki üç çeviriyi, sınıf–ders tekrar engelini, ders saati çakışmasını, bağımlı kayıt arşivleme/geri alma kurallarını ve tenant actor audit'ini gerçek servisler üzerinden kontrol eder. Bütün fixture ve yazmalar transaction sonunda rollback edilir.
+
+`pnpm db:verify:students` kişi/öğrenci/yıllık kayıt/sınıf yerleşiminin atomik oluşturulmasını, şifreli kimlik tekrarını, yıl içermeyen artan okul numarasını, aynı kişinin kopyalanmadan veli bağlanmasını, çapraz tenant reddini, tek primary kuralını, pasife alma geçmişini, optimistic revision ve audit'i gerçek servisler üzerinden kontrol eder. On kontrolün bütün fixture ve yazmaları transaction sonunda rollback edilir.
 
 ## Kaynaklar
 

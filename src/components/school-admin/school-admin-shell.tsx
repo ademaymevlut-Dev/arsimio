@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  GraduationCap,
   ShieldCheck,
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
@@ -54,6 +55,13 @@ function createNavigation(messages: AppDictionary["shell"]) {
     label: messages.academicStructure,
     icon: LibraryBig,
     permission: "academics.read",
+  },
+  {
+    group: messages.people,
+    href: "/students",
+    label: messages.students,
+    icon: GraduationCap,
+    permission: "students.read",
   },
   ];
 }

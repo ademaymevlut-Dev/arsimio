@@ -112,6 +112,73 @@ enum AcademicYearSetupRunStatus {
   FAILED
 }
 
+enum PersonSex {
+  MALE
+  FEMALE
+}
+
+enum PersonStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum IdentityType {
+  NATIONAL_ID
+  PASSPORT
+}
+
+enum ContactKind {
+  PHONE
+  EMAIL
+}
+
+enum SchoolSequenceKind {
+  STUDENT_NUMBER
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+  GRADUATED
+}
+
+enum GuardianRelationshipType {
+  MOTHER
+  FATHER
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum EnrollmentOutcome {
+  PROMOTED
+  REPEATED
+  GRADUATED
+  TRANSFERRED
+  WITHDRAWN
+  UNKNOWN
+}
+
+enum StudentLifecycleEventType {
+  ACTIVATED
+  INACTIVATED
+  REACTIVATED
+  TRANSFERRED_OUT
+  WITHDRAWN
+  GRADUATED
+}
+
+enum StudentExitReason {
+  FAMILY_RELOCATION
+  COST
+  OTHER_SCHOOL
+  OTHER
+  UNKNOWN
+}
+
 model School {
   id              String       @id @default(uuid()) @db.Uuid
   slug            String       @unique @db.VarChar(80)
@@ -155,6 +222,15 @@ model School {
   subjects                    Subject[]
   subjectTranslations         SubjectTranslation[]
   courseOfferings             CourseOffering[]
+  persons                     Person[]
+  personIdentities            PersonIdentity[]
+  personContactPoints         PersonContactPoint[]
+  numberSequences             SchoolNumberSequence[]
+  studentProfiles             StudentProfile[]
+  guardianRelationships       GuardianRelationship[]
+  enrollments                 Enrollment[]
+  studentGroupPlacements      StudentGroupPlacement[]
+  studentLifecycleEvents      StudentLifecycleEvent[]
 
   @@index([status])
   @@map("schools")
@@ -482,6 +558,8 @@ model AcademicYear {
   classSections            AcademicYearClassSection[]
   courseOfferings          CourseOffering[]
   setupRuns                AcademicYearSetupRun[]
+  enrollments              Enrollment[]
+  studentGroupPlacements   StudentGroupPlacement[]
 
   @@unique([schoolId, name])
   @@unique([id, schoolId])
@@ -852,6 +930,7 @@ model AcademicYearClassSection {
   classSectionDefinition ClassSectionDefinition  @relation(fields: [classSectionDefinitionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
   scheduleProfileVersion ScheduleProfileVersion? @relation(fields: [scheduleProfileVersionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
   courseOfferings        CourseOffering[]
+  studentGroupPlacements StudentGroupPlacement[]
 
   @@unique([academicYearId, classSectionDefinitionId], map: "aycs_year_section_definition_key")
   @@unique([id, schoolId, academicYearId])
@@ -906,4 +985,195 @@ model AcademicYearSetupRun {
   @@unique([schoolId, idempotencyKey])
   @@index([schoolId, academicYearId, startedAt])
   @@map("academic_year_setup_runs")
+}
+
+model Person {
+  id              String       @id @default(uuid()) @db.Uuid
+  schoolId        String       @map("school_id") @db.Uuid
+  firstName       String       @map("first_name") @db.VarChar(100)
+  middleName      String?      @map("middle_name") @db.VarChar(100)
+  lastName        String       @map("last_name") @db.VarChar(100)
+  birthDate       DateTime?    @map("birth_date") @db.Date
+  birthPlace      String?      @map("birth_place") @db.VarChar(150)
+  nationalityText String?      @map("nationality_text") @db.VarChar(100)
+  sex             PersonSex?
+  status          PersonStatus @default(ACTIVE)
+  archivedAt      DateTime?    @map("archived_at") @db.Timestamptz(6)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school                School                 @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  identities            PersonIdentity[]
+  contactPoints         PersonContactPoint[]
+  studentProfile        StudentProfile?
+  guardianRelationships GuardianRelationship[] @relation("GuardianPerson")
+
+  @@unique([id, schoolId])
+  @@index([schoolId, status, lastName, firstName])
+  @@map("persons")
+}
+
+model PersonIdentity {
+  id             String       @id @default(uuid()) @db.Uuid
+  schoolId       String       @map("school_id") @db.Uuid
+  personId       String       @map("person_id") @db.Uuid
+  type           IdentityType
+  countryCode    String?      @map("country_code") @db.VarChar(2)
+  encryptedValue Bytes        @map("encrypted_value")
+  lookupHash     String       @map("lookup_hash") @db.Char(64)
+  lastFour       String       @map("last_four") @db.VarChar(4)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  person Person @relation(fields: [personId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([schoolId, personId, type])
+  @@unique([schoolId, type, lookupHash])
+  @@index([schoolId, personId])
+  @@map("person_identities")
+}
+
+model PersonContactPoint {
+  id                 String      @id @default(uuid()) @db.Uuid
+  schoolId           String      @map("school_id") @db.Uuid
+  personId           String      @map("person_id") @db.Uuid
+  kind               ContactKind
+  value              String      @db.VarChar(320)
+  normalizedValue    String      @map("normalized_value") @db.VarChar(320)
+  label              String?     @db.VarChar(50)
+  isPrimaryForPerson Boolean     @default(false) @map("is_primary_for_person")
+  archivedAt         DateTime?   @map("archived_at") @db.Timestamptz(6)
+  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  person Person @relation(fields: [personId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([schoolId, personId, kind, normalizedValue])
+  @@index([schoolId, personId, archivedAt])
+  @@map("person_contact_points")
+}
+
+model SchoolNumberSequence {
+  schoolId  String             @map("school_id") @db.Uuid
+  kind      SchoolSequenceKind
+  nextValue BigInt             @default(1) @map("next_value")
+  updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([schoolId, kind])
+  @@map("school_number_sequences")
+}
+
+model StudentProfile {
+  id            String        @id @default(uuid()) @db.Uuid
+  schoolId      String        @map("school_id") @db.Uuid
+  personId      String        @map("person_id") @db.Uuid
+  studentNumber String        @map("student_number") @db.VarChar(40)
+  status        StudentStatus @default(ACTIVE)
+  admittedOn    DateTime      @map("admitted_on") @db.Date
+  inactiveOn    DateTime?     @map("inactive_on") @db.Date
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school                School                  @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  person                Person                  @relation(fields: [personId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  guardianRelationships GuardianRelationship[]
+  enrollments           Enrollment[]
+  lifecycleEvents       StudentLifecycleEvent[]
+
+  @@unique([personId, schoolId])
+  @@unique([schoolId, studentNumber])
+  @@unique([id, schoolId])
+  @@index([schoolId, status, studentNumber])
+  @@map("student_profiles")
+}
+
+model GuardianRelationship {
+  id               String                   @id @default(uuid()) @db.Uuid
+  schoolId         String                   @map("school_id") @db.Uuid
+  studentProfileId String                   @map("student_profile_id") @db.Uuid
+  guardianPersonId String                   @map("guardian_person_id") @db.Uuid
+  relationshipType GuardianRelationshipType @map("relationship_type")
+  isLegalGuardian  Boolean                  @default(false) @map("is_legal_guardian")
+  isPrimaryContact Boolean                  @default(false) @map("is_primary_contact")
+  archivedAt       DateTime?                @map("archived_at") @db.Timestamptz(6)
+  createdAt        DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  student        StudentProfile @relation(fields: [studentProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  guardianPerson Person         @relation("GuardianPerson", fields: [guardianPersonId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([schoolId, studentProfileId, guardianPersonId])
+  @@unique([id, schoolId])
+  @@index([schoolId, guardianPersonId, archivedAt])
+  @@index([schoolId, studentProfileId, archivedAt])
+  @@map("guardian_relationships")
+}
+
+model Enrollment {
+  id               String             @id @default(uuid()) @db.Uuid
+  schoolId         String             @map("school_id") @db.Uuid
+  studentProfileId String             @map("student_profile_id") @db.Uuid
+  academicYearId   String             @map("academic_year_id") @db.Uuid
+  status           EnrollmentStatus   @default(ACTIVE)
+  enrolledOn       DateTime           @map("enrolled_on") @db.Date
+  endedOn          DateTime?          @map("ended_on") @db.Date
+  outcome          EnrollmentOutcome?
+  outcomeOn        DateTime?          @map("outcome_on") @db.Date
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school       School                  @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  student      StudentProfile          @relation(fields: [studentProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  academicYear AcademicYear            @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  placements   StudentGroupPlacement[]
+
+  @@unique([schoolId, studentProfileId, academicYearId])
+  @@unique([id, schoolId, academicYearId])
+  @@index([schoolId, academicYearId, status])
+  @@map("enrollments")
+}
+
+model StudentGroupPlacement {
+  id                         String    @id @default(uuid()) @db.Uuid
+  schoolId                   String    @map("school_id") @db.Uuid
+  academicYearId             String    @map("academic_year_id") @db.Uuid
+  enrollmentId               String    @map("enrollment_id") @db.Uuid
+  academicYearClassSectionId String    @map("academic_year_class_section_id") @db.Uuid
+  validFrom                  DateTime  @map("valid_from") @db.Date
+  validTo                    DateTime? @map("valid_to") @db.Date
+  createdAt                  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school                   School                   @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear             AcademicYear             @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  enrollment               Enrollment               @relation(fields: [enrollmentId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+  academicYearClassSection AcademicYearClassSection @relation(fields: [academicYearClassSectionId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([enrollmentId, validFrom])
+  @@unique([id, schoolId])
+  @@index([schoolId, academicYearId, academicYearClassSectionId, validFrom])
+  @@map("student_group_placements")
+}
+
+model StudentLifecycleEvent {
+  id               String                    @id @default(uuid()) @db.Uuid
+  schoolId         String                    @map("school_id") @db.Uuid
+  studentProfileId String                    @map("student_profile_id") @db.Uuid
+  type             StudentLifecycleEventType
+  effectiveOn      DateTime                  @map("effective_on") @db.Date
+  exitReason       StudentExitReason?        @map("exit_reason")
+  note             String?                   @db.VarChar(500)
+  createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  school  School         @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  student StudentProfile @relation(fields: [studentProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([schoolId, studentProfileId, effectiveOn])
+  @@index([schoolId, type, exitReason, effectiveOn])
+  @@map("student_lifecycle_events")
 }

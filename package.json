@@ -14,6 +14,7 @@
     "db:verify:school-admin": "node --conditions=react-server --import tsx scripts/verify-initial-school-admin.mts",
     "db:verify:academic-calendar": "node --conditions=react-server --import tsx scripts/verify-academic-calendar.mts",
     "db:verify:academic-structure": "node --conditions=react-server --import tsx scripts/verify-academic-structure.mts",
+    "db:verify:students": "node --conditions=react-server --import tsx scripts/verify-student-records.mts",
     "db:seed:pilot": "tsx scripts/seed-pilot.mts",
     "db:seed:legacy-subjects": "tsx scripts/seed-legacy-subjects.mts",
     "postinstall": "prisma generate",

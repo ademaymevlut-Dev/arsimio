@@ -12,6 +12,11 @@ Arsimio sıfırdan geliştirilen yeni bir üründür. Eski HorizonEdu/Flask proj
 - [Veri modeli](./data-model.md): Çekirdek tablolar, ilişkiler ve veri modelleme standartları.
 - [Eski sistem veri modeli incelemesi](./legacy-data-model-review.md): HorizonEdu'nun 46 modeli, kayıt/yıl geçişi/program akışları, 27 bulgu ve yeni akademik çekirdek için görüşme zemini.
 - [Eski sistem canlı veri incelemesi](./legacy-live-data-review.md): 447 öğrenci/1.051 yıllık kayıt, öğretmen/program sayımları, gerçek yıl geçişleri ve 10 canlı bulgu; doğrudan SQL doğrulaması açık.
+- [Eski sistem veri akışı](./00-veri-akisi.md): HorizonEdu Flask modellerinin tablo, ilişki ve iş akışı haritası.
+- [Hedef veri mimarisi](./01-hedef-veri-mimarisi.md): Global, okul kapsamlı ve öğretim yılı kapsamlı verilerin ayrımı ile karar defteri.
+- [Akademik hedef ER ve geçiş planı](./02-akademik-hedef-er-ve-gecis-plani.md): Tekrar kullanılabilir akademik katalog, yıllık açılımlar ve güvenli dönüşüm sırası.
+- [Kişi, öğrenci, veli ve personel mimarisi](./03-kisi-ogrenci-personel-veli-veri-mimarisi.md): Gerçek kişi, hesap, üyelik, öğrenci, veli ve çalışma ilişkisinin ayrıştırılması için öneri ve karar soruları.
+- [Kişi, öğrenci, veli ve personel teknik tasarımı](./04-kisi-ogrenci-veli-personel-teknik-tasarim.md): Onaylanan kararların nihai ER modeli, tablo/kısıtları, ayrı portal hesapları ve adım adım uygulama paketleri.
 - [Migration çalışma düzeni](./database-migrations.md): Artımlı şema geliştirme, uygulanan migration, SQL kısıtları ve doğrulama.
 - [İki okul pilotu](./two-school-pilot.md): Sıradaki teslim; iki domain, markalı giriş, üyelik/yetki ve veri izolasyonu kabul planı.
 - [Pilot kurulum ve doğrulama](./pilot-setup.md): Canlı adresler, ilk hesap aktivasyonu, komutlar ve açık kabul işleri.

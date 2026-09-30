@@ -2,7 +2,7 @@
 
 Bu modelin uygulamadaki ana kaynağı [`prisma/schema.prisma`](../prisma/schema.prisma) dosyasıdır. Şema değişiklikleri Prisma Migrate ile sürümlenir; PostgreSQL RLS ve Prisma'nın doğrudan ifade edemediği kısıtlar migration SQL'ine açıkça eklenir.
 
-2026-09-23 itibarıyla 13 çekirdek + 3 parola/oturum + 2 akademik takvim + 1 dönem çeviri + 9 akademik yapı tablosu, toplam 28 uygulama tablosu Neon'a uygulandı. Ders kataloğuna ayrıca `track` alanı eklendi. [Migration çalışma düzeni](./database-migrations.md) mevcut kısıtları ve henüz uygulanmamış güvenlik katmanlarını ayırır. Aşağıdaki profil tabloları, okul takvimi/çalışma günleri ve `school_settings` sonraki aşamalar için planlanmıştır.
+2026-09-30 itibarıyla çekirdek, auth, akademik takvim/yapı ve öğrenci kayıt omurgasını kapsayan toplam 46 uygulama tablosu Neon'a uygulandı. [Migration çalışma düzeni](./database-migrations.md) mevcut kısıtları ve henüz uygulanmamış güvenlik katmanlarını ayırır. Personel/öğretmen, profil hesapları, okul takvimi/çalışma günleri ve `school_settings` sonraki aşamalar için planlanmıştır.
 
 ## Modelleme standartları
 
@@ -124,17 +124,25 @@ Seçili öğretim yılının günlük zaman dilimlerini sıra, başlangıç ve b
 
 Bu kayıtların tamamı kalıcı silme yerine arşivleme/geri alma kullanır. Aktif alt kayıt varken kademe, seviye, şube veya ders arşivlenemez; geri alma sırasında üst ilişkilerin kullanımda olması gerekir. Yazmalar `academics.manage`, origin doğrulaması, Serializable transaction, optimistic revision ve audit kaydıyla yürür.
 
-## Kişi profilleri
+## Kişi ve öğrenci kayıt omurgası
 
-Kimlik hesabı ile okul içindeki kişi/profil kavramı ayrılmalıdır:
+### `persons`, `person_identities`, `person_contact_points`
 
-- `staff_profiles`
-- `teacher_profiles`
-- `student_profiles`
-- `guardian_profiles`
-- `driver_profiles`
+`persons` okul kapsamındaki tek gerçek kişi kartıdır. Öğrenci, anne/baba ve ileride personel/öğretmen rolleri aynı kişiye ayrı ilişkilerle bağlanır; aynı insan rol başına yeniden oluşturulmaz. Resmî kimlik isteğe bağlı, şifreli ve okul+kimlik türü kapsamında normalize HMAC ile benzersizdir. Telefon/e-posta kişiye ait çoklu iletişim noktalarıdır.
 
-Her profilin hemen bir giriş hesabı olmak zorunda değildir. Örneğin öğrenci kaydı oluşturulabilir, kullanıcı hesabı daha sonra davet edilebilir. Profil ile `school_membership` bağlantısı isteğe bağlı başlayıp doğrulandıktan sonra kurulabilir.
+### `student_profiles`, `school_number_sequences`
+
+`student_profiles`, Person'ın kalıcı öğrenci rolünü ve öğretim yılı içermeyen okul numarasını taşır. Numara okul-kapsamlı atomik dizi üzerinden ayrılır; öğrenci durumu yıllık kayıttan ayrı tutulur.
+
+### `guardian_relationships`
+
+Bir anne/baba Person'ını öğrenci profiline bağlar. Aynı kişi birden fazla çocuğa bağlanabilir. Partial unique index aynı öğrenci için aynı anda yalnız bir aktif `is_primary_contact` kaydına izin verir; ücretli mesaj alıcısı bu ilişkiden çözülür.
+
+### `enrollments`, `student_group_placements`, `student_lifecycle_events`
+
+`enrollments` öğrencinin bir öğretim yılındaki tek kaydıdır. `student_group_placements` bu yıllık kayıt içindeki tarihli sınıf/şube geçmişini tutar ve çakışmayı DB trigger'ıyla reddeder. `student_lifecycle_events` aktif/pasif, transfer ve mezuniyet gibi kalıcı geçmiş olaylarını neden/tarihle saklar.
+
+Her kişinin hemen bir giriş hesabı olmak zorunda değildir. Öğrenci ve anne/baba portal hesapları sonraki `PersonAccount` paketinde kişi kartlarına bağlanacaktır; personel/öğretmen profilleri de aynı Person'ı tekrar kullanacaktır.
 
 ## Temel ilişkiler
 
@@ -150,7 +158,9 @@ schools
   │       │       └── grade_levels ── class_sections ── course_offerings
   │       └── lesson_periods ── lesson_period_translations
   ├── subjects ── subject_translations ── course_offerings
-  ├── enrollments
+  ├── persons
+  │     ├── student_profiles ── enrollments ── student_group_placements
+  │     └── guardian_relationships
   ├── teaching_assignments
   ├── attendance
   ├── assessments / grades
