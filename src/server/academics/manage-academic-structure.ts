@@ -6,11 +6,13 @@ import { getDictionary, getSchoolLocale } from "@/i18n/server";
 import { getPrisma } from "@/lib/db";
 import {
   parseAcademicStructureTransition,
+  parseAcademicYearSetup,
   parseClassSection,
   parseCourseOffering,
   parseEducationStage,
   parseGradeLevel,
   parseLessonPeriod,
+  parseScheduleProfile,
   parseSubject,
   type AcademicStructureServerMessages,
   type AcademicStructureState,
@@ -23,7 +25,9 @@ import {
   persistEducationStage,
   persistGradeLevel,
   persistLessonPeriod,
+  persistScheduleProfile,
   persistSubject,
+  runAcademicYearSetup,
   transitionAcademicStructure,
   type AcademicStructureActor,
 } from "./academic-structure-service";
@@ -122,6 +126,14 @@ export async function manageCourseOffering(form: FormData) {
 
 export async function manageLessonPeriod(form: FormData) {
   return run(parseLessonPeriod, persistLessonPeriod, form);
+}
+
+export async function manageScheduleProfile(form: FormData) {
+  return run(parseScheduleProfile, persistScheduleProfile, form);
+}
+
+export async function manageAcademicYearSetup(form: FormData) {
+  return run(parseAcademicYearSetup, runAcademicYearSetup, form);
 }
 
 export async function manageAcademicStructureTransition(form: FormData) {

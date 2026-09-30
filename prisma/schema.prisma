@@ -76,6 +76,42 @@ enum SubjectTrack {
   IGCSE
 }
 
+enum VersionStatus {
+  DRAFT
+  PUBLISHED
+  RETIRED
+}
+
+enum ScheduleProfileKind {
+  FULL_DAY
+  MORNING
+  AFTERNOON
+  UNCLASSIFIED
+}
+
+enum AcademicYearSetupStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  READY
+  FAILED
+}
+
+enum AcademicYearClassSectionStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CourseOfferingSource {
+  CURRICULUM
+  MANUAL
+}
+
+enum AcademicYearSetupRunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
 model School {
   id              String       @id @default(uuid()) @db.Uuid
   slug            String       @unique @db.VarChar(80)
@@ -90,26 +126,35 @@ model School {
   createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  createdBy                  User?                       @relation("SchoolCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  archivedBy                 User?                       @relation("SchoolArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
-  domains                    SchoolDomain[]
-  branding                   SchoolBranding?
-  memberships                SchoolMembership[]
-  roles                      Role[]
-  invitations                SchoolInvitation[]
-  auditEvents                AuditEvent[]
-  academicYears              AcademicYear[]
-  academicTerms              AcademicTerm[]
-  academicTermTranslations   AcademicTermTranslation[]
-  educationStages            EducationStage[]
-  educationStageTranslations EducationStageTranslation[]
-  gradeLevels                GradeLevel[]
-  classSections              ClassSection[]
-  subjects                   Subject[]
-  subjectTranslations        SubjectTranslation[]
-  courseOfferings            CourseOffering[]
-  lessonPeriods              LessonPeriod[]
-  lessonPeriodTranslations   LessonPeriodTranslation[]
+  createdBy                   User?                                 @relation("SchoolCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  archivedBy                  User?                                 @relation("SchoolArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+  domains                     SchoolDomain[]
+  branding                    SchoolBranding?
+  memberships                 SchoolMembership[]
+  roles                       Role[]
+  invitations                 SchoolInvitation[]
+  auditEvents                 AuditEvent[]
+  academicYears               AcademicYear[]
+  academicTerms               AcademicTerm[]
+  academicTermTranslations    AcademicTermTranslation[]
+  educationStageDefinitions   EducationStageDefinition[]
+  stageDefinitionTranslations EducationStageDefinitionTranslation[]
+  gradeLevelDefinitions       GradeLevelDefinition[]
+  classSectionDefinitions     ClassSectionDefinition[]
+  academicStructureVersions   AcademicStructureVersion[]
+  academicStructureLevels     AcademicStructureLevel[]
+  curriculumVersions          CurriculumVersion[]
+  curriculumItems             CurriculumItem[]
+  academicYearCurricula       AcademicYearCurriculum[]
+  scheduleProfiles            ScheduleProfile[]
+  scheduleProfileVersions     ScheduleProfileVersion[]
+  schedulePeriods             SchedulePeriod[]
+  schedulePeriodTranslations  SchedulePeriodTranslation[]
+  academicYearClassSections   AcademicYearClassSection[]
+  academicYearSetupRuns       AcademicYearSetupRun[]
+  subjects                    Subject[]
+  subjectTranslations         SubjectTranslation[]
+  courseOfferings             CourseOffering[]
 
   @@index([status])
   @@map("schools")
@@ -160,23 +205,26 @@ model User {
   createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  schoolsCreated          School[]           @relation("SchoolCreatedBy")
-  schoolsArchived         School[]           @relation("SchoolArchivedBy")
-  memberships             SchoolMembership[]
-  platformRoles           UserRole[]
-  invitationsSent         SchoolInvitation[] @relation("InvitationSender")
-  invitationsAccepted     SchoolInvitation[] @relation("InvitationAcceptor")
-  auditEvents             AuditEvent[]       @relation("AuditActor")
-  membershipRolesAssigned MembershipRole[]   @relation("MembershipRoleAssigner")
-  userRolesAssigned       UserRole[]         @relation("UserRoleAssigner")
-  credential              UserCredential?
-  sessions                AuthSession[]
-  academicYearsCreated    AcademicYear[]     @relation("AcademicYearCreatedBy")
-  academicYearsUpdated    AcademicYear[]     @relation("AcademicYearUpdatedBy")
-  academicYearsArchived   AcademicYear[]     @relation("AcademicYearArchivedBy")
-  academicTermsCreated    AcademicTerm[]     @relation("AcademicTermCreatedBy")
-  academicTermsUpdated    AcademicTerm[]     @relation("AcademicTermUpdatedBy")
-  academicTermsArchived   AcademicTerm[]     @relation("AcademicTermArchivedBy")
+  schoolsCreated                   School[]                   @relation("SchoolCreatedBy")
+  schoolsArchived                  School[]                   @relation("SchoolArchivedBy")
+  memberships                      SchoolMembership[]
+  platformRoles                    UserRole[]
+  invitationsSent                  SchoolInvitation[]         @relation("InvitationSender")
+  invitationsAccepted              SchoolInvitation[]         @relation("InvitationAcceptor")
+  auditEvents                      AuditEvent[]               @relation("AuditActor")
+  membershipRolesAssigned          MembershipRole[]           @relation("MembershipRoleAssigner")
+  userRolesAssigned                UserRole[]                 @relation("UserRoleAssigner")
+  credential                       UserCredential?
+  sessions                         AuthSession[]
+  academicYearsCreated             AcademicYear[]             @relation("AcademicYearCreatedBy")
+  academicYearsUpdated             AcademicYear[]             @relation("AcademicYearUpdatedBy")
+  academicYearsArchived            AcademicYear[]             @relation("AcademicYearArchivedBy")
+  academicTermsCreated             AcademicTerm[]             @relation("AcademicTermCreatedBy")
+  academicTermsUpdated             AcademicTerm[]             @relation("AcademicTermUpdatedBy")
+  academicTermsArchived            AcademicTerm[]             @relation("AcademicTermArchivedBy")
+  academicStructureVersionsCreated AcademicStructureVersion[] @relation("AcademicStructureVersionCreatedBy")
+  curriculumVersionsCreated        CurriculumVersion[]        @relation("CurriculumVersionCreatedBy")
+  academicYearSetupRunsStarted     AcademicYearSetupRun[]     @relation("AcademicYearSetupRunStartedBy")
 
   @@unique([authProvider, authProviderUserId])
   @@index([status])
@@ -408,29 +456,32 @@ model AuditEvent {
 }
 
 model AcademicYear {
-  id           String             @id @default(uuid()) @db.Uuid
-  schoolId     String             @map("school_id") @db.Uuid
-  name         String             @db.VarChar(40)
-  startDate    DateTime           @map("start_date") @db.Date
-  endDate      DateTime           @map("end_date") @db.Date
-  status       AcademicYearStatus @default(DRAFT)
-  createdById  String?            @map("created_by_id") @db.Uuid
-  updatedById  String?            @map("updated_by_id") @db.Uuid
-  archivedAt   DateTime?          @map("archived_at") @db.Timestamptz(6)
-  archivedById String?            @map("archived_by_id") @db.Uuid
-  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                         String                  @id @default(uuid()) @db.Uuid
+  schoolId                   String                  @map("school_id") @db.Uuid
+  academicStructureVersionId String?                 @map("academic_structure_version_id") @db.Uuid
+  name                       String                  @db.VarChar(40)
+  startDate                  DateTime                @map("start_date") @db.Date
+  endDate                    DateTime                @map("end_date") @db.Date
+  status                     AcademicYearStatus      @default(DRAFT)
+  setupStatus                AcademicYearSetupStatus @default(NOT_STARTED) @map("setup_status")
+  setupCompletedAt           DateTime?               @map("setup_completed_at") @db.Timestamptz(6)
+  createdById                String?                 @map("created_by_id") @db.Uuid
+  updatedById                String?                 @map("updated_by_id") @db.Uuid
+  archivedAt                 DateTime?               @map("archived_at") @db.Timestamptz(6)
+  archivedById               String?                 @map("archived_by_id") @db.Uuid
+  createdAt                  DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school          School           @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  createdBy       User?            @relation("AcademicYearCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  updatedBy       User?            @relation("AcademicYearUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  archivedBy      User?            @relation("AcademicYearArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  terms           AcademicTerm[]
-  educationStages EducationStage[]
-  gradeLevels     GradeLevel[]
-  classSections   ClassSection[]
-  courseOfferings CourseOffering[]
-  lessonPeriods   LessonPeriod[]
+  school                   School                     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicStructureVersion AcademicStructureVersion?  @relation(fields: [academicStructureVersionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  createdBy                User?                      @relation("AcademicYearCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  updatedBy                User?                      @relation("AcademicYearUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  archivedBy               User?                      @relation("AcademicYearArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  terms                    AcademicTerm[]
+  curricula                AcademicYearCurriculum[]
+  classSections            AcademicYearClassSection[]
+  courseOfferings          CourseOffering[]
+  setupRuns                AcademicYearSetupRun[]
 
   @@unique([schoolId, name])
   @@unique([id, schoolId])
@@ -485,102 +536,137 @@ model AcademicTermTranslation {
   @@map("academic_term_translations")
 }
 
-model EducationStage {
-  id             String    @id @default(uuid()) @db.Uuid
-  schoolId       String    @map("school_id") @db.Uuid
-  academicYearId String    @map("academic_year_id") @db.Uuid
-  code           String    @db.VarChar(30)
-  name           String    @db.VarChar(100)
-  sequence       Int
-  archivedAt     DateTime? @map("archived_at") @db.Timestamptz(6)
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+model EducationStageDefinition {
+  id          String    @id @default(uuid()) @db.Uuid
+  schoolId    String    @map("school_id") @db.Uuid
+  code        String    @db.VarChar(30)
+  defaultName String    @map("default_name") @db.VarChar(100)
+  sequence    Int
+  archivedAt  DateTime? @map("archived_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school       School                      @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  academicYear AcademicYear                @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  translations EducationStageTranslation[]
-  gradeLevels  GradeLevel[]
+  school          School                                @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  translations    EducationStageDefinitionTranslation[]
+  structureLevels AcademicStructureLevel[]
 
-  @@unique([academicYearId, code])
-  @@unique([academicYearId, sequence])
-  @@unique([id, schoolId, academicYearId])
-  @@index([schoolId, academicYearId, archivedAt, sequence])
-  @@map("education_stages")
+  @@unique([schoolId, code])
+  @@unique([id, schoolId])
+  @@index([schoolId, archivedAt, sequence])
+  @@map("education_stage_definitions")
 }
 
-model EducationStageTranslation {
-  educationStageId String   @map("education_stage_id") @db.Uuid
-  schoolId         String   @map("school_id") @db.Uuid
-  academicYearId   String   @map("academic_year_id") @db.Uuid
-  locale           String   @db.VarChar(10)
-  name             String   @db.VarChar(100)
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+model EducationStageDefinitionTranslation {
+  educationStageDefinitionId String   @map("education_stage_definition_id") @db.Uuid
+  schoolId                   String   @map("school_id") @db.Uuid
+  locale                     String   @db.VarChar(10)
+  name                       String   @db.VarChar(100)
+  createdAt                  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  educationStage EducationStage @relation(fields: [educationStageId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
-  school         School         @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  educationStageDefinition EducationStageDefinition @relation(fields: [educationStageDefinitionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  school                   School                   @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
-  @@id([educationStageId, locale])
-  @@unique([schoolId, academicYearId, locale, name], map: "est_scope_locale_name_key")
-  @@index([schoolId, academicYearId, locale], map: "est_scope_locale_idx")
-  @@map("education_stage_translations")
+  @@id([educationStageDefinitionId, locale])
+  @@unique([schoolId, locale, name], map: "esdt_school_locale_name_key")
+  @@index([schoolId, locale])
+  @@map("education_stage_definition_translations")
 }
 
-model GradeLevel {
-  id               String    @id @default(uuid()) @db.Uuid
-  schoolId         String    @map("school_id") @db.Uuid
-  academicYearId   String    @map("academic_year_id") @db.Uuid
-  educationStageId String    @map("education_stage_id") @db.Uuid
-  code             String    @db.VarChar(30)
-  sequence         Int
-  archivedAt       DateTime? @map("archived_at") @db.Timestamptz(6)
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+model GradeLevelDefinition {
+  id           String    @id @default(uuid()) @db.Uuid
+  schoolId     String    @map("school_id") @db.Uuid
+  code         String    @db.VarChar(30)
+  displayLabel String    @map("display_label") @db.VarChar(100)
+  sequence     Int
+  archivedAt   DateTime? @map("archived_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school         School         @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  academicYear   AcademicYear   @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  educationStage EducationStage @relation(fields: [educationStageId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
-  classSections  ClassSection[]
+  school          School                   @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  classSections   ClassSectionDefinition[]
+  structureLevels AcademicStructureLevel[]
+  curriculumItems CurriculumItem[]
+  yearCurricula   AcademicYearCurriculum[]
 
-  @@unique([academicYearId, code])
-  @@unique([academicYearId, sequence])
-  @@unique([id, schoolId, academicYearId])
-  @@index([schoolId, academicYearId, educationStageId, archivedAt], map: "gl_scope_stage_archived_idx")
-  @@map("grade_levels")
+  @@unique([schoolId, code])
+  @@unique([id, schoolId])
+  @@index([schoolId, archivedAt, sequence])
+  @@map("grade_level_definitions")
 }
 
-model ClassSection {
-  id             String    @id @default(uuid()) @db.Uuid
-  schoolId       String    @map("school_id") @db.Uuid
-  academicYearId String    @map("academic_year_id") @db.Uuid
-  gradeLevelId   String    @map("grade_level_id") @db.Uuid
-  code           String    @db.VarChar(30)
-  archivedAt     DateTime? @map("archived_at") @db.Timestamptz(6)
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+model ClassSectionDefinition {
+  id                     String    @id @default(uuid()) @db.Uuid
+  schoolId               String    @map("school_id") @db.Uuid
+  gradeLevelDefinitionId String    @map("grade_level_definition_id") @db.Uuid
+  code                   String    @db.VarChar(30)
+  displayLabel           String?   @map("display_label") @db.VarChar(100)
+  sequence               Int       @default(1)
+  archivedAt             DateTime? @map("archived_at") @db.Timestamptz(6)
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school          School           @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  academicYear    AcademicYear     @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  gradeLevel      GradeLevel       @relation(fields: [gradeLevelId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
-  courseOfferings CourseOffering[]
+  school             School                     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  gradeLevel         GradeLevelDefinition       @relation(fields: [gradeLevelDefinitionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  academicYearCopies AcademicYearClassSection[]
 
-  @@unique([academicYearId, gradeLevelId, code], map: "cs_year_grade_code_key")
-  @@unique([id, schoolId, academicYearId])
-  @@index([schoolId, academicYearId, archivedAt], map: "cs_scope_archived_idx")
-  @@map("class_sections")
+  @@unique([schoolId, gradeLevelDefinitionId, code], map: "csd_school_grade_code_key")
+  @@unique([id, schoolId])
+  @@index([schoolId, archivedAt, gradeLevelDefinitionId, sequence], map: "csd_school_archived_grade_sequence_idx")
+  @@map("class_section_definitions")
+}
+
+model AcademicStructureVersion {
+  id          String        @id @default(uuid()) @db.Uuid
+  schoolId    String        @map("school_id") @db.Uuid
+  name        String        @db.VarChar(150)
+  status      VersionStatus @default(DRAFT)
+  publishedAt DateTime?     @map("published_at") @db.Timestamptz(6)
+  createdById String?       @map("created_by_id") @db.Uuid
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school        School                   @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy     User?                    @relation("AcademicStructureVersionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  levels        AcademicStructureLevel[]
+  academicYears AcademicYear[]
+
+  @@unique([schoolId, name])
+  @@unique([id, schoolId])
+  @@index([schoolId, status, createdAt])
+  @@map("academic_structure_versions")
+}
+
+model AcademicStructureLevel {
+  academicStructureVersionId String @map("academic_structure_version_id") @db.Uuid
+  schoolId                   String @map("school_id") @db.Uuid
+  gradeLevelDefinitionId     String @map("grade_level_definition_id") @db.Uuid
+  educationStageDefinitionId String @map("education_stage_definition_id") @db.Uuid
+  sequence                   Int
+
+  school                   School                   @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicStructureVersion AcademicStructureVersion @relation(fields: [academicStructureVersionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  gradeLevelDefinition     GradeLevelDefinition     @relation(fields: [gradeLevelDefinitionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  educationStageDefinition EducationStageDefinition @relation(fields: [educationStageDefinitionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([academicStructureVersionId, gradeLevelDefinitionId])
+  @@unique([academicStructureVersionId, sequence])
+  @@index([schoolId, educationStageDefinitionId])
+  @@map("academic_structure_levels")
 }
 
 model Subject {
-  id         String    @id @default(uuid()) @db.Uuid
-  schoolId   String    @map("school_id") @db.Uuid
-  name       String    @db.VarChar(150)
+  id         String       @id @default(uuid()) @db.Uuid
+  schoolId   String       @map("school_id") @db.Uuid
+  name       String       @db.VarChar(150)
   track      SubjectTrack @default(GENERAL)
-  archivedAt DateTime? @map("archived_at") @db.Timestamptz(6)
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  archivedAt DateTime?    @map("archived_at") @db.Timestamptz(6)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   school          School               @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   translations    SubjectTranslation[]
+  curriculumItems CurriculumItem[]
   courseOfferings CourseOffering[]
 
   @@unique([id, schoolId])
@@ -606,64 +692,218 @@ model SubjectTranslation {
   @@map("subject_translations")
 }
 
+model CurriculumVersion {
+  id          String        @id @default(uuid()) @db.Uuid
+  schoolId    String        @map("school_id") @db.Uuid
+  name        String        @db.VarChar(150)
+  revision    Int           @default(1)
+  status      VersionStatus @default(DRAFT)
+  publishedAt DateTime?     @map("published_at") @db.Timestamptz(6)
+  createdById String?       @map("created_by_id") @db.Uuid
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school        School                   @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdBy     User?                    @relation("CurriculumVersionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  items         CurriculumItem[]
+  yearCurricula AcademicYearCurriculum[]
+
+  @@unique([schoolId, name, revision])
+  @@unique([id, schoolId])
+  @@index([schoolId, status, createdAt])
+  @@map("curriculum_versions")
+}
+
+model CurriculumItem {
+  id                     String       @id @default(uuid()) @db.Uuid
+  schoolId               String       @map("school_id") @db.Uuid
+  curriculumVersionId    String       @map("curriculum_version_id") @db.Uuid
+  gradeLevelDefinitionId String       @map("grade_level_definition_id") @db.Uuid
+  subjectId              String       @map("subject_id") @db.Uuid
+  deliveryType           SubjectTrack @default(GENERAL) @map("delivery_type")
+  gradingBucket          String?      @map("grading_bucket") @db.VarChar(100)
+  createdAt              DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school            School               @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  curriculumVersion CurriculumVersion    @relation(fields: [curriculumVersionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  gradeLevel        GradeLevelDefinition @relation(fields: [gradeLevelDefinitionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  subject           Subject              @relation(fields: [subjectId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  courseOfferings   CourseOffering[]
+
+  @@unique([curriculumVersionId, gradeLevelDefinitionId, subjectId], map: "ci_version_grade_subject_key")
+  @@unique([id, schoolId])
+  @@index([schoolId, gradeLevelDefinitionId])
+  @@map("curriculum_items")
+}
+
+model AcademicYearCurriculum {
+  id                     String   @id @default(uuid()) @db.Uuid
+  schoolId               String   @map("school_id") @db.Uuid
+  academicYearId         String   @map("academic_year_id") @db.Uuid
+  gradeLevelDefinitionId String   @map("grade_level_definition_id") @db.Uuid
+  curriculumVersionId    String   @map("curriculum_version_id") @db.Uuid
+  validFrom              DateTime @map("valid_from") @db.Date
+  validTo                DateTime @map("valid_to") @db.Date
+  createdAt              DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  school            School               @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear      AcademicYear         @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  gradeLevel        GradeLevelDefinition @relation(fields: [gradeLevelDefinitionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  curriculumVersion CurriculumVersion    @relation(fields: [curriculumVersionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([academicYearId, gradeLevelDefinitionId, curriculumVersionId, validFrom], map: "ayc_year_grade_version_from_key")
+  @@unique([id, schoolId])
+  @@index([schoolId, academicYearId, gradeLevelDefinitionId, validFrom, validTo], map: "ayc_scope_validity_idx")
+  @@map("academic_year_curricula")
+}
+
+model ScheduleProfile {
+  id         String              @id @default(uuid()) @db.Uuid
+  schoolId   String              @map("school_id") @db.Uuid
+  code       String              @db.VarChar(30)
+  name       String              @db.VarChar(100)
+  kind       ScheduleProfileKind
+  archivedAt DateTime?           @map("archived_at") @db.Timestamptz(6)
+  createdAt  DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school   School                   @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  versions ScheduleProfileVersion[]
+
+  @@unique([schoolId, code])
+  @@unique([id, schoolId])
+  @@index([schoolId, archivedAt, kind])
+  @@map("schedule_profiles")
+}
+
+model ScheduleProfileVersion {
+  id                String        @id @default(uuid()) @db.Uuid
+  schoolId          String        @map("school_id") @db.Uuid
+  scheduleProfileId String        @map("schedule_profile_id") @db.Uuid
+  version           Int           @default(1)
+  status            VersionStatus @default(DRAFT)
+  publishedAt       DateTime?     @map("published_at") @db.Timestamptz(6)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school               School                     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  scheduleProfile      ScheduleProfile            @relation(fields: [scheduleProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  periods              SchedulePeriod[]
+  academicYearSections AcademicYearClassSection[]
+
+  @@unique([scheduleProfileId, version])
+  @@unique([id, schoolId])
+  @@index([schoolId, status, scheduleProfileId])
+  @@map("schedule_profile_versions")
+}
+
+model SchedulePeriod {
+  id                       String   @id @default(uuid()) @db.Uuid
+  schoolId                 String   @map("school_id") @db.Uuid
+  scheduleProfileVersionId String   @map("schedule_profile_version_id") @db.Uuid
+  code                     String   @db.VarChar(30)
+  defaultName              String   @map("default_name") @db.VarChar(100)
+  sequence                 Int
+  startTime                DateTime @map("start_time") @db.Time(0)
+  endTime                  DateTime @map("end_time") @db.Time(0)
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school                 School                      @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  scheduleProfileVersion ScheduleProfileVersion      @relation(fields: [scheduleProfileVersionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  translations           SchedulePeriodTranslation[]
+
+  @@unique([scheduleProfileVersionId, code])
+  @@unique([scheduleProfileVersionId, sequence])
+  @@unique([id, schoolId])
+  @@index([schoolId, scheduleProfileVersionId, startTime])
+  @@map("schedule_periods")
+}
+
+model SchedulePeriodTranslation {
+  schedulePeriodId String   @map("schedule_period_id") @db.Uuid
+  schoolId         String   @map("school_id") @db.Uuid
+  locale           String   @db.VarChar(10)
+  name             String   @db.VarChar(100)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  schedulePeriod SchedulePeriod @relation(fields: [schedulePeriodId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([schedulePeriodId, locale])
+  @@index([schoolId, locale])
+  @@map("schedule_period_translations")
+}
+
+model AcademicYearClassSection {
+  id                       String                         @id @default(uuid()) @db.Uuid
+  schoolId                 String                         @map("school_id") @db.Uuid
+  academicYearId           String                         @map("academic_year_id") @db.Uuid
+  classSectionDefinitionId String                         @map("class_section_definition_id") @db.Uuid
+  scheduleProfileVersionId String?                        @map("schedule_profile_version_id") @db.Uuid
+  status                   AcademicYearClassSectionStatus @default(ACTIVE)
+  createdAt                DateTime                       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime                       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school                 School                  @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear           AcademicYear            @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  classSectionDefinition ClassSectionDefinition  @relation(fields: [classSectionDefinitionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  scheduleProfileVersion ScheduleProfileVersion? @relation(fields: [scheduleProfileVersionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  courseOfferings        CourseOffering[]
+
+  @@unique([academicYearId, classSectionDefinitionId], map: "aycs_year_section_definition_key")
+  @@unique([id, schoolId, academicYearId])
+  @@index([schoolId, academicYearId, status])
+  @@map("academic_year_class_sections")
+}
+
 model CourseOffering {
-  id             String    @id @default(uuid()) @db.Uuid
-  schoolId       String    @map("school_id") @db.Uuid
-  academicYearId String    @map("academic_year_id") @db.Uuid
-  classSectionId String    @map("class_section_id") @db.Uuid
-  subjectId      String    @map("subject_id") @db.Uuid
-  archivedAt     DateTime? @map("archived_at") @db.Timestamptz(6)
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                         String               @id @default(uuid()) @db.Uuid
+  schoolId                   String               @map("school_id") @db.Uuid
+  academicYearId             String               @map("academic_year_id") @db.Uuid
+  academicYearClassSectionId String               @map("academic_year_class_section_id") @db.Uuid
+  subjectId                  String               @map("subject_id") @db.Uuid
+  curriculumItemId           String?              @map("curriculum_item_id") @db.Uuid
+  source                     CourseOfferingSource @default(CURRICULUM)
+  validFrom                  DateTime             @map("valid_from") @db.Date
+  validTo                    DateTime             @map("valid_to") @db.Date
+  archivedAt                 DateTime?            @map("archived_at") @db.Timestamptz(6)
+  createdAt                  DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school       School       @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  academicYear AcademicYear @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  classSection ClassSection @relation(fields: [classSectionId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
-  subject      Subject      @relation(fields: [subjectId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  school                   School                   @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear             AcademicYear             @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  academicYearClassSection AcademicYearClassSection @relation(fields: [academicYearClassSectionId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+  subject                  Subject                  @relation(fields: [subjectId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  curriculumItem           CurriculumItem?          @relation(fields: [curriculumItemId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
 
-  @@unique([academicYearId, classSectionId, subjectId], map: "co_year_section_subject_key")
+  @@unique([academicYearId, academicYearClassSectionId, subjectId, validFrom], map: "co_year_section_subject_from_key")
   @@unique([id, schoolId])
   @@index([schoolId, academicYearId, archivedAt], map: "co_scope_archived_idx")
   @@index([subjectId, schoolId], map: "co_subject_school_idx")
   @@map("course_offerings")
 }
 
-model LessonPeriod {
-  id             String    @id @default(uuid()) @db.Uuid
-  schoolId       String    @map("school_id") @db.Uuid
-  academicYearId String    @map("academic_year_id") @db.Uuid
-  name           String    @db.VarChar(100)
-  sequence       Int
-  startTime      DateTime  @map("start_time") @db.Time(0)
-  endTime        DateTime  @map("end_time") @db.Time(0)
-  archivedAt     DateTime? @map("archived_at") @db.Timestamptz(6)
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+model AcademicYearSetupRun {
+  id             String                     @id @default(uuid()) @db.Uuid
+  schoolId       String                     @map("school_id") @db.Uuid
+  academicYearId String                     @map("academic_year_id") @db.Uuid
+  idempotencyKey String                     @map("idempotency_key") @db.VarChar(191)
+  status         AcademicYearSetupRunStatus @default(RUNNING)
+  inputSnapshot  Json                       @map("input_snapshot") @db.JsonB
+  resultSummary  Json?                      @map("result_summary") @db.JsonB
+  startedById    String?                    @map("started_by_id") @db.Uuid
+  startedAt      DateTime                   @default(now()) @map("started_at") @db.Timestamptz(6)
+  finishedAt     DateTime?                  @map("finished_at") @db.Timestamptz(6)
+  errorSummary   String?                    @map("error_summary") @db.VarChar(1000)
 
-  school       School                    @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  academicYear AcademicYear              @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  translations LessonPeriodTranslation[]
-
-  @@unique([academicYearId, sequence])
-  @@unique([id, schoolId, academicYearId])
-  @@index([schoolId, academicYearId, archivedAt, startTime], map: "lp_scope_archived_start_idx")
-  @@map("lesson_periods")
-}
-
-model LessonPeriodTranslation {
-  lessonPeriodId String   @map("lesson_period_id") @db.Uuid
-  schoolId       String   @map("school_id") @db.Uuid
-  academicYearId String   @map("academic_year_id") @db.Uuid
-  locale         String   @db.VarChar(10)
-  name           String   @db.VarChar(100)
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  lessonPeriod LessonPeriod @relation(fields: [lessonPeriodId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
   school       School       @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear AcademicYear @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  startedBy    User?        @relation("AcademicYearSetupRunStartedBy", fields: [startedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
 
-  @@id([lessonPeriodId, locale])
-  @@unique([schoolId, academicYearId, locale, name], map: "lpt_scope_locale_name_key")
-  @@index([schoolId, academicYearId, locale], map: "lpt_scope_locale_idx")
-  @@map("lesson_period_translations")
+  @@unique([schoolId, idempotencyKey])
+  @@index([schoolId, academicYearId, startedAt])
+  @@map("academic_year_setup_runs")
 }

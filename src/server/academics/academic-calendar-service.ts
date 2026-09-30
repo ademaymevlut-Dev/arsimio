@@ -142,6 +142,15 @@ export async function persistAcademicYear(
   input: AcademicYearInput,
 ): Promise<AcademicCalendarState> {
   if (!input.id) {
+    const activeYear = await tx.academicYear.findFirst({
+      where: { schoolId: actor.schoolId, status: "ACTIVE", archivedAt: null },
+      select: { id: true },
+    });
+    if (activeYear)
+      return {
+        status: "error",
+        message: actor.messages.activeYearMustClose,
+      };
     const created = await tx.academicYear.create({
       data: {
         schoolId: actor.schoolId,
@@ -450,40 +459,11 @@ export async function transitionAcademicYear(
     reason = "Academic year restored as draft; archived terms remain archived.";
   }
 
-  if (previousActiveYear) {
-    await tx.academicYear.update({
-      where: { id: previousActiveYear.id },
-      data: { status: "CLOSED", updatedById: actor.actorUserId },
-    });
-    await tx.academicTerm.updateMany({
-      where: {
-        schoolId: actor.schoolId,
-        academicYearId: previousActiveYear.id,
-        status: { notIn: ["CLOSED", "ARCHIVED"] },
-      },
-      data: { status: "CLOSED", updatedById: actor.actorUserId },
-    });
-    for (const term of previousActiveYear.terms.filter(
-      (term) => term.status !== "CLOSED",
-    )) {
-      await auditTermStatusChange(
-        tx,
-        actor,
-        term,
-        "CLOSED",
-        `Closed automatically when ${current.name} became active.`,
-      );
-    }
-    await audit(tx, actor, {
-      action: "academic.year.closed",
-      entityType: "AcademicYear",
-      entityId: previousActiveYear.id,
-      beforeData: yearSnapshot(previousActiveYear),
-      afterData: { ...yearSnapshot(previousActiveYear), status: "CLOSED" },
-      changedFields: ["status"],
-      reason: `Closed automatically when ${current.name} became active.`,
-    });
-  }
+  if (previousActiveYear)
+    return {
+      status: "error",
+      message: actor.messages.activeYearMustClose,
+    };
 
   const result = await tx.academicYear.updateMany({
     where: {

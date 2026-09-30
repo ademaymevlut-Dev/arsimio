@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import type { AcademicStructureState } from "@/lib/academic-structure-validation";
 import {
   manageAcademicStructureTransition,
+  manageAcademicYearSetup,
   manageClassSection,
   manageCourseOffering,
   manageEducationStage,
   manageGradeLevel,
   manageLessonPeriod,
+  manageScheduleProfile,
   manageSubject,
 } from "@/server/academics/manage-academic-structure";
 
@@ -60,6 +62,20 @@ export async function saveLessonPeriod(
   form: FormData,
 ) {
   return refresh(await manageLessonPeriod(form));
+}
+
+export async function saveScheduleProfile(
+  _state: AcademicStructureState,
+  form: FormData,
+) {
+  return refresh(await manageScheduleProfile(form));
+}
+
+export async function setupAcademicYear(
+  _state: AcademicStructureState,
+  form: FormData,
+) {
+  return refresh(await manageAcademicYearSetup(form));
 }
 
 export async function changeAcademicStructureStatus(

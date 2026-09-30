@@ -1,5 +1,5 @@
 import "server-only";
-import type { SubjectTrack } from "@/generated/prisma/client";
+import type { ScheduleProfileKind, SubjectTrack } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/db";
 import {
   SUPPORTED_LOCALES,
@@ -17,13 +17,11 @@ function localized(
   defaultLocale: Locale,
   fallback: string,
 ) {
-  const map = new Map(
-    translations.map((translation) => [translation.locale, translation.name]),
-  );
+  const map = new Map(translations.map((translation) => [translation.locale, translation.name]));
   return {
     name: map.get(locale) ?? map.get(defaultLocale) ?? fallback,
     names: Object.fromEntries(
-      SUPPORTED_LOCALES.map((code) => [code, map.get(code) ?? ""]),
+      SUPPORTED_LOCALES.map((code) => [code, map.get(code) ?? fallback]),
     ) as LocalizedNames,
   };
 }
@@ -42,6 +40,7 @@ export type GradeLevelRecord = {
   id: string;
   educationStageId: string;
   code: string;
+  displayLabel: string;
   sequence: number;
   stageName: string;
   archived: boolean;
@@ -54,6 +53,8 @@ export type ClassSectionRecord = {
   gradeCode: string;
   stageName: string;
   code: string;
+  displayLabel: string | null;
+  sequence: number;
   displayName: string;
   archived: boolean;
   revision: string;
@@ -70,16 +71,32 @@ export type SubjectRecord = {
 
 export type CourseOfferingRecord = {
   id: string;
-  classSectionId: string;
+  gradeLevelId: string;
   className: string;
   subjectId: string;
   subjectName: string;
+  track: SubjectTrack;
+  archived: boolean;
+  revision: string;
+};
+
+export type ScheduleProfileRecord = {
+  id: string;
+  code: string;
+  name: string;
+  kind: ScheduleProfileKind;
+  versionId: string | null;
+  version: number | null;
+  versionStatus: "DRAFT" | "PUBLISHED" | "RETIRED" | null;
   archived: boolean;
   revision: string;
 };
 
 export type LessonPeriodRecord = {
   id: string;
+  profileId: string;
+  profileName: string;
+  code: string;
   name: string;
   names: LocalizedNames;
   sequence: number;
@@ -90,128 +107,191 @@ export type LessonPeriodRecord = {
 };
 
 export type AcademicStructureRecord = {
+  structureVersion: { id: string; name: string; status: string } | null;
+  curriculumVersion: { id: string; name: string; revision: number; status: string } | null;
   stages: EducationStageRecord[];
   gradeLevels: GradeLevelRecord[];
   classSections: ClassSectionRecord[];
   subjects: SubjectRecord[];
   courseOfferings: CourseOfferingRecord[];
+  scheduleProfiles: ScheduleProfileRecord[];
   lessonPeriods: LessonPeriodRecord[];
+  annualSetup: {
+    academicYearId: string | null;
+    status: string | null;
+    sectionCount: number;
+    offeringCount: number;
+  };
 };
 
 export async function getAcademicStructure(
   schoolId: string,
-  academicYearId: string,
+  academicYearId: string | null,
   locale: Locale,
   schoolDefaultLocale: string,
-): Promise<AcademicStructureRecord | null> {
+): Promise<AcademicStructureRecord> {
   const prisma = getPrisma();
-  const year = await prisma.academicYear.findFirst({
-    where: { id: academicYearId, schoolId },
-    select: { id: true },
-  });
-  if (!year) return null;
-
   const defaultLocale = normalizeLocale(schoolDefaultLocale);
-  const [stages, gradeLevels, classSections, subjects, courseOfferings, periods] =
+  const year = academicYearId
+    ? await prisma.academicYear.findFirst({
+        where: { id: academicYearId, schoolId },
+        select: { id: true, setupStatus: true, academicStructureVersionId: true },
+      })
+    : null;
+
+  const [draftStructure, draftCurriculum] = await Promise.all([
+    prisma.academicStructureVersion.findFirst({
+      where: { schoolId, status: "DRAFT" },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, name: true, status: true },
+    }),
+    prisma.curriculumVersion.findFirst({
+      where: { schoolId, status: "DRAFT" },
+      orderBy: [{ revision: "desc" }, { createdAt: "desc" }],
+      select: { id: true, name: true, revision: true, status: true },
+    }),
+  ]);
+  const structureVersion =
+    draftStructure ??
+    (year?.academicStructureVersionId
+      ? await prisma.academicStructureVersion.findFirst({
+          where: { id: year.academicStructureVersionId, schoolId },
+          select: { id: true, name: true, status: true },
+        })
+      : await prisma.academicStructureVersion.findFirst({
+          where: { schoolId, status: "PUBLISHED" },
+          orderBy: { publishedAt: "desc" },
+          select: { id: true, name: true, status: true },
+        }));
+  const curriculumVersion =
+    draftCurriculum ??
+    (year
+      ? await prisma.curriculumVersion.findFirst({
+          where: { schoolId, yearCurricula: { some: { academicYearId: year.id } } },
+          orderBy: [{ revision: "desc" }, { publishedAt: "desc" }],
+          select: { id: true, name: true, revision: true, status: true },
+        })
+      : null) ??
+    (await prisma.curriculumVersion.findFirst({
+      where: { schoolId, status: "PUBLISHED" },
+      orderBy: [{ revision: "desc" }, { publishedAt: "desc" }],
+      select: { id: true, name: true, revision: true, status: true },
+    }));
+
+  const [stages, levels, sections, subjects, items, profiles, sectionCount, offeringCount] =
     await Promise.all([
-      prisma.educationStage.findMany({
-        where: { schoolId, academicYearId },
+      prisma.educationStageDefinition.findMany({
+        where: { schoolId },
         orderBy: [{ archivedAt: "asc" }, { sequence: "asc" }],
         include: { translations: { select: { locale: true, name: true } } },
       }),
-      prisma.gradeLevel.findMany({
-        where: { schoolId, academicYearId },
-        orderBy: [{ archivedAt: "asc" }, { sequence: "asc" }],
-        include: {
-          educationStage: {
+      structureVersion
+        ? prisma.academicStructureLevel.findMany({
+            where: { schoolId, academicStructureVersionId: structureVersion.id },
+            orderBy: { sequence: "asc" },
             include: {
-              translations: { select: { locale: true, name: true } },
+              gradeLevelDefinition: true,
+              educationStageDefinition: {
+                include: { translations: { select: { locale: true, name: true } } },
+              },
             },
-          },
-        },
-      }),
-      prisma.classSection.findMany({
-        where: { schoolId, academicYearId },
+          })
+        : Promise.resolve([]),
+      prisma.classSectionDefinition.findMany({
+        where: { schoolId },
         orderBy: [
           { archivedAt: "asc" },
           { gradeLevel: { sequence: "asc" } },
+          { sequence: "asc" },
           { code: "asc" },
         ],
-        include: {
-          gradeLevel: {
-            include: {
-              educationStage: {
-                include: {
-                  translations: { select: { locale: true, name: true } },
-                },
-              },
-            },
-          },
-        },
+        include: { gradeLevel: true },
       }),
       prisma.subject.findMany({
         where: { schoolId },
         orderBy: [{ archivedAt: "asc" }, { name: "asc" }],
         include: { translations: { select: { locale: true, name: true } } },
       }),
-      prisma.courseOffering.findMany({
-        where: { schoolId, academicYearId },
-        orderBy: [
-          { archivedAt: "asc" },
-          { classSection: { gradeLevel: { sequence: "asc" } } },
-          { subject: { name: "asc" } },
-        ],
-        include: {
-          classSection: { include: { gradeLevel: true } },
-          subject: {
+      curriculumVersion
+        ? prisma.curriculumItem.findMany({
+            where: { schoolId, curriculumVersionId: curriculumVersion.id },
+            orderBy: [
+              { gradeLevel: { sequence: "asc" } },
+              { subject: { name: "asc" } },
+            ],
             include: {
-              translations: { select: { locale: true, name: true } },
+              gradeLevel: true,
+              subject: { include: { translations: { select: { locale: true, name: true } } } },
+            },
+          })
+        : Promise.resolve([]),
+      prisma.scheduleProfile.findMany({
+        where: { schoolId },
+        orderBy: [{ archivedAt: "asc" }, { kind: "asc" }, { name: "asc" }],
+        include: {
+          versions: {
+            where: { status: { in: ["DRAFT", "PUBLISHED"] } },
+            orderBy: [{ status: "asc" }, { version: "desc" }],
+            take: 1,
+            include: {
+              periods: {
+                orderBy: { sequence: "asc" },
+                include: { translations: { select: { locale: true, name: true } } },
+              },
             },
           },
         },
       }),
-      prisma.lessonPeriod.findMany({
-        where: { schoolId, academicYearId },
-        orderBy: [{ archivedAt: "asc" }, { sequence: "asc" }],
-        include: { translations: { select: { locale: true, name: true } } },
-      }),
+      year
+        ? prisma.academicYearClassSection.count({ where: { schoolId, academicYearId: year.id } })
+        : Promise.resolve(0),
+      year
+        ? prisma.courseOffering.count({ where: { schoolId, academicYearId: year.id, archivedAt: null } })
+        : Promise.resolve(0),
     ]);
 
+  const levelStage = new Map(
+    levels.map((level) => [
+      level.gradeLevelDefinitionId,
+      localized(
+        level.educationStageDefinition.translations,
+        locale,
+        defaultLocale,
+        level.educationStageDefinition.defaultName,
+      ).name,
+    ]),
+  );
+
   return {
+    structureVersion,
+    curriculumVersion,
     stages: stages.map((stage) => ({
       id: stage.id,
       code: stage.code,
-      ...localized(stage.translations, locale, defaultLocale, stage.name),
+      ...localized(stage.translations, locale, defaultLocale, stage.defaultName),
       sequence: stage.sequence,
       archived: Boolean(stage.archivedAt),
       revision: stage.updatedAt.toISOString(),
     })),
-    gradeLevels: gradeLevels.map((grade) => ({
-      id: grade.id,
-      educationStageId: grade.educationStageId,
-      code: grade.code,
-      sequence: grade.sequence,
-      stageName: localized(
-        grade.educationStage.translations,
-        locale,
-        defaultLocale,
-        grade.educationStage.name,
-      ).name,
-      archived: Boolean(grade.archivedAt),
-      revision: grade.updatedAt.toISOString(),
+    gradeLevels: levels.map((level) => ({
+      id: level.gradeLevelDefinition.id,
+      educationStageId: level.educationStageDefinitionId,
+      code: level.gradeLevelDefinition.code,
+      displayLabel: level.gradeLevelDefinition.displayLabel,
+      sequence: level.sequence,
+      stageName: levelStage.get(level.gradeLevelDefinitionId) ?? "—",
+      archived: Boolean(level.gradeLevelDefinition.archivedAt),
+      revision: level.gradeLevelDefinition.updatedAt.toISOString(),
     })),
-    classSections: classSections.map((section) => ({
+    classSections: sections.map((section) => ({
       id: section.id,
-      gradeLevelId: section.gradeLevelId,
+      gradeLevelId: section.gradeLevelDefinitionId,
       gradeCode: section.gradeLevel.code,
-      stageName: localized(
-        section.gradeLevel.educationStage.translations,
-        locale,
-        defaultLocale,
-        section.gradeLevel.educationStage.name,
-      ).name,
+      stageName: levelStage.get(section.gradeLevelDefinitionId) ?? "—",
       code: section.code,
-      displayName: `${section.gradeLevel.code} / ${section.code}`,
+      displayLabel: section.displayLabel,
+      sequence: section.sequence,
+      displayName: section.displayLabel ?? `${section.gradeLevel.displayLabel} / ${section.code}`,
       archived: Boolean(section.archivedAt),
       revision: section.updatedAt.toISOString(),
     })),
@@ -222,28 +302,46 @@ export async function getAcademicStructure(
       archived: Boolean(subject.archivedAt),
       revision: subject.updatedAt.toISOString(),
     })),
-    courseOfferings: courseOfferings.map((offering) => ({
-      id: offering.id,
-      classSectionId: offering.classSectionId,
-      className: `${offering.classSection.gradeLevel.code} / ${offering.classSection.code}`,
-      subjectId: offering.subjectId,
-      subjectName: localized(
-        offering.subject.translations,
-        locale,
-        defaultLocale,
-        offering.subject.name,
-      ).name,
-      archived: Boolean(offering.archivedAt),
-      revision: offering.updatedAt.toISOString(),
+    courseOfferings: items.map((item) => ({
+      id: item.id,
+      gradeLevelId: item.gradeLevelDefinitionId,
+      className: item.gradeLevel.displayLabel,
+      subjectId: item.subjectId,
+      subjectName: localized(item.subject.translations, locale, defaultLocale, item.subject.name).name,
+      track: item.deliveryType,
+      archived: false,
+      revision: item.updatedAt.toISOString(),
     })),
-    lessonPeriods: periods.map((period) => ({
-      id: period.id,
-      ...localized(period.translations, locale, defaultLocale, period.name),
-      sequence: period.sequence,
-      startTime: timeValue(period.startTime),
-      endTime: timeValue(period.endTime),
-      archived: Boolean(period.archivedAt),
-      revision: period.updatedAt.toISOString(),
+    scheduleProfiles: profiles.map((profile) => ({
+      id: profile.id,
+      code: profile.code,
+      name: profile.name,
+      kind: profile.kind,
+      versionId: profile.versions[0]?.id ?? null,
+      version: profile.versions[0]?.version ?? null,
+      versionStatus: profile.versions[0]?.status ?? null,
+      archived: Boolean(profile.archivedAt),
+      revision: profile.updatedAt.toISOString(),
     })),
+    lessonPeriods: profiles.flatMap((profile) =>
+      (profile.versions[0]?.periods ?? []).map((period) => ({
+        id: period.id,
+        profileId: profile.id,
+        profileName: profile.name,
+        code: period.code,
+        ...localized(period.translations, locale, defaultLocale, period.defaultName),
+        sequence: period.sequence,
+        startTime: timeValue(period.startTime),
+        endTime: timeValue(period.endTime),
+        archived: false,
+        revision: period.updatedAt.toISOString(),
+      })),
+    ),
+    annualSetup: {
+      academicYearId: year?.id ?? null,
+      status: year?.setupStatus ?? null,
+      sectionCount,
+      offeringCount,
+    },
   };
 }

@@ -223,16 +223,32 @@ try {
       );
       pass("a term cannot be activated or closed independently from its year");
 
+      const nextYearInput = {
+        id: null,
+        revision: null,
+        name: "2027 / 2028",
+        startDate: new Date("2027-09-01T00:00:00.000Z"),
+        endDate: new Date("2028-06-30T00:00:00.000Z"),
+      };
+      assert.equal(
+        (await persistAcademicYear(tx, actorContext, nextYearInput)).status,
+        "error",
+      );
+      const activeYearRevision = await tx.academicYear.findUniqueOrThrow({
+        where: { id: firstYear.id },
+      });
       assert.equal(
         (
-          await persistAcademicYear(tx, actorContext, {
-            id: null,
-            revision: null,
-            name: "2027 / 2028",
-            startDate: new Date("2027-09-01T00:00:00.000Z"),
-            endDate: new Date("2028-06-30T00:00:00.000Z"),
+          await transitionAcademicYear(tx, actorContext, {
+            id: firstYear.id,
+            revision: activeYearRevision.updatedAt.toISOString(),
+            transition: "close",
           })
         ).status,
+        "success",
+      );
+      assert.equal(
+        (await persistAcademicYear(tx, actorContext, nextYearInput)).status,
         "success",
       );
       const nextYear = await tx.academicYear.findFirstOrThrow({
@@ -288,7 +304,7 @@ try {
         }),
         2,
       );
-      pass("activating a new year closes the previous year and all of its terms");
+      pass("the active year must be closed explicitly before the next year can be created");
 
       const otherYear = await tx.academicYear.create({
         data: {

@@ -117,14 +117,14 @@ export const getAcademicCalendarSummary = cache(async (schoolId: string) => {
   if (!activeYear)
     return { yearCount, activeYear, academicStructureReady: false };
   const [stageCount, levelCount, sectionCount, subjectCount] = await Promise.all([
-    getPrisma().educationStage.count({
-      where: { schoolId, academicYearId: activeYear.id, archivedAt: null },
+    getPrisma().educationStageDefinition.count({
+      where: { schoolId, archivedAt: null },
     }),
-    getPrisma().gradeLevel.count({
-      where: { schoolId, academicYearId: activeYear.id, archivedAt: null },
+    getPrisma().gradeLevelDefinition.count({
+      where: { schoolId, archivedAt: null },
     }),
-    getPrisma().classSection.count({
-      where: { schoolId, academicYearId: activeYear.id, archivedAt: null },
+    getPrisma().academicYearClassSection.count({
+      where: { schoolId, academicYearId: activeYear.id, status: "ACTIVE" },
     }),
     getPrisma().subject.count({ where: { schoolId, archivedAt: null } }),
   ]);

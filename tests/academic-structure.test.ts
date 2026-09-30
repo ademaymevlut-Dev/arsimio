@@ -7,6 +7,7 @@ import {
   parseEducationStage,
   parseGradeLevel,
   parseLessonPeriod,
+  parseScheduleProfile,
   parseSubject,
   parseTimeValue,
   timeValue,
@@ -18,10 +19,9 @@ function form(values: Record<string, string>) {
   return data;
 }
 
-const yearId = "34837f18-bf73-4862-97e4-8689a1fe1133";
 const stageId = "865501af-fab8-4944-ac73-34794527aaf4";
 const levelId = "2a80c4c7-5a59-4e34-80d7-ec80b6a99050";
-const sectionId = "d2732845-0a08-4409-b7ec-f75a54c105ac";
+const profileId = "d2732845-0a08-4409-b7ec-f75a54c105ac";
 const subjectId = "3b0852f1-53a4-43a3-a4cc-a1705f65e3fd";
 const revision = "2026-09-22T08:00:00.000Z";
 
@@ -36,7 +36,6 @@ test("education stages keep one identity with three localized names", () => {
     form({
       id: "new",
       revision: "new",
-      academicYearId: yearId,
       code: " PRIMARY ",
       sequence: "2",
       nameTr: " İlkokul ",
@@ -55,15 +54,15 @@ test("education stages keep one identity with three localized names", () => {
   }
 });
 
-test("levels and sections require year-scoped parent UUIDs", () => {
+test("levels and sections require school-scoped parent UUIDs", () => {
   assert.equal(
     parseGradeLevel(
       form({
         id: "new",
         revision: "new",
-        academicYearId: yearId,
         educationStageId: stageId,
         code: "4",
+        displayLabel: "4. Sınıf",
         sequence: "5",
       }),
     ).success,
@@ -74,9 +73,9 @@ test("levels and sections require year-scoped parent UUIDs", () => {
       form({
         id: "new",
         revision: "new",
-        academicYearId: yearId,
         gradeLevelId: levelId,
         code: "1",
+        sequence: "1",
       }),
     ).success,
     true,
@@ -86,9 +85,9 @@ test("levels and sections require year-scoped parent UUIDs", () => {
       form({
         id: "new",
         revision: "new",
-        academicYearId: yearId,
         educationStageId: "other-school",
         code: "4",
+        displayLabel: "4. Sınıf",
         sequence: "5",
       }),
     ).success,
@@ -113,22 +112,37 @@ test("subject catalog requires Turkish, Albanian and English on one record", () 
   );
 });
 
-test("course offering requires year, class section and subject", () => {
+test("curriculum item requires level, subject and delivery type", () => {
   assert.equal(
     parseCourseOffering(
-      form({ academicYearId: yearId, classSectionId: sectionId, subjectId }),
+      form({ gradeLevelId: levelId, subjectId, track: "GENERAL" }),
     ).success,
     true,
   );
   assert.equal(
     parseCourseOffering(
-      form({ academicYearId: yearId, classSectionId: "bad", subjectId }),
+      form({ gradeLevelId: "bad", subjectId, track: "GENERAL" }),
     ).success,
     false,
   );
 });
 
-test("lesson periods parse wall-clock times and reject reversed ranges", () => {
+test("schedule profiles reject migration-only kinds", () => {
+  assert.equal(
+    parseScheduleProfile(
+      form({ id: "new", revision: "new", code: "MORNING", name: "Sabahçı", profileKind: "MORNING" }),
+    ).success,
+    true,
+  );
+  assert.equal(
+    parseScheduleProfile(
+      form({ id: "new", revision: "new", code: "OLD", name: "Eski", profileKind: "UNCLASSIFIED" }),
+    ).success,
+    false,
+  );
+});
+
+test("lesson periods parse profile-local wall-clock times and reject reversed ranges", () => {
   const time = parseTimeValue("08:45");
   assert.ok(time);
   assert.equal(timeValue(time), "08:45");
@@ -138,7 +152,8 @@ test("lesson periods parse wall-clock times and reject reversed ranges", () => {
       form({
         id: "new",
         revision: "new",
-        academicYearId: yearId,
+        profileId,
+        code: "P1",
         ...names,
         sequence: "1",
         startTime: "08:00",
@@ -152,7 +167,8 @@ test("lesson periods parse wall-clock times and reject reversed ranges", () => {
       form({
         id: "new",
         revision: "new",
-        academicYearId: yearId,
+        profileId,
+        code: "P2",
         ...names,
         sequence: "1",
         startTime: "09:00",
