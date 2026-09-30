@@ -16,6 +16,7 @@ export type AcademicStructureField =
   | "educationStageId"
   | "gradeLevelId"
   | "subjectId"
+  | "subjectIds"
   | "track"
   | "profileId"
   | "profileKind"
@@ -54,8 +55,10 @@ export type SubjectInput = RecordIdentity & {
 };
 export type CourseOfferingInput = {
   gradeLevelId: string;
-  subjectId: string;
-  track: SubjectTrack;
+  items: Array<{
+    subjectId: string;
+    track: SubjectTrack;
+  }>;
 };
 export type ScheduleProfileInput = RecordIdentity & {
   code: string;
@@ -240,18 +243,28 @@ export function parseCourseOffering(
   messages: AcademicStructureServerMessages = tr.academicStructureServer,
 ): Parsed<CourseOfferingInput> {
   const gradeLevelId = form.get("gradeLevelId");
-  const subjectId = form.get("subjectId");
-  const trackValue = form.get("track");
-  const track = typeof trackValue === "string" && TRACKS.has(trackValue as SubjectTrack)
-    ? (trackValue as SubjectTrack)
-    : null;
+  const subjectIds = [...new Set(form.getAll("subjectIds"))];
   const fieldErrors: AcademicStructureState["fieldErrors"] = {};
   if (!validSchoolId(gradeLevelId)) fieldErrors.gradeLevelId = messages.invalidRelation;
-  if (!validSchoolId(subjectId)) fieldErrors.subjectId = messages.invalidRelation;
-  if (!track) fieldErrors.track = messages.invalidRelation;
-  if (!validSchoolId(gradeLevelId) || !validSchoolId(subjectId) || !track)
+  if (
+    subjectIds.length < 1 ||
+    subjectIds.length > 200 ||
+    !subjectIds.every(validSchoolId)
+  ) {
+    fieldErrors.subjectIds = messages.invalidRelation;
+  }
+  const items = subjectIds.flatMap((subjectId) => {
+    if (!validSchoolId(subjectId)) return [];
+    const trackValue = form.get(`track:${subjectId}`);
+    if (typeof trackValue !== "string" || !TRACKS.has(trackValue as SubjectTrack)) {
+      return [];
+    }
+    return [{ subjectId, track: trackValue as SubjectTrack }];
+  });
+  if (items.length !== subjectIds.length) fieldErrors.track = messages.invalidTrack;
+  if (!validSchoolId(gradeLevelId) || fieldErrors.subjectIds || fieldErrors.track)
     return invalidState(messages, fieldErrors);
-  return { success: true, data: { gradeLevelId, subjectId, track } };
+  return { success: true, data: { gradeLevelId, items } };
 }
 
 export function parseScheduleProfile(

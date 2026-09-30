@@ -54,6 +54,7 @@ import type { AcademicYearRecord } from "@/server/academics/academic-calendar";
 import type {
   AcademicStructureRecord,
   ClassSectionRecord,
+  CourseOfferingRecord,
   EducationStageRecord,
   GradeLevelRecord,
   LessonPeriodRecord,
@@ -308,16 +309,205 @@ function SubjectDialog({ subject, messages, trigger }: { subject?: SubjectRecord
   );
 }
 
-function CurriculumDialog({ levels, subjects, messages, trigger }: { levels: GradeLevelRecord[]; subjects: SubjectRecord[]; messages: Messages; trigger: ReactNode }) {
-  const text = messages.academicStructure;
+function CurriculumDialog({
+  levels,
+  subjects,
+  offerings,
+  messages,
+  trigger,
+}: {
+  levels: GradeLevelRecord[];
+  subjects: SubjectRecord[];
+  offerings: CourseOfferingRecord[];
+  messages: Messages;
+  trigger: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
   return (
-    <RecordDialog trigger={trigger} title={text.newOffering} description={text.offeringsDescription} action={saveCourseOffering} submitLabel={text.add} messages={messages}>
-      {(state, pending) => <>
-        <div><Label htmlFor="curriculum-level">{text.level}</Label><NativeSelect id="curriculum-level" name="gradeLevelId" required disabled={pending} defaultValue="" className="mt-2"><option value="" disabled>{text.selectLevel}</option>{levels.filter((item) => !item.archived).map((item) => <option key={item.id} value={item.id}>{item.displayLabel}</option>)}</NativeSelect></div>
-        <div><Label htmlFor="curriculum-subject">{text.subject}</Label><NativeSelect id="curriculum-subject" name="subjectId" required disabled={pending} defaultValue="" className="mt-2"><option value="" disabled>{text.selectSubject}</option>{subjects.filter((item) => !item.archived).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</NativeSelect></div>
-        <div><Label htmlFor="curriculum-track">{text.subjectTrack}</Label><NativeSelect id="curriculum-track" name="track" defaultValue="GENERAL" disabled={pending} className="mt-2"><option value="GENERAL">{text.subjectTrackGeneral}</option><option value="ELECTIVE">{text.subjectTrackElective}</option><option value="IGCSE">{text.subjectTrackIgcse}</option></NativeSelect></div>
-      </>}
-    </RecordDialog>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      {open && (
+        <CurriculumDialogContent
+          levels={levels}
+          subjects={subjects}
+          offerings={offerings}
+          messages={messages}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </Dialog>
+  );
+}
+
+function CurriculumDialogContent({
+  levels,
+  subjects,
+  offerings,
+  messages,
+  onClose,
+}: {
+  levels: GradeLevelRecord[];
+  subjects: SubjectRecord[];
+  offerings: CourseOfferingRecord[];
+  messages: Messages;
+  onClose: () => void;
+}) {
+  const text = messages.academicStructure;
+  const activeLevels = levels.filter((item) => !item.archived);
+  const activeSubjects = subjects.filter((item) => !item.archived);
+  const [selectedLevelId, setSelectedLevelId] = useState(activeLevels[0]?.id ?? "");
+  const [selectedTracks, setSelectedTracks] = useState<Record<string, SubjectRecord["track"]>>({});
+  const [state, formAction, pending] = useActionState(saveCourseOffering, initialState);
+  const existingBySubject = new Map(
+    offerings
+      .filter((item) => item.gradeLevelId === selectedLevelId)
+      .map((item) => [item.subjectId, item]),
+  );
+  const availableSubjects = activeSubjects.filter((subject) => !existingBySubject.has(subject.id));
+  const selectedCount = Object.keys(selectedTracks).length;
+  const trackOptions = [
+    ["GENERAL", text.subjectTrackGeneral],
+    ["ELECTIVE", text.subjectTrackElective],
+    ["IGCSE", text.subjectTrackIgcse],
+  ] as const;
+
+  function selectLevel(levelId: string) {
+    setSelectedLevelId(levelId);
+    setSelectedTracks({});
+  }
+
+  function selectSubject(subject: SubjectRecord, selected: boolean) {
+    setSelectedTracks((current) => {
+      const next = { ...current };
+      if (selected) next[subject.id] = subject.track;
+      else delete next[subject.id];
+      return next;
+    });
+  }
+
+  return (
+    <DialogContent className="max-w-5xl">
+      <DialogHeader>
+        <DialogTitle>{text.newOffering}</DialogTitle>
+        <DialogDescription>{text.offeringSelectionHelp}</DialogDescription>
+      </DialogHeader>
+      <form action={formAction} className="space-y-5">
+        <div className="grid min-h-0 gap-5 md:grid-cols-[220px_minmax(0,1fr)]">
+          <fieldset
+            disabled={pending}
+            className="min-w-0"
+            aria-describedby={state.fieldErrors?.gradeLevelId ? "curriculum-level-error" : undefined}
+          >
+            <legend className="mb-3 text-sm font-semibold text-foreground">{text.offeringLevelLegend}</legend>
+            <div className="max-h-[52dvh] space-y-2 overflow-y-auto pr-1">
+              {activeLevels.map((level) => (
+                <label key={level.id} className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 transition-colors has-checked:border-primary has-checked:bg-primary/5">
+                  <input
+                    type="radio"
+                    name="gradeLevelId"
+                    value={level.id}
+                    checked={selectedLevelId === level.id}
+                    onChange={() => selectLevel(level.id)}
+                    className="mt-0.5 size-4 accent-primary"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-foreground">{level.displayLabel}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{level.stageName}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <FieldError state={state} field="gradeLevelId" id="curriculum-level-error" />
+          </fieldset>
+
+          <fieldset
+            disabled={pending || !selectedLevelId}
+            className="min-w-0"
+            aria-labelledby="curriculum-subjects-title"
+            aria-describedby={state.fieldErrors?.subjectIds || state.fieldErrors?.track ? "curriculum-subjects-error curriculum-track-error" : undefined}
+          >
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 id="curriculum-subjects-title" className="text-sm font-semibold text-foreground">{text.offeringSubjectsLegend}</h3>
+                <p className="mt-1 text-xs text-muted-foreground">{formatMessage(text.subjectsSelected, { count: selectedCount })}</p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!availableSubjects.length}
+                  onClick={() => setSelectedTracks(Object.fromEntries(availableSubjects.map((subject) => [subject.id, subject.track])))}
+                >
+                  {text.selectAllSubjects}
+                </Button>
+                <Button type="button" variant="ghost" size="sm" disabled={!selectedCount} onClick={() => setSelectedTracks({})}>
+                  {text.clearSubjectSelection}
+                </Button>
+              </div>
+            </div>
+
+            <div className="max-h-[52dvh] space-y-2 overflow-y-auto rounded-lg border border-border p-2">
+              {activeSubjects.map((subject) => {
+                const existing = existingBySubject.get(subject.id);
+                const selectedTrack = selectedTracks[subject.id];
+                const selected = Boolean(selectedTrack);
+                const displayedTrack = existing?.track ?? selectedTrack;
+                return (
+                  <div key={subject.id} className={`rounded-lg border p-3 ${existing ? "bg-muted/40 opacity-75" : selected ? "border-primary bg-primary/5" : "border-border"}`}>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <label className={`flex items-center gap-3 ${existing ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                        <input
+                          type="checkbox"
+                          name="subjectIds"
+                          value={subject.id}
+                          checked={Boolean(existing) || selected}
+                          disabled={Boolean(existing) || pending}
+                          onChange={(event) => selectSubject(subject, event.target.checked)}
+                          className="size-4 rounded accent-primary"
+                        />
+                        <span className="text-sm font-medium text-foreground">{subject.name}</span>
+                      </label>
+                      {existing && <Badge variant="outline">{text.alreadyAdded}</Badge>}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 pl-7">
+                      {trackOptions.map(([track, label]) => (
+                        <label key={track} className={`flex items-center gap-2 text-xs ${existing ? "cursor-not-allowed text-muted-foreground" : selected ? "cursor-pointer text-foreground" : "cursor-not-allowed text-muted-foreground"}`}>
+                          <input
+                            type="radio"
+                            name={`track:${subject.id}`}
+                            value={track}
+                            checked={displayedTrack === track}
+                            disabled={Boolean(existing) || !selected || pending}
+                            onChange={() => setSelectedTracks((current) => ({ ...current, [subject.id]: track }))}
+                            className="size-3.5 accent-primary"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <FieldError state={state} field="subjectIds" id="curriculum-subjects-error" />
+            <FieldError state={state} field="track" id="curriculum-track-error" />
+          </fieldset>
+        </div>
+
+        <ActionAlert state={state} />
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
+            {state.status === "success" ? messages.common.close : messages.common.cancel}
+          </Button>
+          {state.status !== "success" && (
+            <Button type="submit" disabled={pending || !selectedLevelId || selectedCount === 0}>
+              {pending ? messages.common.saving : text.createOfferings}
+            </Button>
+          )}
+        </DialogFooter>
+      </form>
+    </DialogContent>
   );
 }
 
@@ -437,7 +627,7 @@ export function AcademicStructureManager({
         </TabsContent>
 
         <TabsContent value="curriculum">
-          <DataTableShell title={text.offeringsTitle} description={text.offeringsDescription} toolbar={canManage && activeLevels.length && activeSubjects.length ? <CurriculumDialog levels={structure.gradeLevels} subjects={structure.subjects} messages={messages} trigger={<Button><Plus aria-hidden />{text.newOffering}</Button>} /> : undefined} footer={footer(structure.courseOfferings.length)}>
+          <DataTableShell title={text.offeringsTitle} description={text.offeringsDescription} toolbar={canManage && activeLevels.length && activeSubjects.length ? <CurriculumDialog levels={structure.gradeLevels} subjects={structure.subjects} offerings={structure.courseOfferings} messages={messages} trigger={<Button><Plus aria-hidden />{text.newOffering}</Button>} /> : undefined} footer={footer(structure.courseOfferings.length)}>
             {!structure.courseOfferings.length ? <Empty title={text.noOfferings} description={text.noOfferingsDescription} /> : <Table><TableHeader><TableRow><TableHead>{text.level}</TableHead><TableHead>{text.subject}</TableHead><TableHead>{text.subjectTrack}</TableHead><TableHead className="text-right">{messages.common.actions}</TableHead></TableRow></TableHeader><TableBody>{structure.courseOfferings.map((item) => <TableRow key={item.id}><TableCell>{item.className}</TableCell><TableCell>{item.subjectName}</TableCell><TableCell>{trackLabel(item.track)}</TableCell><TableCell><div className="flex justify-end">{canManage && <LifecycleButton entity="offering" id={item.id} revision={item.revision} name={`${item.className} · ${item.subjectName}`} archived={false} messages={messages} />}</div></TableCell></TableRow>)}</TableBody></Table>}
           </DataTableShell>
         </TabsContent>

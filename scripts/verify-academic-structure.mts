@@ -123,12 +123,16 @@ try {
     const subject = await tx.subject.findFirstOrThrow({ where: { schoolId: school.id } });
     assert.equal((await persistCourseOffering(tx, actorContext, {
       gradeLevelId: grade.id,
-      subjectId: subject.id,
-      track: "GENERAL",
+      items: [{ subjectId: subject.id, track: "GENERAL" }],
+    })).status, "success");
+    assert.equal((await persistCourseOffering(tx, actorContext, {
+      gradeLevelId: grade.id,
+      items: [{ subjectId: subject.id, track: "GENERAL" }],
     })).status, "success");
     const curriculumItem = await tx.curriculumItem.findFirstOrThrow({ where: { schoolId: school.id } });
     assert.equal(curriculumItem.gradeLevelDefinitionId, grade.id);
-    pass("curriculum binds one subject to a grade instead of every section");
+    assert.equal(await tx.curriculumItem.count({ where: { schoolId: school.id } }), 1);
+    pass("curriculum batch binds subjects to a grade and skips duplicates idempotently");
 
     assert.equal((await persistScheduleProfile(tx, actorContext, {
       id: null,

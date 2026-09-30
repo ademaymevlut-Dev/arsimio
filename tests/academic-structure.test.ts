@@ -13,9 +13,15 @@ import {
   timeValue,
 } from "../src/lib/academic-structure-validation";
 
-function form(values: Record<string, string>) {
+function form(values: Record<string, string | string[]>) {
   const data = new FormData();
-  for (const [key, value] of Object.entries(values)) data.set(key, value);
+  for (const [key, value] of Object.entries(values)) {
+    if (Array.isArray(value)) {
+      for (const item of value) data.append(key, item);
+    } else {
+      data.set(key, value);
+    }
+  }
   return data;
 }
 
@@ -112,16 +118,29 @@ test("subject catalog requires Turkish, Albanian and English on one record", () 
   );
 });
 
-test("curriculum item requires level, subject and delivery type", () => {
+test("curriculum batch requires one level and a valid type for every unique subject", () => {
+  const parsed = parseCourseOffering(
+    form({
+      gradeLevelId: levelId,
+      subjectIds: [subjectId, subjectId],
+      [`track:${subjectId}`]: "GENERAL",
+    }),
+  );
+  assert.equal(parsed.success, true);
+  if (parsed.success) assert.equal(parsed.data.items.length, 1);
   assert.equal(
     parseCourseOffering(
-      form({ gradeLevelId: levelId, subjectId, track: "GENERAL" }),
+      form({
+        gradeLevelId: "bad",
+        subjectIds: subjectId,
+        [`track:${subjectId}`]: "GENERAL",
+      }),
     ).success,
-    true,
+    false,
   );
   assert.equal(
     parseCourseOffering(
-      form({ gradeLevelId: "bad", subjectId, track: "GENERAL" }),
+      form({ gradeLevelId: levelId, subjectIds: subjectId }),
     ).success,
     false,
   );

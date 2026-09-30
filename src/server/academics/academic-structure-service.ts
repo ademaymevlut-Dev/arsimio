@@ -1,6 +1,7 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { SUPPORTED_LOCALES, type Locale } from "@/i18n/config";
+import { formatMessage } from "@/i18n/format";
 import type {
   AcademicStructureEntity,
   AcademicStructureServerMessages,
@@ -446,43 +447,63 @@ export async function persistCourseOffering(
   actor: AcademicStructureActor,
   input: CourseOfferingInput,
 ): Promise<AcademicStructureState> {
-  const [grade, subject] = await Promise.all([
+  const subjectIds = input.items.map((item) => item.subjectId);
+  const [grade, subjects] = await Promise.all([
     tx.gradeLevelDefinition.findFirst({
       where: { id: input.gradeLevelId, schoolId: actor.schoolId, archivedAt: null },
       select: { id: true },
     }),
-    tx.subject.findFirst({
-      where: { id: input.subjectId, schoolId: actor.schoolId, archivedAt: null },
+    tx.subject.findMany({
+      where: { id: { in: subjectIds }, schoolId: actor.schoolId, archivedAt: null },
       select: { id: true },
     }),
   ]);
-  if (!grade || !subject) return error(actor.messages.unavailable);
+  if (!grade || subjects.length !== subjectIds.length) return error(actor.messages.unavailable);
   const version = await ensureDraftCurriculumVersion(tx, actor);
-  const existing = await tx.curriculumItem.findFirst({
+  const existing = await tx.curriculumItem.findMany({
     where: {
       curriculumVersionId: version.id,
       gradeLevelDefinitionId: grade.id,
-      subjectId: subject.id,
+      subjectId: { in: subjectIds },
     },
+    select: { subjectId: true },
   });
-  if (existing) return error(actor.messages.duplicate);
-  const created = await tx.curriculumItem.create({
-    data: {
+  const existingSubjectIds = new Set(existing.map((item) => item.subjectId));
+  const missing = input.items.filter((item) => !existingSubjectIds.has(item.subjectId));
+  if (!missing.length) {
+    return { status: "success", message: actor.messages.offeringsUnchanged };
+  }
+  const created = await tx.curriculumItem.createMany({
+    data: missing.map((item) => ({
       schoolId: actor.schoolId,
       curriculumVersionId: version.id,
       gradeLevelDefinitionId: grade.id,
-      subjectId: subject.id,
-      deliveryType: input.track,
-    },
+      subjectId: item.subjectId,
+      deliveryType: item.track,
+    })),
+    skipDuplicates: true,
   });
-  await audit(tx, actor, {
-    action: "academic.curriculum-item.created",
-    entityType: "CurriculumItem",
-    entityId: created.id,
-    afterData: { curriculumVersionId: version.id, ...input },
-    changedFields: ["gradeLevelId", "subjectId", "track"],
-  });
-  return { status: "success", message: actor.messages.offeringCreated };
+  if (created.count > 0) {
+    await audit(tx, actor, {
+      action: "academic.curriculum-items.created",
+      entityType: "CurriculumVersion",
+      entityId: version.id,
+      afterData: {
+        curriculumVersionId: version.id,
+        gradeLevelId: grade.id,
+        items: missing,
+        createdCount: created.count,
+      },
+      changedFields: ["gradeLevelId", "items"],
+    });
+  }
+  return {
+    status: "success",
+    message: formatMessage(actor.messages.offeringsCreated, {
+      created: created.count,
+      skipped: input.items.length - created.count,
+    }),
+  };
 }
 
 export async function persistScheduleProfile(
