@@ -148,10 +148,6 @@ function AddGuardianDialog({
   messages: Pick<AppDictionary, "common" | "students">;
 }) {
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<"existing" | "new">(
-    candidates.length ? "existing" : "new",
-  );
-  const [state, formAction, pending] = useActionState(addGuardian, initialState);
   const text = messages.students;
 
   return (
@@ -162,7 +158,62 @@ function AddGuardianDialog({
           {text.addGuardian}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      {open && (
+        <AddGuardianDialogContent
+          studentId={studentId}
+          candidates={candidates}
+          messages={messages}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </Dialog>
+  );
+}
+
+function AddGuardianDialogContent({
+  studentId,
+  candidates,
+  messages,
+  onClose,
+}: {
+  studentId: string;
+  candidates: GuardianCandidate[];
+  messages: Pick<AppDictionary, "common" | "students">;
+  onClose: () => void;
+}) {
+  const [formVersion, setFormVersion] = useState(0);
+
+  return (
+    <AddGuardianForm
+      key={formVersion}
+      studentId={studentId}
+      candidates={candidates}
+      messages={messages}
+      onClose={onClose}
+      onAddAnother={() => setFormVersion((version) => version + 1)}
+    />
+  );
+}
+
+function AddGuardianForm({
+  studentId,
+  candidates,
+  messages,
+  onClose,
+  onAddAnother,
+}: {
+  studentId: string;
+  candidates: GuardianCandidate[];
+  messages: Pick<AppDictionary, "common" | "students">;
+  onClose: () => void;
+  onAddAnother: () => void;
+}) {
+  const [mode, setMode] = useState<"existing" | "new">("new");
+  const [state, formAction, pending] = useActionState(addGuardian, initialState);
+  const text = messages.students;
+
+  return (
+    <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{text.addGuardian}</DialogTitle>
           <DialogDescription>{text.guardiansDescription}</DialogDescription>
@@ -336,7 +387,7 @@ function AddGuardianDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={onClose}
               disabled={pending}
             >
               {state.status === "success"
@@ -348,10 +399,15 @@ function AddGuardianDialog({
                 {pending ? messages.common.saving : text.addGuardian}
               </Button>
             )}
+            {state.status === "success" && (
+              <Button type="button" onClick={onAddAnother}>
+                <Plus aria-hidden />
+                {text.addAnotherGuardian}
+              </Button>
+            )}
           </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+    </DialogContent>
   );
 }
 
