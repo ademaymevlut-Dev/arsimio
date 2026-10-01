@@ -3,8 +3,10 @@ import type { Prisma } from "@/generated/prisma/client";
 import type {
   CourseTeacherAssignmentInput,
   HomeroomTeacherAssignmentInput,
+  TimetableParticipantTransitionInput,
   TeachingAssignmentTransitionInput,
   TeachingState,
+  WeeklySchedulePlacementInput,
 } from "@/lib/teaching-validation";
 
 export type TeachingActor = {
@@ -446,4 +448,291 @@ export function persistTeachingAssignmentTransition(
   return input.assignmentKind === "homeroom"
     ? passivateHomeroomAssignment(tx, actor, input)
     : passivateCourseAssignment(tx, actor, input);
+}
+
+export async function persistWeeklySchedulePlacement(
+  tx: Prisma.TransactionClient,
+  actor: TeachingActor,
+  input: WeeklySchedulePlacementInput,
+): Promise<TeachingState> {
+  const [teacher, assignment, schedulePeriod] = await Promise.all([
+    validateActiveTeacher(tx, actor, input.teacherProfileId),
+    tx.courseTeacherAssignment.findFirst({
+      where: {
+        id: input.courseTeacherAssignmentId,
+        schoolId: actor.schoolId,
+        teacherProfileId: input.teacherProfileId,
+        status: "ACTIVE",
+        archivedAt: null,
+        courseOffering: {
+          schoolId: actor.schoolId,
+          archivedAt: null,
+          academicYear: {
+            schoolId: actor.schoolId,
+            status: "ACTIVE",
+            archivedAt: null,
+          },
+          academicYearClassSection: { status: "ACTIVE" },
+        },
+      },
+      include: {
+        courseOffering: {
+          include: {
+            academicYear: {
+              select: { id: true, startDate: true, endDate: true },
+            },
+            academicYearClassSection: {
+              select: { id: true, scheduleProfileVersionId: true },
+            },
+            subject: { select: { id: true, name: true } },
+          },
+        },
+      },
+    }),
+    tx.schedulePeriod.findFirst({
+      where: { id: input.schedulePeriodId, schoolId: actor.schoolId },
+      select: { id: true, scheduleProfileVersionId: true },
+    }),
+  ]);
+  if (!teacher)
+    return error("Aktif ogretmen profili bulunamadi.", {
+      teacherProfileId: "Aktif ogretmen secin.",
+    });
+  if (!assignment)
+    return error("Aktif ders ogretmeni atamasi bulunamadi.", {
+      courseTeacherAssignmentId: "Aktif ders atamasi secin.",
+    });
+  if (!schedulePeriod)
+    return error("Ders saati bulunamadi.", {
+      schedulePeriodId: "Ders saati secin.",
+    });
+
+  const classScheduleProfileVersionId =
+    assignment.courseOffering.academicYearClassSection.scheduleProfileVersionId;
+  if (!classScheduleProfileVersionId)
+    return error("Bu sinif icin ders saati profili atanmamis.", {
+      schedulePeriodId: "Once yil kurulumunda saat profili atayin.",
+    });
+  if (schedulePeriod.scheduleProfileVersionId !== classScheduleProfileVersionId)
+    return error("Secilen ders saati bu sinifin saat profiline ait degil.", {
+      schedulePeriodId: "Sinifin saat profilindeki bir ders saatini secin.",
+    });
+  if (
+    !withinDateRange(
+      input.effectiveFrom,
+      assignment.courseOffering.validFrom,
+      assignment.courseOffering.validTo,
+    )
+  )
+    return error("Program baslangici ders aciliminin tarih araliginda olmali.", {
+      effectiveFrom: "Gecerli tarih secin.",
+    });
+
+  const existingParticipant = await tx.timetableSessionParticipant.findFirst({
+    where: {
+      schoolId: actor.schoolId,
+      academicYearId: assignment.academicYearId,
+      courseTeacherAssignmentId: assignment.id,
+      status: "ACTIVE",
+      archivedAt: null,
+      timetableSession: {
+        weekday: input.weekday,
+        schedulePeriodId: schedulePeriod.id,
+        status: "ACTIVE",
+        archivedAt: null,
+      },
+    },
+    select: { id: true },
+  });
+  if (existingParticipant)
+    return {
+      status: "success",
+      message: "Bu ders programda zaten ayni gun ve saate ekli.",
+      entityId: existingParticipant.id,
+    };
+
+  const [teacherSession, classConflict] = await Promise.all([
+    tx.timetableSession.findFirst({
+      where: {
+        schoolId: actor.schoolId,
+        academicYearId: assignment.academicYearId,
+        teacherProfileId: teacher.id,
+        weekday: input.weekday,
+        schedulePeriodId: schedulePeriod.id,
+        status: "ACTIVE",
+        archivedAt: null,
+      },
+      include: {
+        participants: {
+          where: { status: "ACTIVE", archivedAt: null },
+          include: {
+            courseOffering: { select: { subjectId: true, subject: { select: { name: true } } } },
+          },
+        },
+      },
+    }),
+    tx.timetableSessionParticipant.findFirst({
+      where: {
+        schoolId: actor.schoolId,
+        academicYearId: assignment.academicYearId,
+        academicYearClassSectionId:
+          assignment.courseOffering.academicYearClassSectionId,
+        status: "ACTIVE",
+        archivedAt: null,
+        timetableSession: {
+          weekday: input.weekday,
+          schedulePeriodId: schedulePeriod.id,
+          status: "ACTIVE",
+          archivedAt: null,
+        },
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  if (teacherSession && !input.mergeWithTeacherSession)
+    return error(
+      "Bu ogretmenin ayni gun ve saatte dersi var. Ortak ders olarak birlestirmek icin onay kutusunu isaretleyin.",
+      { record: "Ogretmen saat cakismasi var." },
+    );
+  if (
+    teacherSession &&
+    teacherSession.participants.some(
+      (participant) =>
+        participant.courseOffering.subjectId !== assignment.courseOffering.subjectId,
+    )
+  )
+    return error(
+      "Ortak ders icin mevcut oturumdaki ders ile eklenecek ders ayni olmali.",
+      { courseTeacherAssignmentId: "Ayni ders icin birlestirme yapin." },
+    );
+  if (classConflict && !input.allowClassConflict)
+    return error(
+      "Bu sinif ayni gun ve saatte baska bir programa ekli. Devam etmek icin sinif cakismasini onaylayin.",
+      { record: "Sinif saat cakismasi var." },
+    );
+
+  const session =
+    teacherSession ??
+    (await tx.timetableSession.create({
+      data: {
+        schoolId: actor.schoolId,
+        academicYearId: assignment.academicYearId,
+        teacherProfileId: teacher.id,
+        schedulePeriodId: schedulePeriod.id,
+        weekday: input.weekday,
+        effectiveFrom: input.effectiveFrom,
+        note: input.note,
+      },
+      select: { id: true },
+    }));
+
+  const participant = await tx.timetableSessionParticipant.create({
+    data: {
+      schoolId: actor.schoolId,
+      academicYearId: assignment.academicYearId,
+      timetableSessionId: session.id,
+      courseTeacherAssignmentId: assignment.id,
+      courseOfferingId: assignment.courseOfferingId,
+      academicYearClassSectionId:
+        assignment.courseOffering.academicYearClassSectionId,
+      effectiveFrom: input.effectiveFrom,
+      note: input.note,
+    },
+    select: { id: true },
+  });
+  await audit(tx, actor, {
+    action: "timetable.participant.created",
+    entityType: "TimetableSessionParticipant",
+    entityId: participant.id,
+    afterData: {
+      timetableSessionId: session.id,
+      reusedSession: Boolean(teacherSession),
+      courseTeacherAssignmentId: assignment.id,
+      courseOfferingId: assignment.courseOfferingId,
+      academicYearClassSectionId:
+        assignment.courseOffering.academicYearClassSectionId,
+      teacherProfileId: teacher.id,
+      weekday: input.weekday,
+      schedulePeriodId: schedulePeriod.id,
+      effectiveFrom: dateValue(input.effectiveFrom),
+      mergeWithTeacherSession: input.mergeWithTeacherSession,
+      allowClassConflict: input.allowClassConflict,
+    },
+    changedFields: ["timetableSession", "timetableSessionParticipant"],
+  });
+  return {
+    status: "success",
+    message: teacherSession
+      ? "Ders mevcut ortak programa eklendi."
+      : "Ders haftalik programa eklendi.",
+    entityId: participant.id,
+  };
+}
+
+export async function persistTimetableParticipantTransition(
+  tx: Prisma.TransactionClient,
+  actor: TeachingActor,
+  input: TimetableParticipantTransitionInput,
+): Promise<TeachingState> {
+  const participant = await tx.timetableSessionParticipant.findFirst({
+    where: {
+      id: input.timetableParticipantId,
+      schoolId: actor.schoolId,
+      archivedAt: null,
+    },
+    include: { timetableSession: { select: { id: true } } },
+  });
+  if (!participant) return error("Program kaydi bulunamadi.");
+  if (participant.updatedAt.toISOString() !== input.revision)
+    return error("Kayit bu arada degismis. Sayfayi yenileyip tekrar deneyin.");
+  if (input.effectiveOn.getTime() < participant.effectiveFrom.getTime())
+    return error("Pasif tarihi program baslangicindan once olamaz.", {
+      effectiveOn: "Daha ileri bir tarih secin.",
+    });
+  if (participant.status === "PASSIVE")
+    return { status: "success", message: "Program kaydi zaten pasif." };
+
+  await tx.timetableSessionParticipant.update({
+    where: { id: participant.id },
+    data: {
+      status: "PASSIVE",
+      effectiveTo: input.effectiveOn,
+      note: input.note ?? participant.note,
+    },
+  });
+  const activeParticipantCount = await tx.timetableSessionParticipant.count({
+    where: {
+      schoolId: actor.schoolId,
+      timetableSessionId: participant.timetableSessionId,
+      status: "ACTIVE",
+      archivedAt: null,
+    },
+  });
+  if (activeParticipantCount === 0) {
+    await tx.timetableSession.update({
+      where: { id: participant.timetableSessionId },
+      data: { status: "PASSIVE", effectiveTo: input.effectiveOn },
+    });
+  }
+  await audit(tx, actor, {
+    action: "timetable.participant.passivized",
+    entityType: "TimetableSessionParticipant",
+    entityId: participant.id,
+    beforeData: {
+      status: participant.status,
+      effectiveTo: participant.effectiveTo
+        ? dateValue(participant.effectiveTo)
+        : null,
+      note: participant.note,
+    },
+    afterData: {
+      status: "PASSIVE",
+      effectiveTo: dateValue(input.effectiveOn),
+      note: input.note ?? participant.note,
+      sessionPassivized: activeParticipantCount === 0,
+    },
+    changedFields: ["status", "effectiveTo", "note", "timetableSession.status"],
+  });
+  return { status: "success", message: "Ders programdan pasife alindi." };
 }

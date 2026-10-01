@@ -371,27 +371,30 @@ Bu kararlar doğrultusunda ilk kodlama diliminde aşağıdaki yapı hedeflenmiş
   - `Haftalık program`
   - `Hesap`
 
-Haftalık program sekmesi bu pakette yalnız hazırlık notu gösterir. Gün/saat matrisi, ortak ders ve sınıf bazlı CTA üretimi bir sonraki küçük paketin konusudur.
+Paket 4A sonunda haftalık program sekmesi yalnız hazırlık notu gösteriyordu. Bu not, Paket 4B ile gerçek program yerleşimi için genişletildi.
 
-## 8. Sonraki paket
+## 8. Paket 4B uygulama notu
 
-Paket 4B için sıradaki karar ve kodlama başlığı:
+Paket 4B ile haftalık programın ilk çalışan iskeleti hedeflenmiştir:
 
-1. Haftalık program tablosu yıllık şablon olarak kurulacak.
-2. Pazartesi–Cuma günleri ve seçili sınıfın saat profili kullanılacak.
-3. `TimetableSession` tek zaman bloğunu temsil edecek.
-4. `TimetableSessionParticipant` aynı bloktaki sınıf/ders katılımcılarını temsil edecek.
-5. Öğretmen ve sınıf çakışmaları Okul Admin onayına sunulacak.
-6. Öğretmen ekranındaki yoklama/comment/ödev CTA'ları sınıf katılımcısı bazında ayrı üretilecek.
+1. Haftalık program yıllık şablon olarak aktif öğretim yılına bağlanır.
+2. Pazartesi–Cuma günleri ve seçili sınıfın `ScheduleProfileVersion` ders saatleri kullanılır.
+3. `TimetableSession` tek öğretmen + gün + ders saati zaman bloğunu temsil eder.
+4. `TimetableSessionParticipant` aynı bloktaki sınıf/ders katılımcılarını temsil eder.
+5. Aynı öğretmen/gün/saat durumunda kullanıcı açıkça “ortak ders” onayı verir; ortak oturumda ders aynı olmalıdır.
+6. Aynı sınıf/gün/saat çakışmasında kullanıcı açıkça sınıf çakışması onayı verir.
+7. Öğretmen detayındaki `Haftalık program` tabı artık program ekleme formunu ve gün/saat matrisini gösterir.
+8. Matris hücresindeki yoklama/comment/ödev CTA'ları şimdilik pasif hazırlık düğmeleridir; ileride gerçek tarihli ders oturumu üretimi bu katılımcı satırlarına bağlanacaktır.
+9. Programdan çıkarma silme yapmaz; katılımcıyı `PASSIVE` yaparak geçmişi korur.
 
 ## 9. Cevaplardan sonra yapılacaklar
 
-Cevaplar tamamlandığında sıradaki belge güncellemesi:
+Paket 4B sonrasında sıradaki belge ve kodlama başlıkları:
 
-1. Karar özeti
-2. Hedef ER modeli
-3. Migration planı
-4. İlk UI akışı
-5. Kabul testleri
+1. Öğretmen portalında gerçek günlük ders oturumu başlatma akışı
+2. Program katılımcısından tarihli yoklama/comment/ödev kayıtlarına geçiş
+3. Birleşik sınıf derslerinde iki ayrı sınıf CTA'sının gerçek modüllere bağlanması
+4. Sınıf bazlı haftalık program görünümü
+5. Kabul testleri ve canlı veriyle doğrulama
 
-Bu bölüm ilk karar toplama döneminden kalmıştır. Paket 4A kararları netleştiği için migration ve uygulama kodu bu kararlara göre başlatılmıştır; Paket 4B öncesinde haftalık program ayrıntıları ayrıca kesinleştirilecektir.
+Bu bölüm ilk karar toplama döneminden kalmıştır. Paket 4A kararları netleştiği için migration ve uygulama kodu bu kararlara göre başlatılmıştır; Paket 4B ile haftalık programın temel verisi ve öğretmen detay görünümü kurulmuştur.

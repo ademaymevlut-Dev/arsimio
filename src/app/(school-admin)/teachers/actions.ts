@@ -5,7 +5,9 @@ import type { TeachingState } from "@/lib/teaching-validation";
 import {
   manageCourseTeacherAssignment,
   manageHomeroomTeacherAssignment,
+  manageTimetableParticipantTransition,
   manageTeachingAssignmentTransition,
+  manageWeeklySchedulePlacement,
 } from "@/server/teaching/manage-teaching";
 
 function revalidateTeacherScreens(form: FormData) {
@@ -44,6 +46,24 @@ export async function passivateTeachingAssignmentAction(
   form: FormData,
 ) {
   const result = await manageTeachingAssignmentTransition(form);
+  if (result.status === "success") revalidateTeacherScreens(form);
+  return result;
+}
+
+export async function saveWeeklySchedulePlacementAction(
+  _state: TeachingState,
+  form: FormData,
+) {
+  const result = await manageWeeklySchedulePlacement(form);
+  if (result.status === "success") revalidateTeacherScreens(form);
+  return result;
+}
+
+export async function passivateTimetableParticipantAction(
+  _state: TeachingState,
+  form: FormData,
+) {
+  const result = await manageTimetableParticipantTransition(form);
   if (result.status === "success") revalidateTeacherScreens(form);
   return result;
 }

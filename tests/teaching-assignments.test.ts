@@ -3,7 +3,9 @@ import test from "node:test";
 import {
   parseCourseTeacherAssignment,
   parseHomeroomTeacherAssignment,
+  parseTimetableParticipantTransition,
   parseTeachingAssignmentTransition,
+  parseWeeklySchedulePlacement,
 } from "../src/lib/teaching-validation";
 
 function form(values: Record<string, string>) {
@@ -16,6 +18,8 @@ const teacherProfileId = "07e9957c-9a4d-4e28-98d4-15e60c6264d2";
 const classSectionId = "c0f3fa91-0988-40cd-ad45-c80447bfbf6c";
 const courseOfferingId = "4f62dcb1-3972-4198-985b-12ea6da6e4cc";
 const assignmentId = "eb2c5d9f-d24d-4434-9640-5df0b7a9f081";
+const schedulePeriodId = "3d27c070-8cde-45e4-a0e0-10cbd3aaf7ea";
+const timetableParticipantId = "ef7be8cc-5b14-4d5f-b913-8ce93bbf08f4";
 const revision = "2026-10-01T12:00:00.000Z";
 
 test("homeroom assignment accepts teacher, class and date", () => {
@@ -77,4 +81,73 @@ test("assignment transition accepts only known kinds and revision format", () =>
     ).success,
     false,
   );
+});
+
+test("weekly schedule placement accepts active assignment, weekday and period", () => {
+  const parsed = parseWeeklySchedulePlacement(
+    form({
+      teacherProfileId,
+      courseTeacherAssignmentId: assignmentId,
+      schedulePeriodId,
+      weekday: "MONDAY",
+      effectiveFrom: "2026-10-01",
+      mergeWithTeacherSession: "on",
+      allowClassConflict: "on",
+      note: "  joint class ",
+    }),
+  );
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.courseTeacherAssignmentId, assignmentId);
+    assert.equal(parsed.data.schedulePeriodId, schedulePeriodId);
+    assert.equal(parsed.data.weekday, "MONDAY");
+    assert.equal(parsed.data.mergeWithTeacherSession, true);
+    assert.equal(parsed.data.allowClassConflict, true);
+    assert.equal(parsed.data.note, "joint class");
+  }
+});
+
+test("weekly schedule placement rejects invalid weekday and period", () => {
+  const parsed = parseWeeklySchedulePlacement(
+    form({
+      teacherProfileId,
+      courseTeacherAssignmentId: assignmentId,
+      schedulePeriodId: "bad-period",
+      weekday: "SUNDAY",
+      effectiveFrom: "2026-10-01",
+      note: "",
+    }),
+  );
+  assert.equal(parsed.success, false);
+  if (!parsed.success) {
+    assert.ok(parsed.state.fieldErrors?.schedulePeriodId);
+    assert.ok(parsed.state.fieldErrors?.weekday);
+  }
+});
+
+test("timetable participant transition validates revision and date", () => {
+  assert.equal(
+    parseTimetableParticipantTransition(
+      form({
+        timetableParticipantId,
+        revision,
+        effectiveOn: "2026-10-15",
+        note: "remove from timetable",
+      }),
+    ).success,
+    true,
+  );
+  const parsed = parseTimetableParticipantTransition(
+    form({
+      timetableParticipantId,
+      revision: "not-a-date",
+      effectiveOn: "2026-10-40",
+      note: "",
+    }),
+  );
+  assert.equal(parsed.success, false);
+  if (!parsed.success) {
+    assert.ok(parsed.state.fieldErrors?.record);
+    assert.ok(parsed.state.fieldErrors?.effectiveOn);
+  }
 });

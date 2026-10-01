@@ -301,6 +301,32 @@ const en = {
     subjectTrackGeneral: "General",
     subjectTrackElective: "Elective",
     subjectTrackIgcse: "IGCSE",
+    weeklyScheduleDescription:
+      "Place the teacher's active course assignments onto a weekday and period. When a joint lesson is needed, multiple class participants are added to the same teacher/period session.",
+    addWeeklySchedulePlacement: "Add lesson to timetable",
+    selectCourseAssignment: "Select course assignment",
+    selectWeekday: "Select day",
+    selectSchedulePeriod: "Select period",
+    noSchedulePeriods:
+      "The schedule profile linked to this class does not have any periods.",
+    mergeWithTeacherSession:
+      "If this teacher already has a lesson at the same day and period, add it to the same joint session.",
+    allowClassConflict:
+      "I approve the conflict if this class already appears in another timetable at the same day/period.",
+    saveSchedulePlacement: "Add to timetable",
+    weeklyScheduleGridTitle: "Teacher weekly timetable",
+    noWeeklySchedule: "No timetable rows exist for this teacher.",
+    schedulePeriodColumn: "Period",
+    scheduleEffectiveOn: "Timetable passive date",
+    removeFromSchedule: "Remove from timetable",
+    attendanceCta: "Attendance",
+    commentCta: "Comment",
+    homeworkCta: "Homework",
+    weekdayMonday: "Monday",
+    weekdayTuesday: "Tuesday",
+    weekdayWednesday: "Wednesday",
+    weekdayThursday: "Thursday",
+    weekdayFriday: "Friday",
     weeklySchedulePendingTitle: "Weekly timetable is the next package",
     weeklySchedulePendingDescription:
       "This package establishes which classes and courses the teacher is attached to. The weekly day/period matrix will be built on top of these assignments.",

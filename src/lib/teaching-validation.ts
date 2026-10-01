@@ -6,9 +6,13 @@ export type TeachingField =
   | "record"
   | "assignmentKind"
   | "assignmentId"
+  | "timetableParticipantId"
   | "teacherProfileId"
   | "academicYearClassSectionId"
   | "courseOfferingId"
+  | "courseTeacherAssignmentId"
+  | "schedulePeriodId"
+  | "weekday"
   | "effectiveFrom"
   | "effectiveOn"
   | "note";
@@ -42,9 +46,42 @@ export type TeachingAssignmentTransitionInput = {
   note: string | null;
 };
 
+export type TimetableWeekdayInput =
+  | "MONDAY"
+  | "TUESDAY"
+  | "WEDNESDAY"
+  | "THURSDAY"
+  | "FRIDAY";
+
+export type WeeklySchedulePlacementInput = {
+  teacherProfileId: string;
+  courseTeacherAssignmentId: string;
+  schedulePeriodId: string;
+  weekday: TimetableWeekdayInput;
+  effectiveFrom: Date;
+  mergeWithTeacherSession: boolean;
+  allowClassConflict: boolean;
+  note: string | null;
+};
+
+export type TimetableParticipantTransitionInput = {
+  timetableParticipantId: string;
+  revision: string;
+  effectiveOn: Date;
+  note: string | null;
+};
+
 type Parsed<T> =
   | { success: true; data: T }
   | { success: false; state: TeachingState };
+
+const WEEKDAYS = new Set<TimetableWeekdayInput>([
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+]);
 
 function optionalText(value: FormDataEntryValue | null, max: number) {
   if (value === null || value === "") return null;
@@ -184,6 +221,93 @@ export function parseTeachingAssignmentTransition(
     data: {
       assignmentKind,
       assignmentId,
+      revision,
+      effectiveOn,
+      note,
+    },
+  };
+}
+
+export function parseWeeklySchedulePlacement(
+  form: FormData,
+): Parsed<WeeklySchedulePlacementInput> {
+  const teacherProfileId = form.get("teacherProfileId");
+  const courseTeacherAssignmentId = form.get("courseTeacherAssignmentId");
+  const schedulePeriodId = form.get("schedulePeriodId");
+  const weekdayRaw = form.get("weekday");
+  const weekday =
+    typeof weekdayRaw === "string" &&
+    WEEKDAYS.has(weekdayRaw as TimetableWeekdayInput)
+      ? (weekdayRaw as TimetableWeekdayInput)
+      : null;
+  const effectiveFrom = parseDateOnly(form.get("effectiveFrom"));
+  const noteRaw = form.get("note");
+  const note = optionalText(noteRaw, 500);
+  const fieldErrors: TeachingState["fieldErrors"] = {};
+
+  if (!validSchoolId(teacherProfileId))
+    fieldErrors.teacherProfileId = "Ogretmen kaydi gecersiz.";
+  if (!validSchoolId(courseTeacherAssignmentId))
+    fieldErrors.courseTeacherAssignmentId = "Ders atamasi gecersiz.";
+  if (!validSchoolId(schedulePeriodId))
+    fieldErrors.schedulePeriodId = "Ders saati gecersiz.";
+  if (!weekday) fieldErrors.weekday = "Hafta gunu gecersiz.";
+  if (!effectiveFrom) fieldErrors.effectiveFrom = "Tarih gecersiz.";
+  if (provided(noteRaw) && !note) fieldErrors.note = "Not gecersiz.";
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(teacherProfileId) ||
+    !validSchoolId(courseTeacherAssignmentId) ||
+    !validSchoolId(schedulePeriodId) ||
+    !weekday ||
+    !effectiveFrom
+  )
+    return invalid(fieldErrors);
+
+  return {
+    success: true,
+    data: {
+      teacherProfileId,
+      courseTeacherAssignmentId,
+      schedulePeriodId,
+      weekday,
+      effectiveFrom,
+      mergeWithTeacherSession: form.get("mergeWithTeacherSession") === "on",
+      allowClassConflict: form.get("allowClassConflict") === "on",
+      note,
+    },
+  };
+}
+
+export function parseTimetableParticipantTransition(
+  form: FormData,
+): Parsed<TimetableParticipantTransitionInput> {
+  const timetableParticipantId = form.get("timetableParticipantId");
+  const revision = form.get("revision");
+  const effectiveOn = parseDateOnly(form.get("effectiveOn"));
+  const noteRaw = form.get("note");
+  const note = optionalText(noteRaw, 500);
+  const fieldErrors: TeachingState["fieldErrors"] = {};
+
+  if (!validSchoolId(timetableParticipantId))
+    fieldErrors.timetableParticipantId = "Program kaydi gecersiz.";
+  if (!validRevision(revision)) fieldErrors.record = "Kayit surumu gecersiz.";
+  if (!effectiveOn) fieldErrors.effectiveOn = "Tarih gecersiz.";
+  if (provided(noteRaw) && !note) fieldErrors.note = "Not gecersiz.";
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(timetableParticipantId) ||
+    !validRevision(revision) ||
+    !effectiveOn
+  )
+    return invalid(fieldErrors);
+
+  return {
+    success: true,
+    data: {
+      timetableParticipantId,
       revision,
       effectiveOn,
       note,

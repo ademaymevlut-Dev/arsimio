@@ -302,6 +302,32 @@ const sq = {
     subjectTrackGeneral: "E përgjithshme",
     subjectTrackElective: "Zgjedhore",
     subjectTrackIgcse: "IGCSE",
+    weeklyScheduleDescription:
+      "Vendosni caktimet aktive të lëndëve të mësuesit në ditë dhe orë. Kur duhet orë e përbashkët, disa klasa pjesëmarrëse shtohen në të njëjtin sesion mësues/orë.",
+    addWeeklySchedulePlacement: "Shto lëndë në orar",
+    selectCourseAssignment: "Zgjidh caktimin e lëndës",
+    selectWeekday: "Zgjidh ditën",
+    selectSchedulePeriod: "Zgjidh orën",
+    noSchedulePeriods:
+      "Profili i orarit i lidhur me këtë klasë nuk ka orë mësimore.",
+    mergeWithTeacherSession:
+      "Nëse mësuesi ka tashmë orë në të njëjtën ditë dhe orë, shtoje në të njëjtin sesion të përbashkët.",
+    allowClassConflict:
+      "E miratoj konfliktin nëse kjo klasë shfaqet në një orar tjetër në të njëjtën ditë/orë.",
+    saveSchedulePlacement: "Shto në orar",
+    weeklyScheduleGridTitle: "Orari javor i mësuesit",
+    noWeeklySchedule: "Nuk ka rreshta orari për këtë mësues.",
+    schedulePeriodColumn: "Ora",
+    scheduleEffectiveOn: "Data pasive e orarit",
+    removeFromSchedule: "Hiq nga orari",
+    attendanceCta: "Mungesat",
+    commentCta: "Comment",
+    homeworkCta: "Detyrë",
+    weekdayMonday: "E hënë",
+    weekdayTuesday: "E martë",
+    weekdayWednesday: "E mërkurë",
+    weekdayThursday: "E enjte",
+    weekdayFriday: "E premte",
     weeklySchedulePendingTitle: "Orari javor është paketa e radhës",
     weeklySchedulePendingDescription:
       "Kjo paketë lidh mësuesin me klasat dhe lëndët. Matrica javore ditë/orë do të ndërtohet mbi këto caktime.",

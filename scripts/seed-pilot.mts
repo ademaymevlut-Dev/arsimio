@@ -92,6 +92,8 @@ const schoolPermissions = [
   "teachers.manage",
   "teaching.assignments.read",
   "teaching.assignments.manage",
+  "teaching.schedule.read",
+  "teaching.schedule.manage",
 ];
 const platformPermissions = [
   "platform.schools.read",

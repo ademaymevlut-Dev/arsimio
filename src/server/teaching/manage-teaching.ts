@@ -5,7 +5,9 @@ import { getPrisma } from "@/lib/db";
 import {
   parseCourseTeacherAssignment,
   parseHomeroomTeacherAssignment,
+  parseTimetableParticipantTransition,
   parseTeachingAssignmentTransition,
+  parseWeeklySchedulePlacement,
   type TeachingState,
 } from "@/lib/teaching-validation";
 import { isSameOrigin } from "@/server/auth/identifiers";
@@ -13,7 +15,9 @@ import { requireSchoolPermission } from "@/server/authorization/guards";
 import {
   persistCourseTeacherAssignment,
   persistHomeroomTeacherAssignment,
+  persistTimetableParticipantTransition,
   persistTeachingAssignmentTransition,
+  persistWeeklySchedulePlacement,
   type TeachingActor,
 } from "./teaching-service";
 
@@ -58,6 +62,7 @@ function databaseError(errorValue: unknown): TeachingState {
 }
 
 async function run<T>(
+  permission: string,
   parser: (
     form: FormData,
   ) => { success: true; data: T } | { success: false; state: TeachingState },
@@ -68,7 +73,7 @@ async function run<T>(
   ) => Promise<TeachingState>,
   form: FormData,
 ): Promise<TeachingState> {
-  const context = await actorContext("teaching.assignments.manage");
+  const context = await actorContext(permission);
   if (!context) return invalid();
   const parsed = parser(form);
   if (!parsed.success) return parsed.state;
@@ -85,6 +90,7 @@ async function run<T>(
 
 export function manageHomeroomTeacherAssignment(form: FormData) {
   return run(
+    "teaching.assignments.manage",
     parseHomeroomTeacherAssignment,
     persistHomeroomTeacherAssignment,
     form,
@@ -93,6 +99,7 @@ export function manageHomeroomTeacherAssignment(form: FormData) {
 
 export function manageCourseTeacherAssignment(form: FormData) {
   return run(
+    "teaching.assignments.manage",
     parseCourseTeacherAssignment,
     persistCourseTeacherAssignment,
     form,
@@ -101,8 +108,27 @@ export function manageCourseTeacherAssignment(form: FormData) {
 
 export function manageTeachingAssignmentTransition(form: FormData) {
   return run(
+    "teaching.assignments.manage",
     parseTeachingAssignmentTransition,
     persistTeachingAssignmentTransition,
+    form,
+  );
+}
+
+export function manageWeeklySchedulePlacement(form: FormData) {
+  return run(
+    "teaching.schedule.manage",
+    parseWeeklySchedulePlacement,
+    persistWeeklySchedulePlacement,
+    form,
+  );
+}
+
+export function manageTimetableParticipantTransition(form: FormData) {
+  return run(
+    "teaching.schedule.manage",
+    parseTimetableParticipantTransition,
+    persistTimetableParticipantTransition,
     form,
   );
 }

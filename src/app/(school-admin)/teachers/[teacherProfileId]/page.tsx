@@ -42,6 +42,7 @@ export default async function TeacherDetailPage({
       <TeacherDetailTabs
         teacher={teacher}
         canManageAssignments={permissions.includes("teaching.assignments.manage")}
+        canManageSchedule={permissions.includes("teaching.schedule.manage")}
         canManageAccounts={permissions.includes("accounts.manage")}
         defaultEffectiveOn={dateOnlyValue(
           dateOnlyInTimeZone(new Date(), tenant.school.timezone),

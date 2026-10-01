@@ -40,6 +40,10 @@ function dateValue(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+function timeValue(date: Date) {
+  return date.toISOString().slice(11, 16);
+}
+
 function classSectionLabel(section: {
   classSectionDefinition: {
     code: string;
@@ -66,6 +70,32 @@ function assignmentTeacherName(assignment: {
 }) {
   return fullName(assignment.teacherProfile.employment.person);
 }
+
+function schedulePeriodLabel(period: {
+  defaultName: string;
+  translations?: { name: string }[];
+  startTime: Date;
+  endTime: Date;
+}) {
+  const name = period.translations?.[0]?.name ?? period.defaultName;
+  return `${name} (${timeValue(period.startTime)}–${timeValue(period.endTime)})`;
+}
+
+const WEEKDAY_VALUES = [
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+] as const;
+
+const WEEKDAY_ORDER = new Map([
+  ["MONDAY", 1],
+  ["TUESDAY", 2],
+  ["WEDNESDAY", 3],
+  ["THURSDAY", 4],
+  ["FRIDAY", 5],
+]);
 
 export async function getTeacherDetail(
   schoolId: string,
@@ -123,6 +153,7 @@ export async function getTeacherDetail(
     courseOfferings,
     homeroomAssignments,
     courseAssignments,
+    timetableSessions,
   ] = activeYear
     ? await Promise.all([
         db.academicYearClassSection.findMany({
@@ -204,6 +235,52 @@ export async function getTeacherDetail(
                 academicYearClassSection: {
                   include: {
                     classSectionDefinition: { include: { gradeLevel: true } },
+                    scheduleProfileVersion: {
+                      include: {
+                        periods: {
+                          include: {
+                            translations: { where: { locale }, take: 1 },
+                          },
+                          orderBy: [{ sequence: "asc" }],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        }),
+        db.timetableSession.findMany({
+          where: {
+            schoolId,
+            academicYearId: activeYear.id,
+            teacherProfileId: profile.id,
+            status: "ACTIVE",
+            archivedAt: null,
+          },
+          include: {
+            schedulePeriod: {
+              include: { translations: { where: { locale }, take: 1 } },
+            },
+            participants: {
+              where: { status: "ACTIVE", archivedAt: null },
+              include: {
+                courseTeacherAssignment: { select: { id: true } },
+                courseOffering: {
+                  include: {
+                    subject: {
+                      include: {
+                        translations: { where: { locale }, take: 1 },
+                      },
+                    },
+                    academicYearClassSection: {
+                      include: {
+                        classSectionDefinition: {
+                          include: { gradeLevel: true },
+                        },
+                      },
+                    },
                   },
                 },
               },
@@ -211,7 +288,7 @@ export async function getTeacherDetail(
           },
         }),
       ])
-    : [[], [], [], []] as const;
+    : [[], [], [], [], []] as const;
 
   const sortedClassSections = [...classSections].sort((first, second) => {
     const firstGrade =
@@ -231,6 +308,57 @@ export async function getTeacherDetail(
       translatedName(first.subject).localeCompare(
         translatedName(second.subject),
         locale,
+      )
+    );
+  });
+  const schedulePeriodsById = new Map<
+    string,
+    {
+      id: string;
+      label: string;
+      sequence: number;
+      startTime: string;
+      endTime: string;
+    }
+  >();
+  for (const assignment of courseAssignments) {
+    const periods =
+      assignment.courseOffering.academicYearClassSection.scheduleProfileVersion
+        ?.periods ?? [];
+    for (const period of periods) {
+      schedulePeriodsById.set(period.id, {
+        id: period.id,
+        label: schedulePeriodLabel(period),
+        sequence: period.sequence,
+        startTime: timeValue(period.startTime),
+        endTime: timeValue(period.endTime),
+      });
+    }
+  }
+  for (const session of timetableSessions) {
+    schedulePeriodsById.set(session.schedulePeriod.id, {
+      id: session.schedulePeriod.id,
+      label: schedulePeriodLabel(session.schedulePeriod),
+      sequence: session.schedulePeriod.sequence,
+      startTime: timeValue(session.schedulePeriod.startTime),
+      endTime: timeValue(session.schedulePeriod.endTime),
+    });
+  }
+  const schedulePeriodOptions = [...schedulePeriodsById.values()].sort(
+    (first, second) =>
+      first.sequence - second.sequence ||
+      first.startTime.localeCompare(second.startTime) ||
+      first.label.localeCompare(second.label, locale),
+  );
+  const sortedTimetableSessions = [...timetableSessions].sort((first, second) => {
+    const weekday =
+      (WEEKDAY_ORDER.get(first.weekday) ?? 99) -
+      (WEEKDAY_ORDER.get(second.weekday) ?? 99);
+    if (weekday !== 0) return weekday;
+    return (
+      first.schedulePeriod.sequence - second.schedulePeriod.sequence ||
+      timeValue(first.schedulePeriod.startTime).localeCompare(
+        timeValue(second.schedulePeriod.startTime),
       )
     );
   });
@@ -320,11 +448,57 @@ export async function getTeacherDetail(
       ),
       subjectName: translatedName(assignment.courseOffering.subject),
       track: assignment.courseOffering.subject.track,
+      schedulePeriods:
+        assignment.courseOffering.academicYearClassSection.scheduleProfileVersion
+          ?.periods.map((period) => ({
+            id: period.id,
+            label: schedulePeriodLabel(period),
+            sequence: period.sequence,
+            startTime: timeValue(period.startTime),
+            endTime: timeValue(period.endTime),
+          })) ?? [],
       effectiveFrom: dateValue(assignment.effectiveFrom),
       effectiveTo: assignment.effectiveTo
         ? dateValue(assignment.effectiveTo)
         : null,
       note: assignment.note,
     })),
+    schedulePeriodOptions,
+    weeklySchedule: {
+      weekdays: [...WEEKDAY_VALUES],
+      periods: schedulePeriodOptions,
+      sessions: sortedTimetableSessions.map((session) => ({
+        id: session.id,
+        weekday: session.weekday,
+        schedulePeriodId: session.schedulePeriodId,
+        periodLabel: schedulePeriodLabel(session.schedulePeriod),
+        effectiveFrom: dateValue(session.effectiveFrom),
+        effectiveTo: session.effectiveTo ? dateValue(session.effectiveTo) : null,
+        note: session.note,
+        participants: session.participants
+          .map((participant) => ({
+            id: participant.id,
+            revision: participant.updatedAt.toISOString(),
+            courseTeacherAssignmentId: participant.courseTeacherAssignmentId,
+            courseOfferingId: participant.courseOfferingId,
+            classLabel: classSectionLabel(
+              participant.courseOffering.academicYearClassSection,
+            ),
+            subjectName: translatedName(participant.courseOffering.subject),
+            track: participant.courseOffering.subject.track,
+            status: participant.status,
+            effectiveFrom: dateValue(participant.effectiveFrom),
+            effectiveTo: participant.effectiveTo
+              ? dateValue(participant.effectiveTo)
+              : null,
+            note: participant.note,
+          }))
+          .sort(
+            (first, second) =>
+              first.classLabel.localeCompare(second.classLabel, locale) ||
+              first.subjectName.localeCompare(second.subjectName, locale),
+          ),
+      })),
+    },
   };
 }

@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
+  passivateTimetableParticipantAction,
   passivateTeachingAssignmentAction,
   saveCourseTeacherAssignmentAction,
   saveHomeroomTeacherAssignmentAction,
+  saveWeeklySchedulePlacementAction,
 } from "@/app/(school-admin)/teachers/actions";
 import type { TeachingState } from "@/lib/teaching-validation";
 import { Alert } from "@/components/ui/alert";
@@ -29,6 +31,46 @@ import type { AppDictionary } from "@/i18n/dictionaries/types";
 import { PersonAccountPanel } from "./person-account-panel";
 
 type StaffMessages = AppDictionary["staff"];
+
+type TimetableWeekday =
+  | "MONDAY"
+  | "TUESDAY"
+  | "WEDNESDAY"
+  | "THURSDAY"
+  | "FRIDAY";
+
+type SchedulePeriodOption = {
+  id: string;
+  label: string;
+  sequence: number;
+  startTime: string;
+  endTime: string;
+};
+
+type TimetableParticipantRow = {
+  id: string;
+  revision: string;
+  courseTeacherAssignmentId: string;
+  courseOfferingId: string;
+  classLabel: string;
+  subjectName: string;
+  track: string;
+  status: "ACTIVE" | "PASSIVE";
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  note: string | null;
+};
+
+type TimetableSessionRow = {
+  id: string;
+  weekday: TimetableWeekday;
+  schedulePeriodId: string;
+  periodLabel: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  note: string | null;
+  participants: TimetableParticipantRow[];
+};
 
 type TeacherDetail = {
   id: string;
@@ -78,7 +120,14 @@ type TeacherDetail = {
     courseOfferingId: string;
     subjectName: string;
     track: string;
+    schedulePeriods: SchedulePeriodOption[];
   })[];
+  schedulePeriodOptions: SchedulePeriodOption[];
+  weeklySchedule: {
+    weekdays: TimetableWeekday[];
+    periods: SchedulePeriodOption[];
+    sessions: TimetableSessionRow[];
+  };
 };
 
 type AssignmentRow = {
@@ -105,6 +154,14 @@ function trackLabel(track: string, messages: StaffMessages) {
   if (track === "ELECTIVE") return messages.subjectTrackElective;
   if (track === "IGCSE") return messages.subjectTrackIgcse;
   return messages.subjectTrackGeneral;
+}
+
+function weekdayLabel(weekday: TimetableWeekday, messages: StaffMessages) {
+  if (weekday === "MONDAY") return messages.weekdayMonday;
+  if (weekday === "TUESDAY") return messages.weekdayTuesday;
+  if (weekday === "WEDNESDAY") return messages.weekdayWednesday;
+  if (weekday === "THURSDAY") return messages.weekdayThursday;
+  return messages.weekdayFriday;
 }
 
 function AssignmentTransitionForm({
@@ -508,15 +565,372 @@ function CourseAssignmentsTab({
   );
 }
 
+function TimetableParticipantTransitionForm({
+  participant,
+  detailTeacherProfileId,
+  defaultEffectiveOn,
+  messages,
+  action,
+  pending,
+}: {
+  participant: TimetableParticipantRow;
+  detailTeacherProfileId: string;
+  defaultEffectiveOn: string;
+  messages: StaffMessages;
+  action: (payload: FormData) => void;
+  pending: boolean;
+}) {
+  return (
+    <form action={action} className="mt-2 flex flex-wrap items-center gap-2">
+      <input
+        type="hidden"
+        name="detailTeacherProfileId"
+        value={detailTeacherProfileId}
+      />
+      <input
+        type="hidden"
+        name="timetableParticipantId"
+        value={participant.id}
+      />
+      <input type="hidden" name="revision" value={participant.revision} />
+      <Input
+        aria-label={messages.scheduleEffectiveOn}
+        className="h-7 w-36 text-xs"
+        name="effectiveOn"
+        type="date"
+        defaultValue={defaultEffectiveOn}
+        min={participant.effectiveFrom}
+        required
+      />
+      <Button type="submit" size="xs" variant="outline" disabled={pending}>
+        {messages.removeFromSchedule}
+      </Button>
+    </form>
+  );
+}
+
+function WeeklyScheduleTab({
+  teacher,
+  defaultEffectiveOn,
+  canManageSchedule,
+  messages,
+}: {
+  teacher: TeacherDetail;
+  defaultEffectiveOn: string;
+  canManageSchedule: boolean;
+  messages: StaffMessages;
+}) {
+  const activeCourseAssignments = teacher.courseAssignments.filter(
+    (assignment) => assignment.status === "ACTIVE",
+  );
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState(
+    () =>
+      activeCourseAssignments.find(
+        (assignment) => assignment.schedulePeriods.length > 0,
+      )?.id ?? "",
+  );
+  const selectedAssignment = activeCourseAssignments.find(
+    (assignment) => assignment.id === selectedAssignmentId,
+  );
+  const periodOptions = selectedAssignment?.schedulePeriods ?? [];
+  const [createState, createAction, createPending] = useActionState<
+    TeachingState,
+    FormData
+  >(saveWeeklySchedulePlacementAction, {});
+  const [transitionState, transitionAction, transitionPending] = useActionState<
+    TeachingState,
+    FormData
+  >(passivateTimetableParticipantAction, {});
+  const sessionsBySlot = new Map<string, TimetableSessionRow[]>();
+  for (const session of teacher.weeklySchedule.sessions) {
+    const key = `${session.weekday}:${session.schedulePeriodId}`;
+    const sessions = sessionsBySlot.get(key) ?? [];
+    sessions.push(session);
+    sessionsBySlot.set(key, sessions);
+  }
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-[minmax(320px,0.75fr)_minmax(0,1.5fr)]">
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle>{messages.addWeeklySchedulePlacement}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {messages.weeklyScheduleDescription}
+          </p>
+          {!teacher.activeYear ? (
+            <Alert variant="warning">{messages.noActiveAcademicYear}</Alert>
+          ) : null}
+          {canManageSchedule ? (
+            <form action={createAction} className="space-y-4">
+              <input type="hidden" name="teacherProfileId" value={teacher.id} />
+              <div className="space-y-2">
+                <Label htmlFor="courseTeacherAssignmentId">
+                  {messages.selectCourseAssignment}
+                </Label>
+                <NativeSelect
+                  id="courseTeacherAssignmentId"
+                  name="courseTeacherAssignmentId"
+                  value={selectedAssignmentId}
+                  onChange={(event) =>
+                    setSelectedAssignmentId(event.currentTarget.value)
+                  }
+                  disabled={!teacher.activeYear || activeCourseAssignments.length === 0}
+                  required
+                >
+                  <option value="">{messages.selectCourseAssignment}</option>
+                  {activeCourseAssignments.map((assignment) => (
+                    <option
+                      key={assignment.id}
+                      value={assignment.id}
+                      disabled={assignment.schedulePeriods.length === 0}
+                    >
+                      {assignment.classLabel} · {assignment.subjectName} ·{" "}
+                      {trackLabel(assignment.track, messages)}
+                      {assignment.schedulePeriods.length === 0
+                        ? ` · ${messages.noSchedulePeriods}`
+                        : ""}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="weekday">{messages.selectWeekday}</Label>
+                  <NativeSelect
+                    id="weekday"
+                    name="weekday"
+                    disabled={!teacher.activeYear}
+                    required
+                  >
+                    <option value="">{messages.selectWeekday}</option>
+                    {teacher.weeklySchedule.weekdays.map((weekday) => (
+                      <option key={weekday} value={weekday}>
+                        {weekdayLabel(weekday, messages)}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="schedulePeriodId">
+                    {messages.selectSchedulePeriod}
+                  </Label>
+                  <NativeSelect
+                    id="schedulePeriodId"
+                    name="schedulePeriodId"
+                    disabled={!teacher.activeYear || periodOptions.length === 0}
+                    required
+                  >
+                    <option value="">{messages.selectSchedulePeriod}</option>
+                    {periodOptions.map((period) => (
+                      <option key={period.id} value={period.id}>
+                        {period.label}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="scheduleEffectiveFrom">
+                  {messages.effectiveDate}
+                </Label>
+                <Input
+                  id="scheduleEffectiveFrom"
+                  name="effectiveFrom"
+                  type="date"
+                  defaultValue={defaultEffectiveOn}
+                  min={teacher.activeYear?.startDate}
+                  max={teacher.activeYear?.endDate}
+                  disabled={!teacher.activeYear}
+                  required
+                />
+              </div>
+              <label className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm">
+                <input
+                  className="mt-1"
+                  type="checkbox"
+                  name="mergeWithTeacherSession"
+                />
+                <span>{messages.mergeWithTeacherSession}</span>
+              </label>
+              <label className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm">
+                <input
+                  className="mt-1"
+                  type="checkbox"
+                  name="allowClassConflict"
+                />
+                <span>{messages.allowClassConflict}</span>
+              </label>
+              <div className="space-y-2">
+                <Label htmlFor="scheduleNote">{messages.assignmentNote}</Label>
+                <Textarea id="scheduleNote" name="note" rows={3} />
+              </div>
+              {activeCourseAssignments.length === 0 && teacher.activeYear ? (
+                <Alert variant="warning">{messages.noCourseAssignments}</Alert>
+              ) : null}
+              {selectedAssignmentId && periodOptions.length === 0 ? (
+                <Alert variant="warning">{messages.noSchedulePeriods}</Alert>
+              ) : null}
+              {createState.status ? (
+                <Alert
+                  variant={createState.status === "error" ? "danger" : "success"}
+                >
+                  {createState.message}
+                </Alert>
+              ) : null}
+              <Button
+                type="submit"
+                disabled={
+                  createPending ||
+                  !teacher.activeYear ||
+                  activeCourseAssignments.length === 0 ||
+                  periodOptions.length === 0
+                }
+              >
+                {messages.saveSchedulePlacement}
+              </Button>
+            </form>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle>{messages.weeklyScheduleGridTitle}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {transitionState.status ? (
+            <Alert
+              variant={transitionState.status === "error" ? "danger" : "success"}
+            >
+              {transitionState.message}
+            </Alert>
+          ) : null}
+          {teacher.weeklySchedule.periods.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {messages.noWeeklySchedule}
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-36">
+                      {messages.schedulePeriodColumn}
+                    </TableHead>
+                    {teacher.weeklySchedule.weekdays.map((weekday) => (
+                      <TableHead key={weekday} className="min-w-56">
+                        {weekdayLabel(weekday, messages)}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {teacher.weeklySchedule.periods.map((period) => (
+                    <TableRow key={period.id}>
+                      <TableCell className="align-top font-medium">
+                        {period.label}
+                      </TableCell>
+                      {teacher.weeklySchedule.weekdays.map((weekday) => {
+                        const sessions =
+                          sessionsBySlot.get(`${weekday}:${period.id}`) ?? [];
+                        return (
+                          <TableCell
+                            key={`${weekday}-${period.id}`}
+                            className="align-top"
+                          >
+                            {sessions.length === 0 ? (
+                              <span className="text-sm text-muted-foreground">
+                                —
+                              </span>
+                            ) : (
+                              <div className="space-y-3">
+                                {sessions.map((session) => (
+                                  <div
+                                    key={session.id}
+                                    className="space-y-2 rounded-lg border border-border p-2"
+                                  >
+                                    {session.participants.map((participant) => (
+                                      <div
+                                        key={participant.id}
+                                        className="rounded-md bg-muted/40 p-2"
+                                      >
+                                        <p className="font-medium">
+                                          {participant.classLabel} ·{" "}
+                                          {participant.subjectName}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {trackLabel(participant.track, messages)}
+                                        </p>
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                          <Button
+                                            type="button"
+                                            size="xs"
+                                            variant="outline"
+                                            disabled
+                                          >
+                                            {messages.attendanceCta}
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            size="xs"
+                                            variant="outline"
+                                            disabled
+                                          >
+                                            {messages.commentCta}
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            size="xs"
+                                            variant="outline"
+                                            disabled
+                                          >
+                                            {messages.homeworkCta}
+                                          </Button>
+                                        </div>
+                                        {canManageSchedule ? (
+                                          <TimetableParticipantTransitionForm
+                                            participant={participant}
+                                            detailTeacherProfileId={teacher.id}
+                                            defaultEffectiveOn={defaultEffectiveOn}
+                                            messages={messages}
+                                            action={transitionAction}
+                                            pending={transitionPending}
+                                          />
+                                        ) : null}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export function TeacherDetailTabs({
   teacher,
   canManageAssignments,
+  canManageSchedule,
   canManageAccounts,
   defaultEffectiveOn,
   messages,
 }: {
   teacher: TeacherDetail;
   canManageAssignments: boolean;
+  canManageSchedule: boolean;
   canManageAccounts: boolean;
   defaultEffectiveOn: string;
   messages: StaffMessages;
@@ -664,15 +1078,12 @@ export function TeacherDetailTabs({
       </TabsContent>
 
       <TabsContent value="schedule">
-        <Card>
-          <CardHeader className="border-b">
-            <CardTitle>{messages.weeklySchedulePendingTitle}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <p>{messages.weeklySchedulePendingDescription}</p>
-            <p>{messages.teacherCtaPlanningNote}</p>
-          </CardContent>
-        </Card>
+        <WeeklyScheduleTab
+          teacher={teacher}
+          defaultEffectiveOn={defaultEffectiveOn}
+          canManageSchedule={canManageSchedule}
+          messages={messages}
+        />
       </TabsContent>
 
       <TabsContent value="account">

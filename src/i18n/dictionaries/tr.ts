@@ -401,6 +401,32 @@ export const tr = {
     subjectTrackGeneral: "Genel",
     subjectTrackElective: "Seçmeli",
     subjectTrackIgcse: "IGCSE",
+    weeklyScheduleDescription:
+      "Öğretmenin aktif ders atamalarını gün ve ders saatine yerleştirin. Ortak ders gerekiyorsa aynı öğretmen/saat oturumuna birden fazla sınıf katılımcısı eklenir.",
+    addWeeklySchedulePlacement: "Haftalık programa ders ekle",
+    selectCourseAssignment: "Ders ataması seçin",
+    selectWeekday: "Gün seçin",
+    selectSchedulePeriod: "Ders saati seçin",
+    noSchedulePeriods:
+      "Bu sınıfın bağlı olduğu saat profilinde ders saati bulunmuyor.",
+    mergeWithTeacherSession:
+      "Öğretmenin aynı gün ve saatte mevcut dersi varsa ortak ders olarak aynı oturuma ekle.",
+    allowClassConflict:
+      "Bu sınıf aynı gün/saatte başka programda görünüyorsa çakışmayı onaylıyorum.",
+    saveSchedulePlacement: "Programa ekle",
+    weeklyScheduleGridTitle: "Öğretmenin haftalık programı",
+    noWeeklySchedule: "Bu öğretmen için program satırı yok.",
+    schedulePeriodColumn: "Ders saati",
+    scheduleEffectiveOn: "Program pasif tarihi",
+    removeFromSchedule: "Programdan çıkar",
+    attendanceCta: "Yoklama",
+    commentCta: "Comment",
+    homeworkCta: "Ödev",
+    weekdayMonday: "Pazartesi",
+    weekdayTuesday: "Salı",
+    weekdayWednesday: "Çarşamba",
+    weekdayThursday: "Perşembe",
+    weekdayFriday: "Cuma",
     weeklySchedulePendingTitle: "Haftalık program bir sonraki paket",
     weeklySchedulePendingDescription:
       "Bu pakette öğretmenin hangi sınıf ve derse bağlı olduğu kuruluyor. Haftalık gün/saat matrisi bu atamaları kullanarak ayrıca oluşturulacak.",
