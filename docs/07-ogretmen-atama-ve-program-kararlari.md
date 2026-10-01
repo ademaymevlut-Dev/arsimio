@@ -383,9 +383,14 @@ Paket 4B ile haftalık programın ilk çalışan iskeleti hedeflenmiştir:
 4. `TimetableSessionParticipant` aynı bloktaki sınıf/ders katılımcılarını temsil eder.
 5. Aynı öğretmen/gün/saat durumunda kullanıcı açıkça “ortak ders” onayı verir; ortak oturumda ders aynı olmalıdır.
 6. Aynı sınıf/gün/saat çakışmasında kullanıcı açıkça sınıf çakışması onayı verir.
-7. Öğretmen detayındaki `Haftalık program` tabı artık program ekleme formunu ve gün/saat matrisini gösterir.
-8. Matris hücresindeki yoklama/comment/ödev CTA'ları şimdilik pasif hazırlık düğmeleridir; ileride gerçek tarihli ders oturumu üretimi bu katılımcı satırlarına bağlanacaktır.
-9. Programdan çıkarma silme yapmaz; katılımcıyı `PASSIVE` yaparak geçmişi korur.
+7. Okul Admin için ana program girişi sınıf merkezlidir:
+   - `Akademik Yapı > Haftalık program`
+   - önce sınıf seçilir
+   - sonra o sınıfın atanmış ders/öğretmen kaydı gün ve ders saatine yerleştirilir
+8. Öğretmen detayındaki `Haftalık program` tabı veri giriş merkezi değildir; yalnız öğretmenin otomatik program özetini gösterir.
+9. Yoklama/comment/ödev CTA'ları Okul Admin ekranında değil, öğretmen login/dashboard ekranında üretilecektir.
+10. CTA üretimi için temel kaynak `TimetableSessionParticipant` satırıdır. Ortak derste aynı hücrede birden fazla sınıf katılımcısı varsa öğretmen dashboard'unda her sınıf için ayrı CTA üretilecektir.
+11. Programdan çıkarma silme yapmaz; katılımcıyı `PASSIVE` yaparak geçmişi korur.
 
 ## 9. Cevaplardan sonra yapılacaklar
 
@@ -394,7 +399,7 @@ Paket 4B sonrasında sıradaki belge ve kodlama başlıkları:
 1. Öğretmen portalında gerçek günlük ders oturumu başlatma akışı
 2. Program katılımcısından tarihli yoklama/comment/ödev kayıtlarına geçiş
 3. Birleşik sınıf derslerinde iki ayrı sınıf CTA'sının gerçek modüllere bağlanması
-4. Sınıf bazlı haftalık program görünümü
-5. Kabul testleri ve canlı veriyle doğrulama
+4. Sınıf bazlı haftalık program görünümünün canlı veriyle kabul testi
+5. Sınıf ve öğretmen programları için rapor/çakışma uyarıları
 
-Bu bölüm ilk karar toplama döneminden kalmıştır. Paket 4A kararları netleştiği için migration ve uygulama kodu bu kararlara göre başlatılmıştır; Paket 4B ile haftalık programın temel verisi ve öğretmen detay görünümü kurulmuştur.
+Bu bölüm ilk karar toplama döneminden kalmıştır. Paket 4A kararları netleştiği için migration ve uygulama kodu bu kararlara göre başlatılmıştır; Paket 4B ile haftalık programın temel verisi, sınıf merkezli Okul Admin girişi ve öğretmen detayındaki otomatik özet görünümü kurulmuştur.

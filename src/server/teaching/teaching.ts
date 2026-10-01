@@ -448,22 +448,12 @@ export async function getTeacherDetail(
       ),
       subjectName: translatedName(assignment.courseOffering.subject),
       track: assignment.courseOffering.subject.track,
-      schedulePeriods:
-        assignment.courseOffering.academicYearClassSection.scheduleProfileVersion
-          ?.periods.map((period) => ({
-            id: period.id,
-            label: schedulePeriodLabel(period),
-            sequence: period.sequence,
-            startTime: timeValue(period.startTime),
-            endTime: timeValue(period.endTime),
-          })) ?? [],
       effectiveFrom: dateValue(assignment.effectiveFrom),
       effectiveTo: assignment.effectiveTo
         ? dateValue(assignment.effectiveTo)
         : null,
       note: assignment.note,
     })),
-    schedulePeriodOptions,
     weeklySchedule: {
       weekdays: [...WEEKDAY_VALUES],
       periods: schedulePeriodOptions,

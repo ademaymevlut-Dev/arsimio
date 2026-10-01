@@ -62,6 +62,13 @@ function createNavigation(messages: AppDictionary["shell"]) {
     permission: "academics.read",
   },
   {
+    group: messages.academics,
+    href: "/academics/timetable",
+    label: messages.weeklySchedule,
+    icon: BookOpenCheck,
+    permission: "teaching.schedule.read",
+  },
+  {
     group: messages.people,
     href: "/students",
     label: messages.students,

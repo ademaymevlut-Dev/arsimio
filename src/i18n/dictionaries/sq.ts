@@ -64,6 +64,7 @@ const sq = {
     overview: "Përmbledhje",
     academicYears: "Vitet shkollore",
     academicStructure: "Klasat dhe lëndët",
+    weeklySchedule: "Orari javor",
     students: "Nxënësit",
     guardians: "Prindërit",
     staff: "Personeli",
@@ -302,6 +303,14 @@ const sq = {
     subjectTrackGeneral: "E përgjithshme",
     subjectTrackElective: "Zgjedhore",
     subjectTrackIgcse: "IGCSE",
+    classWeeklyScheduleEyebrow: "ORARI JAVOR",
+    classWeeklyScheduleTitle: "Orari javor i klasës",
+    classWeeklySchedulePageDescription:
+      "Ndërtoni orarin nga pamja e klasës. Detajet e mësuesit dhe CTA-të e dashboard-it të mësuesit do të krijohen automatikisht nga këto regjistrime.",
+    classWeeklyScheduleSetupTitle: "Krijo orarin e klasës",
+    classWeeklyScheduleDescription:
+      "Zgjidhni klasën, pastaj vendosni një caktim lëndë/mësues në ditë dhe orë.",
+    classWeeklyScheduleGridTitle: "Matrica javore e klasës",
     weeklyScheduleDescription:
       "Vendosni caktimet aktive të lëndëve të mësuesit në ditë dhe orë. Kur duhet orë e përbashkët, disa klasa pjesëmarrëse shtohen në të njëjtin sesion mësues/orë.",
     addWeeklySchedulePlacement: "Shto lëndë në orar",

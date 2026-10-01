@@ -63,6 +63,7 @@ export const tr = {
     overview: "Genel bakış",
     academicYears: "Öğretim yılları",
     academicStructure: "Sınıflar ve dersler",
+    weeklySchedule: "Haftalık program",
     students: "Öğrenciler",
     guardians: "Veliler",
     staff: "Personel",
@@ -401,6 +402,14 @@ export const tr = {
     subjectTrackGeneral: "Genel",
     subjectTrackElective: "Seçmeli",
     subjectTrackIgcse: "IGCSE",
+    classWeeklyScheduleEyebrow: "HAFTALIK PROGRAM",
+    classWeeklyScheduleTitle: "Sınıf haftalık programı",
+    classWeeklySchedulePageDescription:
+      "Programı sınıf merkezli oluşturun. Öğretmen detayları ve öğretmen dashboard CTA'ları bu kayıtlardan otomatik beslenecek.",
+    classWeeklyScheduleSetupTitle: "Sınıf programını oluştur",
+    classWeeklyScheduleDescription:
+      "Önce sınıfı seçin, sonra bu sınıfa atanmış ders/öğretmen kaydını gün ve ders saatine yerleştirin.",
+    classWeeklyScheduleGridTitle: "Sınıfın haftalık matrisi",
     weeklyScheduleDescription:
       "Öğretmenin aktif ders atamalarını gün ve ders saatine yerleştirin. Ortak ders gerekiyorsa aynı öğretmen/saat oturumuna birden fazla sınıf katılımcısı eklenir.",
     addWeeklySchedulePlacement: "Haftalık programa ders ekle",

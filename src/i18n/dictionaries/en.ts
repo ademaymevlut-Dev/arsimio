@@ -64,6 +64,7 @@ const en = {
     overview: "Overview",
     academicYears: "Academic years",
     academicStructure: "Classes and subjects",
+    weeklySchedule: "Weekly timetable",
     students: "Students",
     guardians: "Guardians",
     staff: "Staff",
@@ -301,6 +302,14 @@ const en = {
     subjectTrackGeneral: "General",
     subjectTrackElective: "Elective",
     subjectTrackIgcse: "IGCSE",
+    classWeeklyScheduleEyebrow: "WEEKLY TIMETABLE",
+    classWeeklyScheduleTitle: "Class weekly timetable",
+    classWeeklySchedulePageDescription:
+      "Build the timetable from the class view. Teacher details and teacher dashboard CTAs will be generated from these records.",
+    classWeeklyScheduleSetupTitle: "Create class timetable",
+    classWeeklyScheduleDescription:
+      "Select a class, then place one of its assigned course/teacher records onto a weekday and period.",
+    classWeeklyScheduleGridTitle: "Class weekly matrix",
     weeklyScheduleDescription:
       "Place the teacher's active course assignments onto a weekday and period. When a joint lesson is needed, multiple class participants are added to the same teacher/period session.",
     addWeeklySchedulePlacement: "Add lesson to timetable",
