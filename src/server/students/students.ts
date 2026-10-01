@@ -172,6 +172,13 @@ export type StudentDetailRecord = {
     nationality: string | null;
     sex: "MALE" | "FEMALE" | null;
     identities: Array<{ type: "NATIONAL_ID" | "PASSPORT"; lastFour: string }>;
+    account: {
+      id: string;
+      username: string | null;
+      status: string;
+      mustChangePassword: boolean;
+      suspendedAt: string | null;
+    } | null;
   };
   guardians: Array<{
     id: string;
@@ -182,6 +189,13 @@ export type StudentDetailRecord = {
     isPrimaryContact: boolean;
     phone: string | null;
     email: string | null;
+    account: {
+      id: string;
+      username: string | null;
+      status: string;
+      mustChangePassword: boolean;
+      suspendedAt: string | null;
+    } | null;
   }>;
   enrollments: Array<{
     id: string;
@@ -219,6 +233,14 @@ export async function getStudentDetail(
           identities: {
             where: options.includeIdentities ? {} : { id: { in: [] } },
           },
+          accounts: {
+            where: { schoolId, portal: "STUDENT", archivedAt: null },
+            include: {
+              user: {
+                include: { memberships: { where: { schoolId }, take: 1 } },
+              },
+            },
+          },
         },
       },
       guardianRelationships: {
@@ -228,7 +250,17 @@ export async function getStudentDetail(
         orderBy: [{ isPrimaryContact: "desc" }, { relationshipType: "asc" }],
         include: {
           guardianPerson: {
-            include: { contactPoints: { where: { archivedAt: null } } },
+            include: {
+              contactPoints: { where: { archivedAt: null } },
+              accounts: {
+                where: { schoolId, portal: "GUARDIAN", archivedAt: null },
+                include: {
+                  user: {
+                    include: { memberships: { where: { schoolId }, take: 1 } },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -273,10 +305,24 @@ export async function getStudentDetail(
         type: identity.type,
         lastFour: identity.lastFour,
       })),
+      account: student.person.accounts[0]
+        ? {
+            id: student.person.accounts[0].id,
+            username:
+              student.person.accounts[0].user.memberships[0]?.username ?? null,
+            status:
+              student.person.accounts[0].user.memberships[0]?.status ??
+              student.person.accounts[0].user.status,
+            mustChangePassword: student.person.accounts[0].mustChangePassword,
+            suspendedAt:
+              student.person.accounts[0].suspendedAt?.toISOString() ?? null,
+          }
+        : null,
     },
     guardians: student.guardianRelationships.map((relationship) => {
       const phone = relationship.guardianPerson.contactPoints.find((point) => point.kind === "PHONE");
       const email = relationship.guardianPerson.contactPoints.find((point) => point.kind === "EMAIL");
+      const account = relationship.guardianPerson.accounts[0];
       return {
         id: relationship.id,
         personId: relationship.guardianPersonId,
@@ -286,6 +332,16 @@ export async function getStudentDetail(
         isPrimaryContact: relationship.isPrimaryContact,
         phone: phone?.value ?? null,
         email: email?.value ?? null,
+        account: account
+          ? {
+              id: account.id,
+              username: account.user.memberships[0]?.username ?? null,
+              status:
+                account.user.memberships[0]?.status ?? account.user.status,
+              mustChangePassword: account.mustChangePassword,
+              suspendedAt: account.suspendedAt?.toISOString() ?? null,
+            }
+          : null,
       };
     }),
     enrollments: student.enrollments.map((enrollment) => ({

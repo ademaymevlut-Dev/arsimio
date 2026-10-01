@@ -2,6 +2,26 @@
 
 Bu günlük yapılan teknik ve ürün çalışmalarını tarih sırasıyla kaydeder. Gizli anahtarlar, parolalar ve bağlantı dizeleri bu belgeye yazılmaz.
 
+## 2026-10-01 — Paket 2A profil hesapları uygulaması
+
+- Kullanıcının 05 numaralı karar belgesindeki yanıtları okundu. H05 boş bırakılmış olsa da H07 cevabına dayanarak sistem üretimli geçici parola seçildi; H11 için ilk sürümde Okul Admin'in serbest rol seçmemesi, portal türünün güvenli sistem rolünü otomatik bağlaması kararı uygulandı.
+- `AccountPortal` enum'u ve tenant kapsamlı `PersonAccount` tablosu eklendi. Aynı gerçek kişi farklı portal hesapları taşıyabilir; her hesap ayrı `User`, `SchoolMembership`, parola, oturum ve askıya alma durumuna sahiptir.
+- Öğrenci detayına öğrenci hesabı, anne/baba kartlarına veli hesabı oluşturma/sıfırlama/askıya alma panelleri eklendi. Geçici parola işlem sonucunda bir kez gösterilir; parola hash/audit/hata mesajlarına yazılmaz.
+- Okul Admin menüsüne `Veliler` ve `Kullanıcı hesapları` eklendi. Veli listesi/detayı, bağlı çocukları ve veli hesap durumunu gösterir; kullanıcı hesapları ekranı mevcut hesapları ve eski Okul Admin hesaplarını kontrollü biçimde kişiye bağlama aksiyonunu içerir.
+- `/change-password`, `/guardian` ve `/student` route'ları eklendi. Geçici parolayla giriş yapan kullanıcı önce parola değiştirir ve tekrar login ekranına döner; öğrenci/veli hesapları Okul Admin shell'e URL yazarak giremez.
+- Parola minimumu kullanıcı kararıyla 8 karaktere indirildi; scrypt hash, credential version ve oturum iptali mantığı korundu.
+- Yeni Okul Admin oluşturma akışı artık aynı transaction içinde `Person` ve `SCHOOL_ADMIN` `PersonAccount` bağlantısı da oluşturur. Eski adminler için otomatik eşleştirme sayfa açılışında yapılmaz; butonla çalışan servis aynı isimli mevcut kişi varsa kaydı atlar.
+- Prisma validate/generate, TypeScript, ESLint, 70/70 birim testi ve `next build --webpack` geçti. Yerel `pnpm build` Turbopack modunda çalışma ortamının process/port kısıtı nedeniyle Next iç panic'i verdi; Webpack build bütün route'ları başarıyla üretti.
+- Migration hazırlandı fakat canlı veritabanına uygulanmadı. Push/deploy kullanıcı tarafından yapılacak.
+
+## 2026-10-01 — Paket 2 profil hesapları karar turunun açılması
+
+- Kullanıcı canlı öğrenci detayında anne ve baba kayıtlarının birlikte oluşturulabildiğini doğruladı; Paket 1'in öğrenci–veli çekirdeği canlı kabul edildi.
+- Mevcut auth yapısı yeniden incelendi: kullanıcı adı/parola, tenant üyeliği, rol/permission, güvenli oturum ve ilk Okul Admin hesapları çalışıyor; ancak `PersonAccount`, zorunlu ilk parola değişimi, hesap sıfırlama/askıya alma yönetimi ve portal bazlı yönlendirme henüz bulunmuyor.
+- Paket 2'nin personel profili oluşmadan öğretmen/personel hesabı açmaması için çalışma 2A/2B/2C olarak ayrıldı. İlk önerilen teslim mevcut Okul Admin'leri kişiye bağlamak ve öğrenci/veli hesaplarını tamamlamaktır; öğretmen/personel hesap UI'si Paket 3'e bağlanacaktır.
+- [05 numaralı karar belgesi](./05-profil-hesaplari-karar-sorulari.md) oluşturuldu. 13 soru; hesap ekranının yeri, iki velinin erişimi, kardeşler, geçici parola, ilk giriş, sıfırlama, askıya alma, kullanıcı adı, portal başlangıçları, rol sınırı, mevcut yöneticilerin kişi eşlemesi ve dil tercihini kapsar.
+- Bu turda Prisma şeması, migration, uygulama kodu, canlı hesaplar ve veritabanı verileri değiştirilmedi. Kullanıcı yanıtlarından sonra Paket 2A teknik teslimi hazırlanacaktır.
+
 ## 2026-09-30 — Paket 1 öğrenci kayıt omurgası
 
 - Onaylanan kişi mimarisi uygulamaya geçirildi. Tenant kapsamlı `Person`, şifreli/aranabilir `PersonIdentity`, çoklu `PersonContactPoint`, okul numarası dizisi, `StudentProfile`, `GuardianRelationship`, `Enrollment`, `StudentGroupPlacement` ve `StudentLifecycleEvent` modelleri eklendi.

@@ -65,6 +65,8 @@ const sq = {
     academicYears: "Vitet shkollore",
     academicStructure: "Klasat dhe lëndët",
     students: "Nxënësit",
+    guardians: "Prindërit",
+    accounts: "Llogaritë e përdoruesve",
     navigationLabel: "Menyja e administrimit të shkollës",
     schoolManagement: "Administrimi i shkollës",
     homeLabel: "Faqja kryesore e administrimit të {name}",

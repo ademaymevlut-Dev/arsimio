@@ -12,6 +12,7 @@ import {
   issueSession,
   revokeSession,
 } from "@/server/auth/service";
+import { portalStartPath } from "@/server/accounts/accounts-service";
 import { sessionCookieName, SESSION_SECONDS } from "@/server/auth/tokens";
 import { normalizeLocale } from "@/i18n/config";
 import { getRequestDictionary } from "@/i18n/server";
@@ -50,6 +51,7 @@ export async function signIn(
     return failure;
   const identifier = loginIdentifier(tenant.kind, rawIdentifier);
   if (!identifier) return failure;
+  let redirectTo = tenant.kind === "platform" ? "/platform" : "/dashboard";
   try {
     const db = getPrisma();
     if (!(await consumeLoginAttempt(db, tenant, identifier))) return failure;
@@ -73,13 +75,27 @@ export async function signIn(
       expires: session.expiresAt,
       maxAge: SESSION_SECONDS,
     });
+    if (tenant.kind === "school") {
+      const account = await db.personAccount.findFirst({
+        where: {
+          schoolId: tenant.school.id,
+          userId: identity.user.id,
+          archivedAt: null,
+        },
+        select: { portal: true, mustChangePassword: true, suspendedAt: true },
+      });
+      if (account?.suspendedAt) return failure;
+      redirectTo = account?.mustChangePassword
+          ? "/change-password"
+          : portalStartPath(account?.portal);
+    }
   } catch {
     console.error("AUTH_SIGN_IN_UNAVAILABLE");
     return {
       error: dictionary.auth.unavailable,
     };
   }
-  redirect(tenant.kind === "platform" ? "/platform" : "/dashboard");
+  redirect(redirectTo);
 }
 
 export async function signOut() {

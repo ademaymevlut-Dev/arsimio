@@ -48,6 +48,7 @@ export async function findLoginIdentity(
       archivedAt: true,
       school: { select: { status: true, archivedAt: true } },
       user: { select: userSelect },
+      userId: true,
     },
   });
   if (
@@ -171,6 +172,9 @@ export async function readSessionUser(
       },
       membership: {
         select: {
+          id: true,
+          userId: true,
+          schoolId: true,
           status: true,
           archivedAt: true,
           school: { select: { status: true, archivedAt: true } },
@@ -200,10 +204,30 @@ export async function readSessionUser(
       session.membership.school.archivedAt)
   )
     return null;
+  const account =
+    tenant.kind === "school" && session.membership
+      ? await db.personAccount.findFirst({
+          where: {
+            schoolId: tenant.school.id,
+            userId: session.user.id,
+            archivedAt: null,
+          },
+          select: {
+            id: true,
+            portal: true,
+            mustChangePassword: true,
+            suspendedAt: true,
+          },
+        })
+      : null;
+  if (account?.suspendedAt) return null;
   return {
     id: session.user.id,
     email: session.user.email,
     firstName: session.user.firstName,
+    schoolId: tenant.kind === "school" ? tenant.school.id : null,
+    membershipId: session.membership?.id ?? null,
+    account,
   };
 }
 

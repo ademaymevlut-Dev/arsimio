@@ -14,6 +14,8 @@ import {
   Menu,
   GraduationCap,
   ShieldCheck,
+  UserRoundCog,
+  UsersRound,
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
@@ -62,6 +64,20 @@ function createNavigation(messages: AppDictionary["shell"]) {
     label: messages.students,
     icon: GraduationCap,
     permission: "students.read",
+  },
+  {
+    group: messages.people,
+    href: "/guardians",
+    label: messages.guardians,
+    icon: UsersRound,
+    permission: "guardians.read",
+  },
+  {
+    group: messages.people,
+    href: "/accounts",
+    label: messages.accounts,
+    icon: UserRoundCog,
+    permission: "accounts.read",
   },
   ];
 }

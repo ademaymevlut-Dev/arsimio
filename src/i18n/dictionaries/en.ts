@@ -65,6 +65,8 @@ const en = {
     academicYears: "Academic years",
     academicStructure: "Classes and subjects",
     students: "Students",
+    guardians: "Guardians",
+    accounts: "User accounts",
     navigationLabel: "School administration menu",
     schoolManagement: "School administration",
     homeLabel: "{name} administration home",

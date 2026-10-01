@@ -108,6 +108,24 @@ export async function persistInitialSchoolAdmin(
       assignedById: input.actorUserId,
     },
   });
+  const person = await tx.person.create({
+    data: {
+      schoolId: input.schoolId,
+      firstName: input.firstName,
+      lastName: input.lastName,
+      status: "ACTIVE",
+    },
+    select: { id: true },
+  });
+  await tx.personAccount.create({
+    data: {
+      schoolId: input.schoolId,
+      personId: person.id,
+      userId: user.id,
+      portal: "SCHOOL_ADMIN",
+      mustChangePassword: false,
+    },
+  });
   await tx.auditEvent.create({
     data: {
       schoolId: input.schoolId,
@@ -118,12 +136,13 @@ export async function persistInitialSchoolAdmin(
       entityId: membership.id,
       afterData: {
         userId: user.id,
+        personId: person.id,
         membershipId: membership.id,
         username: input.username,
         roleCode: "SCHOOL_ADMIN",
         status: "ACTIVE",
       },
-      changedFields: ["user", "credential", "membership", "role"],
+      changedFields: ["person", "user", "credential", "membership", "role"],
       reason: "Initial school administrator created by platform owner.",
     },
   });
@@ -133,4 +152,3 @@ export async function persistInitialSchoolAdmin(
     message: `${input.firstName} ${input.lastName} için ilk Okul Admin hesabı oluşturuldu.`,
   };
 }
-

@@ -9,6 +9,7 @@ import {
   setPrimaryGuardian,
 } from "@/app/(school-admin)/students/actions";
 import { PageHeader } from "@/components/admin/page-header";
+import { PersonAccountPanel } from "@/components/school-admin/person-account-panel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -547,6 +548,7 @@ export function StudentDetailManager({
   canManageStudent,
   canReadGuardians,
   canManageGuardians,
+  canManageAccounts,
   defaultEffectiveOn,
   locale,
   messages,
@@ -556,6 +558,7 @@ export function StudentDetailManager({
   canManageStudent: boolean;
   canReadGuardians: boolean;
   canManageGuardians: boolean;
+  canManageAccounts: boolean;
   defaultEffectiveOn: string;
   locale: Locale;
   messages: Pick<AppDictionary, "common" | "students">;
@@ -654,6 +657,16 @@ export function StudentDetailManager({
                 </Definition>
               ))}
             </dl>
+            <div className="mt-6">
+              <PersonAccountPanel
+                title="Ogrenci giris hesabi"
+                portal="STUDENT"
+                personId={student.person.id}
+                studentProfileId={student.id}
+                existingAccount={student.person.account}
+                canManage={canManageAccounts}
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -803,6 +816,16 @@ export function StudentDetailManager({
                       />
                     </div>
                   )}
+                  <div className="mt-4 border-t pt-4">
+                    <PersonAccountPanel
+                      title="Veli giris hesabi"
+                      portal="GUARDIAN"
+                      personId={guardian.personId}
+                      studentProfileId={student.id}
+                      existingAccount={guardian.account}
+                      canManage={canManageAccounts}
+                    />
+                  </div>
                 </article>
               ))}
             </div>

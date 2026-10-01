@@ -52,6 +52,7 @@ export default async function StudentDetailPage({
       canManageStudent={permissions.includes("students.manage")}
       canReadGuardians={permissions.includes("guardians.read")}
       canManageGuardians={canManageGuardians}
+      canManageAccounts={permissions.includes("accounts.manage")}
       defaultEffectiveOn={dateOnlyValue(
         dateOnlyInTimeZone(new Date(), tenant.school.timezone),
       )}

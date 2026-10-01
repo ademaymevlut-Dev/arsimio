@@ -179,6 +179,14 @@ enum StudentExitReason {
   UNKNOWN
 }
 
+enum AccountPortal {
+  SCHOOL_ADMIN
+  GUARDIAN
+  STUDENT
+  TEACHER
+  STAFF
+}
+
 model School {
   id              String       @id @default(uuid()) @db.Uuid
   slug            String       @unique @db.VarChar(80)
@@ -225,6 +233,7 @@ model School {
   persons                     Person[]
   personIdentities            PersonIdentity[]
   personContactPoints         PersonContactPoint[]
+  personAccounts              PersonAccount[]
   numberSequences             SchoolNumberSequence[]
   studentProfiles             StudentProfile[]
   guardianRelationships       GuardianRelationship[]
@@ -291,6 +300,7 @@ model User {
   membershipRolesAssigned          MembershipRole[]           @relation("MembershipRoleAssigner")
   userRolesAssigned                UserRole[]                 @relation("UserRoleAssigner")
   credential                       UserCredential?
+  personAccounts                   PersonAccount[]
   sessions                         AuthSession[]
   academicYearsCreated             AcademicYear[]             @relation("AcademicYearCreatedBy")
   academicYearsUpdated             AcademicYear[]             @relation("AcademicYearUpdatedBy")
@@ -1007,10 +1017,36 @@ model Person {
   contactPoints         PersonContactPoint[]
   studentProfile        StudentProfile?
   guardianRelationships GuardianRelationship[] @relation("GuardianPerson")
+  accounts              PersonAccount[]
 
   @@unique([id, schoolId])
   @@index([schoolId, status, lastName, firstName])
   @@map("persons")
+}
+
+model PersonAccount {
+  id                 String        @id @default(uuid()) @db.Uuid
+  schoolId           String        @map("school_id") @db.Uuid
+  personId           String        @map("person_id") @db.Uuid
+  userId             String        @map("user_id") @db.Uuid
+  portal             AccountPortal
+  mustChangePassword Boolean       @default(true) @map("must_change_password")
+  passwordResetAt    DateTime?     @map("password_reset_at") @db.Timestamptz(6)
+  suspendedAt        DateTime?     @map("suspended_at") @db.Timestamptz(6)
+  archivedAt         DateTime?     @map("archived_at") @db.Timestamptz(6)
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  person Person @relation(fields: [personId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([schoolId, portal, personId])
+  @@unique([schoolId, portal, userId])
+  @@unique([schoolId, userId])
+  @@index([schoolId, portal, archivedAt])
+  @@index([schoolId, personId])
+  @@map("person_accounts")
 }
 
 model PersonIdentity {

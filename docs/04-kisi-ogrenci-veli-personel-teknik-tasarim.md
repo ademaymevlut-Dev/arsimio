@@ -1,10 +1,12 @@
 # 04 — Kişi, öğrenci, veli ve personel teknik tasarımı
 
-Tarih: 2026-09-30  
-Durum: `TEKNİK TASARIM TAMAMLANDI — İLK UYGULAMA PAKETİ ONAYI BEKLİYOR`  
+Tarih: 2026-09-30 — son durum 2026-10-01
+
+Durum: `PAKET 1 TAMAMLANDI — PAKET 2A YEREL KOD + DB HAZIR`
+
 Girdi: [03 — Kişi, öğrenci, veli, personel ve öğretmen veri mimarisi](./03-kisi-ogrenci-personel-veli-veri-mimarisi.md)
 
-> Bu belge hedef şemayı, kısıtları ve uygulama paketlerini tanımlar. Henüz Prisma migration'ı, canlı veri değişikliği veya kişi modülü UI kodu uygulanmamıştır.
+> Bu belge hedef şemayı, kısıtları ve uygulama paketlerini tanımlar. Paket 1 kişi–öğrenci–veli omurgası uygulanmıştır; Paket 2A profil hesapları yerel kod ve DB migration olarak hazırlanmıştır. Kararlar ve uygulama notu [05 numaralı belgede](./05-profil-hesaplari-karar-sorulari.md) tutulur.
 
 ## 1. Kesinleşen ürün kararları
 
@@ -563,6 +565,8 @@ Fotoğraf upload'ı ölçü/kalite kararı sonrasında Paket 1'e küçük ek dil
 
 2026-09-30 uygulama notu: Paket 1 modelleri, additive migration, permission/audit servisleri ve öğrenci liste–kayıt–detay UI'si tamamlandı; migration bağlı Neon'a uygulandı ve rollback DB doğrulaması geçti. Vercel yayını ile kullanıcı kabulü henüz tamamlanmadı. Fotoğraf bu teslimin dışında kaldı.
 
+2026-10-01 kabul notu: Kullanıcı canlı öğrenci detayında anne ve baba kayıtlarının birlikte oluşturulabildiğini doğruladı. Paket 1'in öğrenci–veli çekirdeği kabul edildi; profil hesapları ayrı Paket 2 olarak açıldı.
+
 ### Paket 2 — Profil hesapları
 
 - `PersonAccount`
@@ -667,4 +671,4 @@ Bu konular ilgili uygulama paketine gelindiğinde kararlaştırılacaktır; Pake
 
 ## 18. Sıradaki kontrollü adım
 
-Sıradaki adım yeni bir veri paketi açmak değil, **Paket 1 canlı kabulüdür**: `PERSON_IDENTITY_ENCRYPTION_KEY` Vercel ortam sırrı tanımlanır, kullanıcı kodu push/deploy eder ve pilot okulda küçük bir deneme öğrenci kaydıyla okul numarası, sınıf, mevcut/yeni anne-baba, tek primary ve pasif durum geçmişi doğrulanır. Bu kabul tamamlandıktan sonra Paket 2 profil hesaplarının ürün akışı ayrıca ele alınır. Personel sözleşmesi, bordro, fotoğraf veya eski veri seed'i bu kabule eklenmez.
+Sıradaki kontrollü adım **Paket 2A migration'ın canlıya uygulanması ve kullanıcı kabulüdür**. Öğrenci/veli hesabı, geçici parola, ilk giriş, askıya alma, portal yönlendirmesi ve mevcut Okul Admin hesaplarının `Person` ile eşleştirilmesi yerelde hazırlanmıştır. Öğretmen/personel hesap ekranı, personel çekirdeğinin kurulacağı Paket 3'e bırakılır.

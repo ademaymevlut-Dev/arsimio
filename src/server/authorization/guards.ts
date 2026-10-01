@@ -35,6 +35,9 @@ export async function requireSchoolPermission(permission: string) {
   if (tenant.kind !== "school") notFound();
   const user = await getAppUser();
   if (!user) redirect("/login");
+  if (user.account?.mustChangePassword) redirect("/change-password");
+  if (user.account && user.account.portal !== "SCHOOL_ADMIN")
+    redirect("/access-denied");
   const membership = await getPrisma().schoolMembership.findUnique({
     where: { schoolId_userId: { schoolId: tenant.school.id, userId: user.id } },
     include: {
