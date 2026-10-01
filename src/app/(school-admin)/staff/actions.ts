@@ -6,6 +6,8 @@ import type { StaffState } from "@/lib/staff-validation";
 import {
   manageCreateEmployment,
   manageEmploymentTransition,
+  manageSaveStaffCatalogItem,
+  manageStaffCatalogTransition,
   manageTeacherProfile,
 } from "@/server/staff/manage-staff";
 
@@ -48,5 +50,29 @@ export async function saveTeacherProfileAction(
     if (typeof employmentId === "string" && employmentId)
       revalidatePath(`/staff/${employmentId}`);
   }
+  return result;
+}
+
+function revalidateStaffCatalogScreens() {
+  revalidatePath("/staff");
+  revalidatePath("/staff/new");
+  revalidatePath("/staff/settings");
+}
+
+export async function saveStaffCatalogItemAction(
+  _state: StaffState,
+  form: FormData,
+) {
+  const result = await manageSaveStaffCatalogItem(form);
+  if (result.status === "success") revalidateStaffCatalogScreens();
+  return result;
+}
+
+export async function transitionStaffCatalogItemAction(
+  _state: StaffState,
+  form: FormData,
+) {
+  const result = await manageStaffCatalogTransition(form);
+  if (result.status === "success") revalidateStaffCatalogScreens();
   return result;
 }

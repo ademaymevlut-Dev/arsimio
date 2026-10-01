@@ -344,6 +344,7 @@ Bu permission'lar migration içinde mevcut `SCHOOL_ADMIN` rollerine bağlanır. 
 - `/staff` — personel listesi
 - `/staff/new` — yeni kişiyle veya mevcut kişi seçerek personel kaydı
 - `/staff/[employmentId]` — personel detayı, durum geçişi, öğretmen profili, ders capability, öğretmen hesabı
+- `/staff/settings` — departman ve pozisyon katalog yönetimi
 - `/teachers` — öğretmen listesi
 - `/teacher` — öğretmen portalı ilk özet ekranı
 
@@ -351,7 +352,6 @@ Bu permission'lar migration içinde mevcut `SCHOOL_ADMIN` rollerine bağlanır. 
 
 - Maaş, banka, bordro, sözleşme ve yıllık izin detayları
 - Personel belge/fotoğraf yükleme
-- Departman/pozisyon katalog düzenleme UI'si
 - Öğretmenin aktif öğretim yılında hangi sınıf, ders ve saatte görevli olduğu yıllık atama modülü
 - Ders programı, yoklama, ödev, not ve günlük rapor akışları
 
@@ -362,3 +362,22 @@ Bu permission'lar migration içinde mevcut `SCHOOL_ADMIN` rollerine bağlanır. 
 - `pnpm test` → 74/74 geçti
 - `pnpm lint` geçti
 - `pnpm build` geçti; production build yeni `/staff`, `/teachers` ve `/teacher` route'larını üretti.
+
+## 8. 2026-10-01 katalog yönetimi ek uygulama notu
+
+Paket 3A içindeki departman/pozisyon kataloglarının Okul Admin tarafından yönetilmesi tamamlandı. Yeni migration eklenmedi; mevcut `StaffDepartment`, `StaffDepartmentTranslation`, `StaffPosition` ve `StaffPositionTranslation` tabloları kullanıldı.
+
+Eklenenler:
+
+- `/staff/settings` ekranı ile departman ve pozisyon oluşturma, güncelleme, arşivleme ve geri alma
+- Türkçe, Arnavutça ve İngilizce adların tek katalog kaydı altında zorunlu yönetimi
+- `hr.catalog.read` ve `hr.catalog.manage` yetkilerine bağlı sayfa/action erişimi
+- Personel ana sayfası ve sol menüden katalog ekranına erişim
+- Arşivlenen katalogların silinmemesi; geçmiş `Employment` kayıtlarının departman/pozisyon bağlantısının korunması
+
+Doğrulama:
+
+- `./node_modules/.bin/tsc --noEmit --pretty false`
+- `pnpm test` → 76/76 geçti
+- `pnpm lint` geçti
+- `pnpm build` geçti; production build yeni `/staff/settings` route'unu üretti.

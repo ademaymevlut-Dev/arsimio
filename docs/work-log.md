@@ -398,3 +398,11 @@ Bu günlük yapılan teknik ve ürün çalışmalarını tarih sırasıyla kayde
 - HorizonEdu'ya 49 ders, 147 çeviri ve 49 audit kaydı seed edildi. GjimCamEdu'ya ders eklenmedi. Tekrar önizlemesi 49 kaydın eşleştiğini ve yeni yazma olmayacağını gösterdi. İlk iki seed denemesi Prisma ilişki biçimi ve transaction süresi nedeniyle rollback oldu; toplu yazma ile tamamlandı.
 - Ders kataloğunun okul genelinde olduğu, kademe/seviye/şube/plan/saatlerin ise hâlen yıl bazında elle tekrar gerektirdiği canlı veri ve şemada doğrulandı. Kullanıcının önceki işleyişine dönmek için global sınıf/şube kataloğu ve yeni yıla çoklu seçim/plan aktarımı önerisi [inceleme belgesine](./legacy-subject-seed-and-year-reuse.md) yazıldı; yıl aktarım migration'ı/UI'si bu turda uygulanmadı.
 - 65 birim testi, TypeScript, ESLint, Prisma validate ve production Webpack build geçti. DB migration durumu güncel; seed sonrası HorizonEdu 49 ders/147 çeviri, GjimCamEdu 0 ders/0 çeviri. Korumalı Okul Admin ekranında oturumlu tarayıcı kabulü deploy sonrası kullanıcıya açıktır. Commit/push/deploy yapılmadı.
+
+## 2026-10-01 — Personel katalog yönetimi
+
+- Kullanıcının “önce katalog yönetimini tamamlayalım” önceliğiyle departman ve pozisyon katalogları için `/staff/settings` Okul Admin ekranı eklendi. Ekran sol menüde “Personel tanımları” olarak ve `/staff` sayfasındaki “Tanımları yönet” butonuyla erişilebilir.
+- Var olan `StaffDepartment/StaffPosition` ve çeviri tabloları kullanıldı; yeni migration oluşturulmadı. Katalog kayıtları üç dilde ad ister, teknik `code` normalize edilir, arşivleme fiziksel silme yapmaz ve geçmiş `Employment` bağlantıları korunur.
+- Yazma işlemleri `hr.catalog.manage`, okuma `hr.catalog.read` yetkisine bağlıdır. Server Action akışı origin kontrolü, Serializable transaction, optimistic revision ve audit kaydıyla mevcut personel servis düzenini takip eder.
+- Personel kayıt formu yalnız aktif katalogları göstermeye devam eder; katalog ekranı aktif ve arşivli kayıtları birlikte gösterir. Arşiv/geri alma sonrası `/staff`, `/staff/new` ve `/staff/settings` revalidate edilir.
+- `./node_modules/.bin/tsc --noEmit --pretty false`, `pnpm test` (76/76), `pnpm lint` ve `pnpm build` geçti. Build yeni `/staff/settings` route'unu üretti. Canlı deploy/push yapılmadı.

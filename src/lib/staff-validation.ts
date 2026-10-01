@@ -29,6 +29,15 @@ const EXIT_REASONS = new Set<EmploymentExitReason>([
 
 const TEACHER_CATEGORIES = new Set<TeacherCategory>(["CLASSROOM", "BRANCH"]);
 const TEACHER_STATUSES = new Set<TeacherStatus>(["ACTIVE", "INACTIVE"]);
+const STAFF_CATALOG_KINDS = new Set<StaffCatalogKind>([
+  "department",
+  "position",
+]);
+const STAFF_CATALOG_TRANSITIONS = new Set<StaffCatalogTransition>([
+  "archive",
+  "restore",
+]);
+const CATALOG_CODE = /^[A-Z0-9][A-Z0-9_-]{1,49}$/;
 
 export type StaffField =
   | "record"
@@ -52,7 +61,13 @@ export type StaffField =
   | "titleSq"
   | "titleEn"
   | "teacherStatus"
-  | "subjectIds";
+  | "subjectIds"
+  | "catalogKind"
+  | "catalogId"
+  | "code"
+  | "nameTr"
+  | "nameSq"
+  | "nameEn";
 
 export type StaffState = {
   status?: "success" | "error";
@@ -94,6 +109,24 @@ export type TeacherProfileInput = {
   subjectIds: string[];
 };
 
+export type StaffCatalogKind = "department" | "position";
+export type StaffCatalogTransition = "archive" | "restore";
+
+export type StaffCatalogItemInput = {
+  kind: StaffCatalogKind;
+  catalogId: string | null;
+  revision: string | null;
+  code: string;
+  name: { tr: string; sq: string; en: string };
+};
+
+export type StaffCatalogTransitionInput = {
+  kind: StaffCatalogKind;
+  catalogId: string;
+  revision: string;
+  transition: StaffCatalogTransition;
+};
+
 type Parsed<T> =
   | { success: true; data: T }
   | { success: false; state: StaffState };
@@ -107,6 +140,11 @@ function text(value: FormDataEntryValue | null, max: number) {
 function optionalText(value: FormDataEntryValue | null, max: number) {
   if (value === null || value === "") return null;
   return text(value, max);
+}
+
+function catalogCode(value: FormDataEntryValue | null) {
+  const normalized = text(value, 50)?.toUpperCase().replace(/\s+/g, "_") ?? null;
+  return normalized && CATALOG_CODE.test(normalized) ? normalized : null;
 }
 
 function provided(value: FormDataEntryValue | null) {
@@ -302,6 +340,110 @@ export function parseTeacherProfile(form: FormData): Parsed<TeacherProfileInput>
       teacherStatus,
       note,
       subjectIds: [...new Set(subjectIds)],
+    },
+  };
+}
+
+export function parseStaffCatalogItem(
+  form: FormData,
+): Parsed<StaffCatalogItemInput> {
+  const kindRaw = form.get("catalogKind");
+  const kind =
+    typeof kindRaw === "string" &&
+    STAFF_CATALOG_KINDS.has(kindRaw as StaffCatalogKind)
+      ? (kindRaw as StaffCatalogKind)
+      : null;
+  const catalogIdRaw = form.get("catalogId");
+  const catalogId =
+    typeof catalogIdRaw === "string" && catalogIdRaw
+      ? catalogIdRaw
+      : null;
+  const revisionRaw = form.get("revision");
+  const revision =
+    typeof revisionRaw === "string" && revisionRaw ? revisionRaw : null;
+  const code = catalogCode(form.get("code"));
+  const nameTr = text(form.get("nameTr"), 120);
+  const nameSq = text(form.get("nameSq"), 120);
+  const nameEn = text(form.get("nameEn"), 120);
+  const fieldErrors: StaffState["fieldErrors"] = {};
+
+  if (!kind) fieldErrors.catalogKind = "Katalog turu gecersiz.";
+  if (catalogId && !validSchoolId(catalogId))
+    fieldErrors.catalogId = "Katalog kaydi gecersiz.";
+  if (catalogId && !validRevision(revision))
+    fieldErrors.record = "Kayit surumu gecersiz.";
+  if (!code)
+    fieldErrors.code =
+      "Kod 2-50 karakter olmali; harf, rakam, tire veya alt cizgi kullanin.";
+  if (!nameTr) fieldErrors.nameTr = "Turkce ad zorunlu.";
+  if (!nameSq) fieldErrors.nameSq = "Arnavutca ad zorunlu.";
+  if (!nameEn) fieldErrors.nameEn = "Ingilizce ad zorunlu.";
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !kind ||
+    !code ||
+    !nameTr ||
+    !nameSq ||
+    !nameEn ||
+    (catalogId && (!validSchoolId(catalogId) || !validRevision(revision)))
+  )
+    return invalid(fieldErrors);
+
+  return {
+    success: true,
+    data: {
+      kind,
+      catalogId,
+      revision,
+      code,
+      name: { tr: nameTr, sq: nameSq, en: nameEn },
+    },
+  };
+}
+
+export function parseStaffCatalogTransition(
+  form: FormData,
+): Parsed<StaffCatalogTransitionInput> {
+  const kindRaw = form.get("catalogKind");
+  const kind =
+    typeof kindRaw === "string" &&
+    STAFF_CATALOG_KINDS.has(kindRaw as StaffCatalogKind)
+      ? (kindRaw as StaffCatalogKind)
+      : null;
+  const catalogId = form.get("catalogId");
+  const revision = form.get("revision");
+  const transitionRaw = form.get("transition");
+  const transition =
+    typeof transitionRaw === "string" &&
+    STAFF_CATALOG_TRANSITIONS.has(
+      transitionRaw as StaffCatalogTransition,
+    )
+      ? (transitionRaw as StaffCatalogTransition)
+      : null;
+  const fieldErrors: StaffState["fieldErrors"] = {};
+
+  if (!kind) fieldErrors.catalogKind = "Katalog turu gecersiz.";
+  if (!validSchoolId(catalogId)) fieldErrors.catalogId = "Katalog kaydi gecersiz.";
+  if (!validRevision(revision)) fieldErrors.record = "Kayit surumu gecersiz.";
+  if (!transition) fieldErrors.record = "Islem gecersiz.";
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !kind ||
+    !validSchoolId(catalogId) ||
+    !validRevision(revision) ||
+    !transition
+  )
+    return invalid(fieldErrors);
+
+  return {
+    success: true,
+    data: {
+      kind,
+      catalogId,
+      revision,
+      transition,
     },
   };
 }

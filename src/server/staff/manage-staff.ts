@@ -5,6 +5,8 @@ import { getPrisma } from "@/lib/db";
 import {
   parseCreateEmployment,
   parseEmploymentTransition,
+  parseStaffCatalogItem,
+  parseStaffCatalogTransition,
   parseTeacherProfile,
   type StaffState,
 } from "@/lib/staff-validation";
@@ -13,6 +15,8 @@ import { requireSchoolPermission } from "@/server/authorization/guards";
 import {
   persistEmployment,
   persistEmploymentTransition,
+  persistStaffCatalogItem,
+  persistStaffCatalogTransition,
   persistTeacherProfile,
   type StaffActor,
 } from "./staff-service";
@@ -112,5 +116,23 @@ export function manageTeacherProfile(form: FormData) {
     persistTeacherProfile,
     form,
     "hr.staff.read",
+  );
+}
+
+export function manageSaveStaffCatalogItem(form: FormData) {
+  return run(
+    "hr.catalog.manage",
+    parseStaffCatalogItem,
+    persistStaffCatalogItem,
+    form,
+  );
+}
+
+export function manageStaffCatalogTransition(form: FormData) {
+  return run(
+    "hr.catalog.manage",
+    parseStaffCatalogTransition,
+    persistStaffCatalogTransition,
+    form,
   );
 }

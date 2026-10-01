@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, Plus, Settings2 } from "lucide-react";
 import { DataTableShell, TableEmptyState } from "@/components/admin/data-table-shell";
 import { PageHeader } from "@/components/admin/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +54,7 @@ export default async function StaffPage({
   ]);
   const text = dictionary.staff;
   const canManage = permissions.includes("hr.staff.manage");
+  const canReadCatalog = permissions.includes("hr.catalog.read");
   const statusLabels: Record<EmploymentStatus, string> = {
     ACTIVE: text.active,
     ON_LEAVE: text.onLeave,
@@ -67,13 +68,25 @@ export default async function StaffPage({
         title={text.title}
         description={text.description}
         actions={
-          canManage ? (
-            <Button asChild>
-              <Link href="/staff/new">
-                <Plus aria-hidden />
-                {text.newStaff}
-              </Link>
-            </Button>
+          canManage || canReadCatalog ? (
+            <div className="flex flex-wrap gap-2">
+              {canReadCatalog ? (
+                <Button asChild variant="outline">
+                  <Link href="/staff/settings">
+                    <Settings2 aria-hidden />
+                    {text.catalogSettings}
+                  </Link>
+                </Button>
+              ) : null}
+              {canManage ? (
+                <Button asChild>
+                  <Link href="/staff/new">
+                    <Plus aria-hidden />
+                    {text.newStaff}
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
           ) : undefined
         }
       />

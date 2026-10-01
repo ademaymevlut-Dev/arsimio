@@ -3,6 +3,8 @@ import type { Prisma } from "@/generated/prisma/client";
 import type {
   CreateEmploymentInput,
   EmploymentTransitionInput,
+  StaffCatalogItemInput,
+  StaffCatalogTransitionInput,
   StaffState,
   TeacherProfileInput,
 } from "@/lib/staff-validation";
@@ -23,6 +25,8 @@ function error(
 function dateValue(date: Date) {
   return date.toISOString().slice(0, 10);
 }
+
+const CATALOG_LOCALES = ["tr", "sq", "en"] as const;
 
 async function audit(
   tx: Prisma.TransactionClient,
@@ -135,6 +139,325 @@ async function validateCatalogs(
       positionId: "Pozisyon okul kapsaminda degil.",
     });
   return null;
+}
+
+async function upsertDepartmentTranslations(
+  tx: Prisma.TransactionClient,
+  schoolId: string,
+  departmentId: string,
+  names: StaffCatalogItemInput["name"],
+) {
+  for (const locale of CATALOG_LOCALES) {
+    await tx.staffDepartmentTranslation.upsert({
+      where: {
+        departmentId_locale: {
+          departmentId,
+          locale,
+        },
+      },
+      update: { name: names[locale] },
+      create: {
+        schoolId,
+        departmentId,
+        locale,
+        name: names[locale],
+      },
+    });
+  }
+}
+
+async function upsertPositionTranslations(
+  tx: Prisma.TransactionClient,
+  schoolId: string,
+  positionId: string,
+  names: StaffCatalogItemInput["name"],
+) {
+  for (const locale of CATALOG_LOCALES) {
+    await tx.staffPositionTranslation.upsert({
+      where: {
+        positionId_locale: {
+          positionId,
+          locale,
+        },
+      },
+      update: { name: names[locale] },
+      create: {
+        schoolId,
+        positionId,
+        locale,
+        name: names[locale],
+      },
+    });
+  }
+}
+
+async function persistDepartmentCatalogItem(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: StaffCatalogItemInput,
+): Promise<StaffState> {
+  if (!input.catalogId) {
+    const department = await tx.staffDepartment.create({
+      data: {
+        schoolId: actor.schoolId,
+        code: input.code,
+        defaultName: input.name.tr,
+      },
+      select: { id: true },
+    });
+    await upsertDepartmentTranslations(
+      tx,
+      actor.schoolId,
+      department.id,
+      input.name,
+    );
+    await audit(tx, actor, {
+      action: "staff_catalog.department.created",
+      entityType: "StaffDepartment",
+      entityId: department.id,
+      afterData: { code: input.code, name: input.name },
+      changedFields: ["staffDepartment", "staffDepartmentTranslations"],
+    });
+    return {
+      status: "success",
+      message: "Departman tanimi olusturuldu.",
+      entityId: department.id,
+    };
+  }
+
+  const existing = await tx.staffDepartment.findFirst({
+    where: { id: input.catalogId, schoolId: actor.schoolId },
+    select: {
+      id: true,
+      code: true,
+      defaultName: true,
+      archivedAt: true,
+      updatedAt: true,
+      translations: {
+        select: { locale: true, name: true },
+      },
+    },
+  });
+  if (!existing) return error("Departman tanimi bulunamadi.");
+  if (existing.updatedAt.toISOString() !== input.revision)
+    return error("Kayit bu arada degismis. Sayfayi yenileyip tekrar deneyin.");
+
+  await tx.staffDepartment.update({
+    where: { id: existing.id },
+    data: { code: input.code, defaultName: input.name.tr },
+  });
+  await upsertDepartmentTranslations(tx, actor.schoolId, existing.id, input.name);
+  await audit(tx, actor, {
+    action: "staff_catalog.department.updated",
+    entityType: "StaffDepartment",
+    entityId: existing.id,
+    beforeData: {
+      code: existing.code,
+      defaultName: existing.defaultName,
+      archivedAt: existing.archivedAt?.toISOString() ?? null,
+      translations: existing.translations,
+    },
+    afterData: { code: input.code, name: input.name },
+    changedFields: ["staffDepartment", "staffDepartmentTranslations"],
+  });
+  return { status: "success", message: "Departman tanimi guncellendi." };
+}
+
+async function persistPositionCatalogItem(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: StaffCatalogItemInput,
+): Promise<StaffState> {
+  if (!input.catalogId) {
+    const position = await tx.staffPosition.create({
+      data: {
+        schoolId: actor.schoolId,
+        code: input.code,
+        defaultName: input.name.tr,
+      },
+      select: { id: true },
+    });
+    await upsertPositionTranslations(tx, actor.schoolId, position.id, input.name);
+    await audit(tx, actor, {
+      action: "staff_catalog.position.created",
+      entityType: "StaffPosition",
+      entityId: position.id,
+      afterData: { code: input.code, name: input.name },
+      changedFields: ["staffPosition", "staffPositionTranslations"],
+    });
+    return {
+      status: "success",
+      message: "Pozisyon tanimi olusturuldu.",
+      entityId: position.id,
+    };
+  }
+
+  const existing = await tx.staffPosition.findFirst({
+    where: { id: input.catalogId, schoolId: actor.schoolId },
+    select: {
+      id: true,
+      code: true,
+      defaultName: true,
+      archivedAt: true,
+      updatedAt: true,
+      translations: {
+        select: { locale: true, name: true },
+      },
+    },
+  });
+  if (!existing) return error("Pozisyon tanimi bulunamadi.");
+  if (existing.updatedAt.toISOString() !== input.revision)
+    return error("Kayit bu arada degismis. Sayfayi yenileyip tekrar deneyin.");
+
+  await tx.staffPosition.update({
+    where: { id: existing.id },
+    data: { code: input.code, defaultName: input.name.tr },
+  });
+  await upsertPositionTranslations(tx, actor.schoolId, existing.id, input.name);
+  await audit(tx, actor, {
+    action: "staff_catalog.position.updated",
+    entityType: "StaffPosition",
+    entityId: existing.id,
+    beforeData: {
+      code: existing.code,
+      defaultName: existing.defaultName,
+      archivedAt: existing.archivedAt?.toISOString() ?? null,
+      translations: existing.translations,
+    },
+    afterData: { code: input.code, name: input.name },
+    changedFields: ["staffPosition", "staffPositionTranslations"],
+  });
+  return { status: "success", message: "Pozisyon tanimi guncellendi." };
+}
+
+export function persistStaffCatalogItem(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: StaffCatalogItemInput,
+): Promise<StaffState> {
+  return input.kind === "department"
+    ? persistDepartmentCatalogItem(tx, actor, input)
+    : persistPositionCatalogItem(tx, actor, input);
+}
+
+async function persistDepartmentCatalogTransition(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: StaffCatalogTransitionInput,
+): Promise<StaffState> {
+  const existing = await tx.staffDepartment.findFirst({
+    where: { id: input.catalogId, schoolId: actor.schoolId },
+    select: {
+      id: true,
+      code: true,
+      defaultName: true,
+      archivedAt: true,
+      updatedAt: true,
+    },
+  });
+  if (!existing) return error("Departman tanimi bulunamadi.");
+  if (existing.updatedAt.toISOString() !== input.revision)
+    return error("Kayit bu arada degismis. Sayfayi yenileyip tekrar deneyin.");
+
+  const archivedAt = input.transition === "archive" ? new Date() : null;
+  if (
+    (input.transition === "archive" && existing.archivedAt) ||
+    (input.transition === "restore" && !existing.archivedAt)
+  )
+    return { status: "success", message: "Departman tanimi zaten guncel." };
+
+  await tx.staffDepartment.update({
+    where: { id: existing.id },
+    data: { archivedAt },
+  });
+  await audit(tx, actor, {
+    action: `staff_catalog.department.${input.transition}`,
+    entityType: "StaffDepartment",
+    entityId: existing.id,
+    beforeData: {
+      code: existing.code,
+      defaultName: existing.defaultName,
+      archivedAt: existing.archivedAt?.toISOString() ?? null,
+    },
+    afterData: {
+      code: existing.code,
+      defaultName: existing.defaultName,
+      archivedAt: archivedAt?.toISOString() ?? null,
+    },
+    changedFields: ["staffDepartment.archivedAt"],
+  });
+  return {
+    status: "success",
+    message:
+      input.transition === "archive"
+        ? "Departman tanimi arsivlendi."
+        : "Departman tanimi geri alindi.",
+  };
+}
+
+async function persistPositionCatalogTransition(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: StaffCatalogTransitionInput,
+): Promise<StaffState> {
+  const existing = await tx.staffPosition.findFirst({
+    where: { id: input.catalogId, schoolId: actor.schoolId },
+    select: {
+      id: true,
+      code: true,
+      defaultName: true,
+      archivedAt: true,
+      updatedAt: true,
+    },
+  });
+  if (!existing) return error("Pozisyon tanimi bulunamadi.");
+  if (existing.updatedAt.toISOString() !== input.revision)
+    return error("Kayit bu arada degismis. Sayfayi yenileyip tekrar deneyin.");
+
+  const archivedAt = input.transition === "archive" ? new Date() : null;
+  if (
+    (input.transition === "archive" && existing.archivedAt) ||
+    (input.transition === "restore" && !existing.archivedAt)
+  )
+    return { status: "success", message: "Pozisyon tanimi zaten guncel." };
+
+  await tx.staffPosition.update({
+    where: { id: existing.id },
+    data: { archivedAt },
+  });
+  await audit(tx, actor, {
+    action: `staff_catalog.position.${input.transition}`,
+    entityType: "StaffPosition",
+    entityId: existing.id,
+    beforeData: {
+      code: existing.code,
+      defaultName: existing.defaultName,
+      archivedAt: existing.archivedAt?.toISOString() ?? null,
+    },
+    afterData: {
+      code: existing.code,
+      defaultName: existing.defaultName,
+      archivedAt: archivedAt?.toISOString() ?? null,
+    },
+    changedFields: ["staffPosition.archivedAt"],
+  });
+  return {
+    status: "success",
+    message:
+      input.transition === "archive"
+        ? "Pozisyon tanimi arsivlendi."
+        : "Pozisyon tanimi geri alindi.",
+  };
+}
+
+export function persistStaffCatalogTransition(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: StaffCatalogTransitionInput,
+): Promise<StaffState> {
+  return input.kind === "department"
+    ? persistDepartmentCatalogTransition(tx, actor, input)
+    : persistPositionCatalogTransition(tx, actor, input);
 }
 
 export async function persistEmployment(

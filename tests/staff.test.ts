@@ -3,6 +3,8 @@ import test from "node:test";
 import {
   parseCreateEmployment,
   parseEmploymentTransition,
+  parseStaffCatalogItem,
+  parseStaffCatalogTransition,
   parseTeacherProfile,
 } from "../src/lib/staff-validation";
 
@@ -20,6 +22,7 @@ const personId = "8024d130-eeb2-4979-b3c4-fc44bc595394";
 const employmentId = "2f9d5c1e-874c-4cef-9584-07ff73e74827";
 const departmentId = "25a01724-71bb-48bc-879c-1298c951d3c0";
 const positionId = "8bc89aad-a709-451c-aa20-e2505b5be0fd";
+const catalogId = "4e7a0b1a-0b18-4af9-86ac-3e57adfd7767";
 const subjectOne = "0b9a5fbf-d073-42c6-a314-a6de017409a1";
 const subjectTwo = "32bbbf77-cb2a-4b2e-83ac-6b138c0e0d4a";
 const revision = "2026-10-01T12:00:00.000Z";
@@ -110,4 +113,67 @@ test("teacher profile keeps capability subjects separate from annual assignments
     assert.equal(parsed.data.title.sq, "Mësues historie");
     assert.equal(parsed.data.title.en, "History Teacher");
   }
+});
+
+test("staff catalog item requires a code and three translated names", () => {
+  const parsed = parseStaffCatalogItem(
+    form({
+      catalogKind: "department",
+      code: " education ",
+      nameTr: "Eğitim",
+      nameSq: "Arsimi",
+      nameEn: "Education",
+    }),
+  );
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.kind, "department");
+    assert.equal(parsed.data.catalogId, null);
+    assert.equal(parsed.data.code, "EDUCATION");
+    assert.equal(parsed.data.name.sq, "Arsimi");
+  }
+
+  const invalid = parseStaffCatalogItem(
+    form({
+      catalogKind: "position",
+      catalogId,
+      revision,
+      code: "!",
+      nameTr: "Öğretmen",
+      nameSq: "",
+      nameEn: "Teacher",
+    }),
+  );
+  assert.equal(invalid.success, false);
+  if (!invalid.success) {
+    assert.ok(invalid.state.fieldErrors?.code);
+    assert.ok(invalid.state.fieldErrors?.nameSq);
+  }
+});
+
+test("staff catalog archive and restore actions require trusted record metadata", () => {
+  const parsed = parseStaffCatalogTransition(
+    form({
+      catalogKind: "position",
+      catalogId,
+      revision,
+      transition: "archive",
+    }),
+  );
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.kind, "position");
+    assert.equal(parsed.data.transition, "archive");
+  }
+
+  const invalid = parseStaffCatalogTransition(
+    form({
+      catalogKind: "department",
+      catalogId: "foreign",
+      revision,
+      transition: "restore",
+    }),
+  );
+  assert.equal(invalid.success, false);
+  if (!invalid.success) assert.ok(invalid.state.fieldErrors?.catalogId);
 });

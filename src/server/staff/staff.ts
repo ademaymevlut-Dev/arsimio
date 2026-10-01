@@ -42,6 +42,23 @@ function titleTranslations(item: {
   };
 }
 
+function catalogTranslations(item: {
+  defaultName: string;
+  translations?: { locale: string; name: string }[];
+}) {
+  const values = Object.fromEntries(
+    item.translations?.map((translation) => [
+      translation.locale,
+      translation.name,
+    ]) ?? [],
+  );
+  return {
+    tr: values.tr ?? item.defaultName,
+    sq: values.sq ?? item.defaultName,
+    en: values.en ?? item.defaultName,
+  };
+}
+
 function contact(
   points: { kind: string; value: string; isPrimaryForPerson: boolean }[],
   kind: "PHONE" | "EMAIL",
@@ -57,6 +74,16 @@ function contact(
 export type StaffDirectoryFilter = {
   query?: string;
   status?: EmploymentStatus;
+};
+
+export type StaffCatalogItem = {
+  id: string;
+  code: string;
+  name: string;
+  names: { tr: string; sq: string; en: string };
+  archived: boolean;
+  revision: string;
+  employmentCount: number;
 };
 
 export async function getStaffRegistrationContext(
@@ -117,6 +144,57 @@ export async function getStaffRegistrationContext(
       studentNumber: person.studentProfile?.studentNumber ?? null,
       isGuardian: person.guardianRelationships.length > 0,
     })),
+  };
+}
+
+export async function getStaffCatalogs(schoolId: string, locale: string) {
+  const db = getPrisma();
+  const [departments, positions] = await Promise.all([
+    db.staffDepartment.findMany({
+      where: { schoolId },
+      orderBy: [{ archivedAt: "asc" }, { defaultName: "asc" }],
+      include: {
+        translations: true,
+        _count: { select: { employments: true } },
+      },
+    }),
+    db.staffPosition.findMany({
+      where: { schoolId },
+      orderBy: [{ archivedAt: "asc" }, { defaultName: "asc" }],
+      include: {
+        translations: true,
+        _count: { select: { employments: true } },
+      },
+    }),
+  ]);
+  const toCatalogItem = (item: {
+    id: string;
+    code: string;
+    defaultName: string;
+    archivedAt: Date | null;
+    updatedAt: Date;
+    translations: { locale: string; name: string }[];
+    _count: { employments: number };
+  }): StaffCatalogItem => {
+    const names = catalogTranslations(item);
+    return {
+      id: item.id,
+      code: item.code,
+      name: names[locale as keyof typeof names] ?? item.defaultName,
+      names,
+      archived: Boolean(item.archivedAt),
+      revision: item.updatedAt.toISOString(),
+      employmentCount: item._count.employments,
+    };
+  };
+
+  const byStatusAndName = (first: StaffCatalogItem, second: StaffCatalogItem) =>
+    Number(first.archived) - Number(second.archived) ||
+    first.name.localeCompare(second.name, locale);
+
+  return {
+    departments: departments.map(toCatalogItem).sort(byStatusAndName),
+    positions: positions.map(toCatalogItem).sort(byStatusAndName),
   };
 }
 

@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   GraduationCap,
+  Settings2,
   ShieldCheck,
   UserRoundCheck,
   UserRoundCog,
@@ -83,6 +84,13 @@ function createNavigation(messages: AppDictionary["shell"]) {
   },
   {
     group: messages.people,
+    href: "/staff/settings",
+    label: messages.staffCatalog,
+    icon: Settings2,
+    permission: "hr.catalog.read",
+  },
+  {
+    group: messages.people,
     href: "/teachers",
     label: messages.teachers,
     icon: UserRoundCheck,
@@ -123,10 +131,16 @@ function Navigation({
             {items
               .filter((item) => item.group === group)
               .map(({ href, label, icon: Icon }) => {
+                const onStaffCatalog =
+                  pathname === "/staff/settings" ||
+                  pathname.startsWith("/staff/settings/");
                 const active =
                   href === "/dashboard"
                     ? pathname === href
-                    : pathname.startsWith(href);
+                    : href === "/staff"
+                      ? pathname === "/staff" ||
+                        (pathname.startsWith("/staff/") && !onStaffCatalog)
+                      : pathname === href || pathname.startsWith(`${href}/`);
                 const link = (
                   <Link
                     href={href}
