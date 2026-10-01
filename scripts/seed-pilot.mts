@@ -90,6 +90,8 @@ const schoolPermissions = [
   "hr.catalog.manage",
   "teachers.read",
   "teachers.manage",
+  "teaching.assignments.read",
+  "teaching.assignments.manage",
 ];
 const platformPermissions = [
   "platform.schools.read",

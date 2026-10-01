@@ -77,7 +77,7 @@ export default async function TeachersPage() {
                   </TableCell>
                   <TableCell>
                     <Link
-                      href={`/staff/${teacher.employmentId}`}
+                      href={`/teachers/${teacher.id}`}
                       className="font-medium text-primary hover:underline"
                     >
                       {teacher.fullName}
@@ -113,7 +113,7 @@ export default async function TeachersPage() {
                   </TableCell>
                   <TableCell>
                     <Button asChild variant="ghost" size="icon">
-                      <Link href={`/staff/${teacher.employmentId}`}>
+                      <Link href={`/teachers/${teacher.id}`}>
                         <ArrowRight aria-hidden />
                       </Link>
                     </Button>

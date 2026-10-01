@@ -230,6 +230,11 @@ enum TeacherStatus {
   INACTIVE
 }
 
+enum TeachingAssignmentStatus {
+  ACTIVE
+  PASSIVE
+}
+
 model School {
   id              String       @id @default(uuid()) @db.Uuid
   slug            String       @unique @db.VarChar(80)
@@ -286,6 +291,8 @@ model School {
   teacherProfiles             TeacherProfile[]
   teacherProfileTranslations  TeacherProfileTranslation[]
   teacherSubjectCapabilities  TeacherSubjectCapability[]
+  homeroomTeacherAssignments  HomeroomTeacherAssignment[]
+  courseTeacherAssignments    CourseTeacherAssignment[]
   numberSequences             SchoolNumberSequence[]
   studentProfiles             StudentProfile[]
   guardianRelationships       GuardianRelationship[]
@@ -610,18 +617,20 @@ model AcademicYear {
   createdAt                  DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                  DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school                   School                     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  academicStructureVersion AcademicStructureVersion?  @relation(fields: [academicStructureVersionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  createdBy                User?                      @relation("AcademicYearCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  updatedBy                User?                      @relation("AcademicYearUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  archivedBy               User?                      @relation("AcademicYearArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  terms                    AcademicTerm[]
-  curricula                AcademicYearCurriculum[]
-  classSections            AcademicYearClassSection[]
-  courseOfferings          CourseOffering[]
-  setupRuns                AcademicYearSetupRun[]
-  enrollments              Enrollment[]
-  studentGroupPlacements   StudentGroupPlacement[]
+  school                     School                      @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicStructureVersion   AcademicStructureVersion?   @relation(fields: [academicStructureVersionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  createdBy                  User?                       @relation("AcademicYearCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  updatedBy                  User?                       @relation("AcademicYearUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  archivedBy                 User?                       @relation("AcademicYearArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  terms                      AcademicTerm[]
+  curricula                  AcademicYearCurriculum[]
+  classSections              AcademicYearClassSection[]
+  courseOfferings            CourseOffering[]
+  homeroomTeacherAssignments HomeroomTeacherAssignment[]
+  courseTeacherAssignments   CourseTeacherAssignment[]
+  setupRuns                  AcademicYearSetupRun[]
+  enrollments                Enrollment[]
+  studentGroupPlacements     StudentGroupPlacement[]
 
   @@unique([schoolId, name])
   @@unique([id, schoolId])
@@ -988,12 +997,13 @@ model AcademicYearClassSection {
   createdAt                DateTime                       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                DateTime                       @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school                 School                  @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  academicYear           AcademicYear            @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  classSectionDefinition ClassSectionDefinition  @relation(fields: [classSectionDefinitionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  scheduleProfileVersion ScheduleProfileVersion? @relation(fields: [scheduleProfileVersionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  courseOfferings        CourseOffering[]
-  studentGroupPlacements StudentGroupPlacement[]
+  school                     School                      @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear               AcademicYear                @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  classSectionDefinition     ClassSectionDefinition      @relation(fields: [classSectionDefinitionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  scheduleProfileVersion     ScheduleProfileVersion?     @relation(fields: [scheduleProfileVersionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  courseOfferings            CourseOffering[]
+  homeroomTeacherAssignments HomeroomTeacherAssignment[]
+  studentGroupPlacements     StudentGroupPlacement[]
 
   @@unique([academicYearId, classSectionDefinitionId], map: "aycs_year_section_definition_key")
   @@unique([id, schoolId, academicYearId])
@@ -1015,14 +1025,16 @@ model CourseOffering {
   createdAt                  DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                  DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school                   School                   @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  academicYear             AcademicYear             @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  academicYearClassSection AcademicYearClassSection @relation(fields: [academicYearClassSectionId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
-  subject                  Subject                  @relation(fields: [subjectId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  curriculumItem           CurriculumItem?          @relation(fields: [curriculumItemId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  school                   School                    @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear             AcademicYear              @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  academicYearClassSection AcademicYearClassSection  @relation(fields: [academicYearClassSectionId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+  subject                  Subject                   @relation(fields: [subjectId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  curriculumItem           CurriculumItem?           @relation(fields: [curriculumItemId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  teacherAssignments       CourseTeacherAssignment[]
 
   @@unique([academicYearId, academicYearClassSectionId, subjectId, validFrom], map: "co_year_section_subject_from_key")
   @@unique([id, schoolId])
+  @@unique([id, schoolId, academicYearId], map: "co_id_school_year_key")
   @@index([schoolId, academicYearId, archivedAt], map: "co_scope_archived_idx")
   @@index([subjectId, schoolId], map: "co_subject_school_idx")
   @@map("course_offerings")
@@ -1280,10 +1292,12 @@ model TeacherProfile {
   createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school       School                      @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  employment   Employment                  @relation(fields: [employmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  capabilities TeacherSubjectCapability[]
-  translations TeacherProfileTranslation[]
+  school              School                      @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employment          Employment                  @relation(fields: [employmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  capabilities        TeacherSubjectCapability[]
+  translations        TeacherProfileTranslation[]
+  homeroomAssignments HomeroomTeacherAssignment[]
+  courseAssignments   CourseTeacherAssignment[]
 
   @@unique([schoolId, employmentId])
   @@unique([employmentId, schoolId])
@@ -1321,6 +1335,58 @@ model TeacherSubjectCapability {
   @@id([teacherProfileId, subjectId])
   @@index([schoolId, subjectId])
   @@map("teacher_subject_capabilities")
+}
+
+model HomeroomTeacherAssignment {
+  id                         String                   @id @default(uuid()) @db.Uuid
+  schoolId                   String                   @map("school_id") @db.Uuid
+  academicYearId             String                   @map("academic_year_id") @db.Uuid
+  academicYearClassSectionId String                   @map("academic_year_class_section_id") @db.Uuid
+  teacherProfileId           String                   @map("teacher_profile_id") @db.Uuid
+  status                     TeachingAssignmentStatus @default(ACTIVE)
+  effectiveFrom              DateTime                 @map("effective_from") @db.Date
+  effectiveTo                DateTime?                @map("effective_to") @db.Date
+  note                       String?                  @db.VarChar(500)
+  archivedAt                 DateTime?                @map("archived_at") @db.Timestamptz(6)
+  createdAt                  DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school                   School                   @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear             AcademicYear             @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  academicYearClassSection AcademicYearClassSection @relation(fields: [academicYearClassSectionId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+  teacherProfile           TeacherProfile           @relation(fields: [teacherProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([academicYearId, academicYearClassSectionId, teacherProfileId, effectiveFrom], map: "hta_year_section_teacher_from_key")
+  @@unique([id, schoolId])
+  @@index([schoolId, academicYearId, status])
+  @@index([schoolId, teacherProfileId, status])
+  @@map("homeroom_teacher_assignments")
+}
+
+model CourseTeacherAssignment {
+  id               String                   @id @default(uuid()) @db.Uuid
+  schoolId         String                   @map("school_id") @db.Uuid
+  academicYearId   String                   @map("academic_year_id") @db.Uuid
+  courseOfferingId String                   @map("course_offering_id") @db.Uuid
+  teacherProfileId String                   @map("teacher_profile_id") @db.Uuid
+  status           TeachingAssignmentStatus @default(ACTIVE)
+  effectiveFrom    DateTime                 @map("effective_from") @db.Date
+  effectiveTo      DateTime?                @map("effective_to") @db.Date
+  note             String?                  @db.VarChar(500)
+  archivedAt       DateTime?                @map("archived_at") @db.Timestamptz(6)
+  createdAt        DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear   AcademicYear   @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  courseOffering CourseOffering @relation(fields: [courseOfferingId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+  teacherProfile TeacherProfile @relation(fields: [teacherProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([courseOfferingId, teacherProfileId, effectiveFrom], map: "cta_course_teacher_from_key")
+  @@unique([id, schoolId])
+  @@index([schoolId, academicYearId, status])
+  @@index([schoolId, teacherProfileId, status])
+  @@map("course_teacher_assignments")
 }
 
 model SchoolNumberSequence {
