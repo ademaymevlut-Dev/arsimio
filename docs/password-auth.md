@@ -17,7 +17,7 @@ Küresel `User` kimliği korunur: aynı kişi iki okulda farklı kullanıcı ad�
 
 ## Şimdiki güvenlik temeli
 
-- Parolalar Node.js `crypto.scrypt` ile rastgele salt kullanılarak hash edilir (`N=32768`, `r=8`, `p=3`). Salt ve parametreler hash kaydında tutulur; düz parola saklanmaz. 12–128 karakter; boşluklar korunur, parola kısaltılmaz. Parametre seçimi [OWASP parola saklama rehberindeki](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) scrypt seçeneklerinden biridir.
+- Parolalar Node.js `crypto.scrypt` ile rastgele salt kullanılarak hash edilir (`N=32768`, `r=8`, `p=3`). Salt ve parametreler hash kaydında tutulur; düz parola saklanmaz. 8–128 karakter; boşluklar korunur, parola kısaltılmaz. Parametre seçimi [OWASP parola saklama rehberindeki](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) scrypt seçeneklerinden biridir.
 - Bilinmeyen veya aktif olmayan hesapta da aynı maliyetli hash kontrolü yapılır; genel hata mesajı hesap varlığını açıklamaz.
 - Hesap/okul kapsamındaki giriş denemeleri DB'de atomik olarak sınırlandırılır: 15 dakikada 10 deneme. Başarılı denemeler de sayılır. Aynı okulun alias'ları ve ayrı sunucu örnekleri ortak sayacı kullanır. IP/cihaz/WAF katmanı henüz yoktur.
 - Oturum token'ı 256 bit rastgeledir; DB'de yalnız token'ın SHA-256 özeti bulunur. Bu hızlı hash **parolalar için kullanılmaz**.
@@ -39,7 +39,7 @@ pnpm auth:bootstrap
 ```
 
 1. Araç `.vercel/project.json` Arsimio proje kimliğini, DB bağlantısını ve `ARSIMIO_BOOTSTRAP_ADMIN_EMAIL` ile ayrılmış PENDING hesabı kontrol eder. Hedef e-posta ve DB hostname'i gösterilir; bağlantı sırrı gösterilmez.
-2. Sahibi doğru hedefi gördükten sonra `EVET` yazar, yeni ve en az 12 karakterli parolayı iki kez girer. Parola terminalde görünmez; komut argümanı/env/pipe ile kabul edilmez. GitHub/Vercel parolası tekrar kullanılmaz.
+2. Sahibi doğru hedefi gördükten sonra `EVET` yazar, yeni ve en az 8 karakterli parolayı iki kez girer. Parola terminalde görünmez; komut argümanı/env/pipe ile kabul edilmez. GitHub/Vercel parolası tekrar kullanılmaz.
 3. PENDING, arşivlenmemiş, provider'a bağlanmamış ve önceden SUPER_ADMIN rolü ayrılmış hesap; credential ve audit ile tek transaction'da ACTIVE olur. Araç yeni yönetici atamaz; etkin hesabın parolasını sıfırlamaz ve tekrar çalıştırılarak yetki geri vermez.
 4. Yeni kod Vercel'e gönderildikten sonra ana domainin `/login` sayfasında e-posta + parola ile giriş/çıkış sınanır. Yayından önce yerelde `http://localhost:3000/login` kullanılabilir.
 

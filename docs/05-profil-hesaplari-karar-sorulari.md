@@ -127,7 +127,9 @@ Alternatif olarak Okul Admin geçici parolayı iki kez elle girebilir. Bu yönte
 
 Geçici parolayla giriş yapan kullanıcı doğrudan portalı kullanabilsin mi?
 
-**Öneri:** Hayır. İlk girişte yalnız “Yeni parola belirle” ekranına yönlendirilsin. En az 12 karakterlik yeni parola belirlendikten sonra portal açılır. Bu işlem credential sürümünü artırır ve geçici parolayı geçersiz kılar.
+**İlk öneri:** Hayır. İlk girişte yalnız “Yeni parola belirle” ekranına yönlendirilsin. İlk taslakta en az 12 karakter önerilmişti.
+
+**Nihai karar:** Kullanıcı cevabına göre yeni parola en az 8 karakter olmalıdır. Parola yine hash olarak saklanır; düz parola, hash ve oturum anahtarı audit veya hata mesajlarına yazılmaz.
 
 **Cevabınız:**
 Şimdi benim de yaptığım yöntemi change_pas_parent.html sayfasından inceleyebilirsin. Eğer geçici parola 12345678 ile giriş yaparsa ben yeni parola oluştur sayfasına yönlendiriyorum ve aile gerçek parolayı giriş yapıyor. sonrasında da sisteme girmiyor ve geri index sayfasına dönüyor. Oluşturduğu gerçek şifre ile sisteme giriş yapabiliyor. Fakat güvenlik kaygısı ile biz 12 karakterli şifreleme yaparsak bu her sisteme girişte aile için yorucu olacaktır.Yani büyük harf küçük harf simge ve 12 karakter her girişi çok yorucu yapar . burada 8 karakterli istediği gibi bir giriş yapsın ve biz Hash ile veritabanında şifreyi saklayalım. 

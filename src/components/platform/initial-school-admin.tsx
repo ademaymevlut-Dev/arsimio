@@ -200,7 +200,7 @@ export function InitialSchoolAdmin({
             name="password"
             type="password"
             autoComplete="new-password"
-            minLength={12}
+            minLength={8}
             maxLength={128}
             required
             disabled={!canCreate || pending}
@@ -213,7 +213,7 @@ export function InitialSchoolAdmin({
             className="mt-2 h-10"
           />
           <p id="password-help" className="mt-2 text-xs text-muted-foreground">
-            En az 12 karakter. Parola hiçbir rapor veya audit kaydına yazılmaz.
+            En az 8 karakter. Parola hiçbir rapor veya audit kaydına yazılmaz.
           </p>
           <FieldError state={state} field="password" />
         </div>
@@ -224,7 +224,7 @@ export function InitialSchoolAdmin({
             name="passwordConfirmation"
             type="password"
             autoComplete="new-password"
-            minLength={12}
+            minLength={8}
             maxLength={128}
             required
             disabled={!canCreate || pending}

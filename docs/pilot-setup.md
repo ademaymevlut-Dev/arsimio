@@ -23,7 +23,7 @@ cd /Users/mevlutademay/arsimio
 pnpm auth:bootstrap
 ```
 
-Araç hedef hesabı gösterir; sahibi `EVET` yazar ve en az 12 karakterli yeni parolasını iki kez gizli olarak girer. `ARSIMIO_BOOTSTRAP_ADMIN_EMAIL` ile önceden ayrılmış, PENDING ve SUPER_ADMIN rolü mevcut hesap etkinleşir. Aktif hesabın parolasını değiştirmez veya yeni yönetici atamaz. Parola sohbete, `.env` dosyasına veya Git'e konmaz. `/setup` yalnızca bu komutu açıklayan bilgi sayfasıdır.
+Araç hedef hesabı gösterir; sahibi `EVET` yazar ve en az 8 karakterli yeni parolasını iki kez gizli olarak girer. `ARSIMIO_BOOTSTRAP_ADMIN_EMAIL` ile önceden ayrılmış, PENDING ve SUPER_ADMIN rolü mevcut hesap etkinleşir. Aktif hesabın parolasını değiştirmez veya yeni yönetici atamaz. Parola sohbete, `.env` dosyasına veya Git'e konmaz. `/setup` yalnızca bu komutu açıklayan bilgi sayfasıdır.
 
 Yerelde `http://localhost:3000/login`, canlıda `https://arsimio.vercel.app/login` kullanılır. İlk aktivasyon kullanıcı tarafından tamamlandı; yukarıdaki komut mevcut hesap için tekrar çalıştırılmaz. Ayrıntılar, güvenlik kuralları ve kurtarma akışının mevcut sınırları [parolalı giriş belgesinde](./password-auth.md).
 
