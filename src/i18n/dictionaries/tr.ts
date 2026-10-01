@@ -431,6 +431,13 @@ export const tr = {
     attendanceCta: "Yoklama",
     commentCta: "Comment",
     homeworkCta: "Ödev",
+    selectWeek: "Hafta seç",
+    weekOptionLabel: "Hafta {sequence}: {start} - {end}",
+    previousWeek: "Önceki hafta",
+    currentWeek: "Bu hafta",
+    nextWeek: "Sonraki hafta",
+    noSchoolWeeks:
+      "Aktif öğretim yılı için okul haftası oluşturulmamış. Öğretim yılları ekranından takvimi oluşturun.",
     weekdayMonday: "Pazartesi",
     weekdayTuesday: "Salı",
     weekdayWednesday: "Çarşamba",

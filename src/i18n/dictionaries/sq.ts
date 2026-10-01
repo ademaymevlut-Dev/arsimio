@@ -332,6 +332,13 @@ const sq = {
     attendanceCta: "Mungesat",
     commentCta: "Comment",
     homeworkCta: "Detyrë",
+    selectWeek: "Zgjidh javën",
+    weekOptionLabel: "Java {sequence}: {start} - {end}",
+    previousWeek: "Java e mëparshme",
+    currentWeek: "Java aktuale",
+    nextWeek: "Java tjetër",
+    noSchoolWeeks:
+      "Nuk janë krijuar javë shkollore për vitin aktiv. Krijoni kalendarin nga ekrani i viteve shkollore.",
     weekdayMonday: "E hënë",
     weekdayTuesday: "E martë",
     weekdayWednesday: "E mërkurë",

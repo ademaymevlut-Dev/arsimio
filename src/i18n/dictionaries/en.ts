@@ -331,6 +331,13 @@ const en = {
     attendanceCta: "Attendance",
     commentCta: "Comment",
     homeworkCta: "Homework",
+    selectWeek: "Select week",
+    weekOptionLabel: "Week {sequence}: {start} - {end}",
+    previousWeek: "Previous week",
+    currentWeek: "Current week",
+    nextWeek: "Next week",
+    noSchoolWeeks:
+      "No school weeks have been generated for the active academic year. Generate the calendar from Academic years.",
     weekdayMonday: "Monday",
     weekdayTuesday: "Tuesday",
     weekdayWednesday: "Wednesday",

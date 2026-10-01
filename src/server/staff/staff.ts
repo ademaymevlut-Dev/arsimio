@@ -470,7 +470,31 @@ export async function getTeacherPortalHome(
     db.academicYear.findFirst({
       where: { schoolId, status: "ACTIVE", archivedAt: null },
       orderBy: [{ startDate: "desc" }],
-      select: { id: true, name: true, startDate: true, endDate: true },
+      select: {
+        id: true,
+        name: true,
+        startDate: true,
+        endDate: true,
+        academicWeeks: {
+          orderBy: [{ sequence: "asc" }, { startDate: "asc" }],
+          select: {
+            id: true,
+            sequence: true,
+            startDate: true,
+            endDate: true,
+            instructionalDayCount: true,
+            calendarDays: {
+              orderBy: { date: "asc" },
+              select: {
+                id: true,
+                date: true,
+                weekday: true,
+                isInstructionalDay: true,
+              },
+            },
+          },
+        },
+      },
     }),
   ]);
   if (!profile) return null;
@@ -575,6 +599,8 @@ export async function getTeacherPortalHome(
         weekday: session.weekday,
         schedulePeriodId: session.schedulePeriodId,
         periodLabel: schedulePeriodLabel(session.schedulePeriod),
+        effectiveFrom: dateValue(session.effectiveFrom),
+        effectiveTo: session.effectiveTo ? dateValue(session.effectiveTo) : null,
         participants: session.participants
           .map((participant) => ({
             id: participant.id,
@@ -585,6 +611,10 @@ export async function getTeacherPortalHome(
             ),
             subjectName: translatedName(participant.courseOffering.subject),
             track: participant.courseOffering.subject.track,
+            effectiveFrom: dateValue(participant.effectiveFrom),
+            effectiveTo: participant.effectiveTo
+              ? dateValue(participant.effectiveTo)
+              : null,
           }))
           .sort(
             (first, second) =>
@@ -592,6 +622,20 @@ export async function getTeacherPortalHome(
               first.subjectName.localeCompare(second.subjectName, locale),
           ),
       })),
+      weeks:
+        activeYear?.academicWeeks.map((week) => ({
+          id: week.id,
+          sequence: week.sequence,
+          startDate: dateValue(week.startDate),
+          endDate: dateValue(week.endDate),
+          instructionalDayCount: week.instructionalDayCount,
+          days: week.calendarDays.map((day) => ({
+            id: day.id,
+            date: dateValue(day.date),
+            weekday: day.weekday,
+            isInstructionalDay: day.isInstructionalDay,
+          })),
+        })) ?? [],
     },
   };
 }

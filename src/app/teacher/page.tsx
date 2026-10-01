@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { signOut } from "@/app/login/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,8 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { HTML_LOCALES } from "@/i18n/config";
 import type { AppDictionary } from "@/i18n/dictionaries/types";
+import { formatMessage } from "@/i18n/format";
 import { getDictionary, getSchoolLocale } from "@/i18n/server";
+import {
+  dateOnlyInTimeZone,
+  dateOnlyValue,
+} from "@/lib/academic-calendar-validation";
 import { requirePortalAccount } from "@/server/accounts/portal-guards";
 import { getTeacherPortalHome } from "@/server/staff/staff";
 
@@ -41,12 +48,29 @@ function trackLabel(track: string, text: StaffMessages) {
   return text.subjectTrackGeneral;
 }
 
-export default async function TeacherPortalPage() {
+function formatDate(value: string, locale: keyof typeof HTML_LOCALES) {
+  return new Intl.DateTimeFormat(HTML_LOCALES[locale], {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function activeOnDate(record: { effectiveFrom: string; effectiveTo: string | null }, date: string) {
+  return record.effectiveFrom <= date && (!record.effectiveTo || record.effectiveTo >= date);
+}
+
+export default async function TeacherPortalPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ week?: string | string[] }>;
+}) {
   const { tenant, account } = await requirePortalAccount("TEACHER");
   const locale = await getSchoolLocale(undefined, tenant.school.defaultLocale);
-  const [home, dictionary] = await Promise.all([
+  const [home, dictionary, query] = await Promise.all([
     getTeacherPortalHome(tenant.school.id, account.personId, locale),
     getDictionary(locale),
+    searchParams,
   ]);
   if (!home) notFound();
   const text = dictionary.staff;
@@ -67,6 +91,43 @@ export default async function TeacherPortalPage() {
     sessions.push(session);
     sessionsBySlot.set(key, sessions);
   }
+  const requestedWeek =
+    typeof query.week === "string"
+      ? home.weeklySchedule.weeks.find(
+          (week) => week.id === query.week || String(week.sequence) === query.week,
+        ) ?? null
+      : null;
+  const today = dateOnlyValue(
+    dateOnlyInTimeZone(new Date(), tenant.school.timezone),
+  );
+  const currentWeek =
+    home.weeklySchedule.weeks.find(
+      (week) => week.startDate <= today && week.endDate >= today,
+    ) ?? null;
+  const firstFutureWeek =
+    home.weeklySchedule.weeks.find((week) => week.startDate > today) ?? null;
+  const selectedWeek =
+    requestedWeek ??
+    currentWeek ??
+    firstFutureWeek ??
+    home.weeklySchedule.weeks.at(-1) ??
+    null;
+  const selectedWeekIndex = selectedWeek
+    ? home.weeklySchedule.weeks.findIndex((week) => week.id === selectedWeek.id)
+    : -1;
+  const previousWeek =
+    selectedWeekIndex > 0
+      ? home.weeklySchedule.weeks[selectedWeekIndex - 1]
+      : null;
+  const nextWeek =
+    selectedWeekIndex >= 0 &&
+    selectedWeekIndex < home.weeklySchedule.weeks.length - 1
+      ? home.weeklySchedule.weeks[selectedWeekIndex + 1]
+      : null;
+  const weekHref = (week: { id: string }) => ({
+    pathname: "/teacher",
+    query: { week: week.id },
+  });
 
   return (
     <main className="min-h-svh bg-background p-4 sm:p-8">
@@ -156,7 +217,83 @@ export default async function TeacherPortalPage() {
                 {home.activeYear.endDate}
               </p>
             ) : null}
-            {home.weeklySchedule.periods.length === 0 ? (
+            {selectedWeek ? (
+              <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-muted/30 p-3">
+                <form
+                  action="/teacher"
+                  method="get"
+                  className="flex flex-wrap items-end gap-2"
+                >
+                  <label className="space-y-1 text-sm font-medium">
+                    <span>{text.selectWeek}</span>
+                    <select
+                      name="week"
+                      defaultValue={selectedWeek.id}
+                      className="h-8 rounded-md border border-border bg-background px-2 text-sm"
+                    >
+                      {home.weeklySchedule.weeks.map((week) => (
+                        <option key={week.id} value={week.id}>
+                          {formatMessage(text.weekOptionLabel, {
+                            sequence: week.sequence,
+                            start: formatDate(week.startDate, locale),
+                            end: formatDate(week.endDate, locale),
+                          })}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <Button type="submit" variant="outline" size="sm">
+                    {dictionary.language.apply}
+                  </Button>
+                </form>
+                <div className="flex flex-wrap gap-2">
+                  {previousWeek ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={weekHref(previousWeek)}>
+                        {text.previousWeek}
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button type="button" variant="outline" size="sm" disabled>
+                      {text.previousWeek}
+                    </Button>
+                  )}
+                  {currentWeek ? (
+                    <Button
+                      asChild
+                      variant={
+                        currentWeek.id === selectedWeek.id
+                          ? "default"
+                          : "outline"
+                      }
+                      size="sm"
+                    >
+                      <Link href={weekHref(currentWeek)}>
+                        {text.currentWeek}
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button type="button" variant="outline" size="sm" disabled>
+                      {text.currentWeek}
+                    </Button>
+                  )}
+                  {nextWeek ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={weekHref(nextWeek)}>{text.nextWeek}</Link>
+                    </Button>
+                  ) : (
+                    <Button type="button" variant="outline" size="sm" disabled>
+                      {text.nextWeek}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ) : null}
+            {!selectedWeek ? (
+              <p className="text-sm text-muted-foreground">
+                {text.noSchoolWeeks}
+              </p>
+            ) : home.weeklySchedule.periods.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 {text.noWeeklySchedule}
               </p>
@@ -168,9 +305,12 @@ export default async function TeacherPortalPage() {
                       <TableHead className="min-w-40">
                         {text.schedulePeriodColumn}
                       </TableHead>
-                      {home.weeklySchedule.weekdays.map((weekday) => (
-                        <TableHead key={weekday} className="min-w-56">
-                          {weekdayLabel(weekday, text)}
+                      {selectedWeek.days.map((day) => (
+                        <TableHead key={day.id} className="min-w-56">
+                          {weekdayLabel(day.weekday, text)}{" "}
+                          <span className="font-normal text-muted-foreground">
+                            ({formatDate(day.date, locale)})
+                          </span>
                         </TableHead>
                       ))}
                     </TableRow>
@@ -181,12 +321,27 @@ export default async function TeacherPortalPage() {
                         <TableCell className="align-top font-medium">
                           {period.label}
                         </TableCell>
-                        {home.weeklySchedule.weekdays.map((weekday) => {
-                          const sessions =
-                            sessionsBySlot.get(`${weekday}:${period.id}`) ?? [];
+                        {selectedWeek.days.map((day) => {
+                          const sessions = (
+                            sessionsBySlot.get(`${day.weekday}:${period.id}`) ??
+                            []
+                          )
+                            .filter((session) =>
+                              activeOnDate(session, day.date),
+                            )
+                            .map((session) => ({
+                              ...session,
+                              participants: session.participants.filter(
+                                (participant) =>
+                                  activeOnDate(participant, day.date),
+                              ),
+                            }))
+                            .filter(
+                              (session) => session.participants.length > 0,
+                            );
                           return (
                             <TableCell
-                              key={`${weekday}-${period.id}`}
+                              key={`${day.id}-${period.id}`}
                               className="align-top"
                             >
                               {sessions.length === 0 ? (
