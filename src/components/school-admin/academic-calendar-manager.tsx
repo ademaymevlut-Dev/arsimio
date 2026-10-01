@@ -23,6 +23,7 @@ import {
   changeAcademicCalendarStatus,
   saveAcademicTerm,
   saveAcademicYear,
+  syncAcademicCalendar,
 } from "@/app/(school-admin)/academics/years/actions";
 import { DataTableShell, TableEmptyState } from "@/components/admin/data-table-shell";
 import { PageHeader } from "@/components/admin/page-header";
@@ -572,6 +573,65 @@ function LifecycleDialog({
   );
 }
 
+function CalendarSyncContent({
+  year,
+}: {
+  year: AcademicYearRecord;
+}) {
+  const { messages } = useAcademicI18n();
+  const academic = messages.academics;
+  const [state, action, pending] = useActionState(
+    syncAcademicCalendar,
+    initialActionState,
+  );
+
+  return (
+    <AlertDialogContent>
+      <form action={action} className="contents">
+        <input type="hidden" name="id" value={year.id} />
+        <input type="hidden" name="revision" value={year.revision} />
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {formatMessage(academic.syncCalendarTitle, { name: year.name })}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {academic.syncCalendarDescription}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <ActionAlert state={state} />
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>
+            {state.status === "success"
+              ? messages.common.close
+              : messages.common.cancel}
+          </AlertDialogCancel>
+          {state.status !== "success" && (
+            <Button type="submit" disabled={pending}>
+              {pending ? messages.common.processing : academic.syncCalendar}
+            </Button>
+          )}
+        </AlertDialogFooter>
+      </form>
+    </AlertDialogContent>
+  );
+}
+
+function CalendarSyncDialog({
+  year,
+  trigger,
+}: {
+  year: AcademicYearRecord;
+  trigger: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      {open && <CalendarSyncContent year={year} />}
+    </AlertDialog>
+  );
+}
+
 function YearActions({
   year,
   canManage,
@@ -588,6 +648,21 @@ function YearActions({
     );
   return (
     <div className="flex flex-wrap justify-end gap-2">
+      {year.status !== "ARCHIVED" &&
+        year.status !== "CLOSED" &&
+        year.terms.some((term) => term.status !== "ARCHIVED") && (
+          <CalendarSyncDialog
+            year={year}
+            trigger={
+              <Button variant="outline" size="sm">
+                <CalendarDays aria-hidden />{" "}
+                {year.weeks.length
+                  ? academic.regenerateCalendar
+                  : academic.syncCalendar}
+              </Button>
+            }
+          />
+        )}
       {year.status === "DRAFT" && (
         <YearFormDialog
           key={year.revision}
@@ -787,7 +862,7 @@ export function AcademicCalendarManager({
       />
 
       <section
-        className="grid gap-4 md:grid-cols-3"
+        className="grid gap-4 md:grid-cols-4"
         aria-label={academic.summaryLabel}
       >
         <Card className="py-5">
@@ -818,6 +893,17 @@ export function AcademicCalendarManager({
             </p>
             <p className="mt-2 text-lg font-medium">
               {selectedYear?.terms.filter((term) => term.status !== "ARCHIVED").length ?? 0}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="py-5">
+          <CardContent>
+            <CalendarDays className="size-5 text-primary" aria-hidden />
+            <p className="mt-5 text-xs text-muted-foreground">
+              {academic.selectedYearWeeks}
+            </p>
+            <p className="mt-2 text-lg font-medium">
+              {selectedYear?.weeks.length ?? 0}
             </p>
           </CardContent>
         </Card>
@@ -902,6 +988,7 @@ export function AcademicCalendarManager({
       </DataTableShell>
 
       {selectedYear ? (
+        <>
         <DataTableShell
           title={formatMessage(academic.termsTitle, {
             name: selectedYear.name,
@@ -981,6 +1068,93 @@ export function AcademicCalendarManager({
             />
           )}
         </DataTableShell>
+        <DataTableShell
+          title={formatMessage(academic.calendarWeeksTitle, {
+            name: selectedYear.name,
+          })}
+          description={academic.calendarWeeksDescription}
+          toolbar={
+            canManage &&
+            selectedYear.status !== "ARCHIVED" &&
+            selectedYear.status !== "CLOSED" &&
+            selectedYear.terms.some((term) => term.status !== "ARCHIVED") ? (
+              <CalendarSyncDialog
+                year={selectedYear}
+                trigger={
+                  <Button variant="outline">
+                    <CalendarDays aria-hidden />{" "}
+                    {selectedYear.weeks.length
+                      ? academic.regenerateCalendar
+                      : academic.createCalendarWeeks}
+                  </Button>
+                }
+              />
+            ) : undefined
+          }
+          footer={formatMessage(academic.calendarWeeksFooter, {
+            count: selectedYear.weeks.length,
+          })}
+        >
+          {selectedYear.weeks.length ? (
+            <Table className="min-w-[820px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead scope="col">{academic.calendarWeekColumn}</TableHead>
+                  <TableHead scope="col">{common.dateRange}</TableHead>
+                  <TableHead scope="col">{academic.termColumn}</TableHead>
+                  <TableHead scope="col">
+                    {academic.instructionalDaysColumn}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {selectedYear.weeks.map((week) => (
+                  <TableRow key={week.id}>
+                    <TableCell className="font-medium">
+                      {formatMessage(academic.calendarWeekLabel, {
+                        sequence: week.sequence,
+                      })}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(week.startDate, locale)} –{" "}
+                      {formatDate(week.endDate, locale)}
+                    </TableCell>
+                    <TableCell>{week.termName ?? "—"}</TableCell>
+                    <TableCell>
+                      {formatMessage(academic.instructionalDayCount, {
+                        count: week.instructionalDayCount,
+                      })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <TableEmptyState
+              title={academic.noCalendarWeeks}
+              description={academic.noCalendarWeeksDescription}
+              action={
+                canManage &&
+                selectedYear.status !== "ARCHIVED" &&
+                selectedYear.status !== "CLOSED" &&
+                selectedYear.terms.some(
+                  (term) => term.status !== "ARCHIVED",
+                ) ? (
+                  <CalendarSyncDialog
+                    year={selectedYear}
+                    trigger={
+                      <Button variant="outline">
+                        <CalendarDays aria-hidden />{" "}
+                        {academic.createCalendarWeeks}
+                      </Button>
+                    }
+                  />
+                ) : undefined
+              }
+            />
+          )}
+        </DataTableShell>
+        </>
       ) : (
         years.length > 0 && (
           <Alert variant="info">

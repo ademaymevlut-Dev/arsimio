@@ -37,6 +37,11 @@ export type AcademicTermInput = {
   endDate: Date;
 };
 
+export type AcademicCalendarSyncInput = {
+  id: string;
+  revision: string;
+};
+
 export type AcademicEntity = "year" | "term";
 export type AcademicTransition = "activate" | "close" | "archive" | "restore";
 export type AcademicServerMessages = AppDictionary["academicServer"];
@@ -243,4 +248,13 @@ export function parseAcademicTransition(form: FormData): {
     id,
     revision,
   };
+}
+
+export function parseAcademicCalendarSync(
+  form: FormData,
+): AcademicCalendarSyncInput | null {
+  const id = form.get("id");
+  const revision = form.get("revision");
+  if (!validSchoolId(id) || !validRevision(revision)) return null;
+  return { id, revision };
 }

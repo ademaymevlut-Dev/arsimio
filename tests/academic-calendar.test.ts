@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { buildAcademicCalendarPlan } from "../src/lib/academic-week-generation";
 import {
   dateOnlyInTimeZone,
   dateOnlyValue,
@@ -164,5 +165,70 @@ test("academic lifecycle transitions accept only known entities and actions", ()
       form({ entity: "school", transition: "delete", id, revision }),
     ),
     null,
+  );
+});
+
+test("academic week generation uses school weeks, weekdays and term boundaries", () => {
+  const plan = buildAcademicCalendarPlan([
+    {
+      id: "term-1",
+      sequence: 1,
+      startDate: parseDateOnly("2026-09-02")!,
+      endDate: parseDateOnly("2026-09-11")!,
+    },
+    {
+      id: "term-2",
+      sequence: 2,
+      startDate: parseDateOnly("2026-09-17")!,
+      endDate: parseDateOnly("2026-09-18")!,
+    },
+  ]);
+
+  assert.deepEqual(
+    plan.weeks.map((week) => ({
+      sequence: week.sequence,
+      term: week.academicTermId,
+      start: dateOnlyValue(week.startDate),
+      end: dateOnlyValue(week.endDate),
+      days: week.instructionalDayCount,
+    })),
+    [
+      {
+        sequence: 1,
+        term: "term-1",
+        start: "2026-09-02",
+        end: "2026-09-04",
+        days: 3,
+      },
+      {
+        sequence: 2,
+        term: "term-1",
+        start: "2026-09-07",
+        end: "2026-09-11",
+        days: 5,
+      },
+      {
+        sequence: 3,
+        term: "term-2",
+        start: "2026-09-17",
+        end: "2026-09-18",
+        days: 2,
+      },
+    ],
+  );
+  assert.deepEqual(
+    plan.days.map((day) => dateOnlyValue(day.date)),
+    [
+      "2026-09-02",
+      "2026-09-03",
+      "2026-09-04",
+      "2026-09-07",
+      "2026-09-08",
+      "2026-09-09",
+      "2026-09-10",
+      "2026-09-11",
+      "2026-09-17",
+      "2026-09-18",
+    ],
   );
 });

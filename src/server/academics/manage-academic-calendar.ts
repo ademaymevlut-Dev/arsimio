@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { getPrisma } from "@/lib/db";
 import {
   parseAcademicTerm,
+  parseAcademicCalendarSync,
   parseAcademicTransition,
   parseAcademicYear,
   type AcademicCalendarState,
@@ -13,6 +14,7 @@ import {
   academicCalendarConflict,
   persistAcademicTerm,
   persistAcademicYear,
+  syncAcademicCalendarForYear,
   transitionAcademicTerm,
   transitionAcademicYear,
 } from "./academic-calendar-service";
@@ -140,6 +142,41 @@ export async function manageAcademicTransition(
     );
   } catch (error) {
     console.error("ACADEMIC_CALENDAR_TRANSITION_UNAVAILABLE");
+    return databaseError(error, actor.messages);
+  }
+}
+
+export async function manageAcademicCalendarSync(
+  form: FormData,
+): Promise<AcademicCalendarState> {
+  const actor = await actorContext();
+  if (!actor) {
+    const { academicServer } = await getDictionary("tr");
+    return invalid(academicServer);
+  }
+  const parsed = parseAcademicCalendarSync(form);
+  if (!parsed) return invalid(actor.messages);
+  try {
+    return await getPrisma().$transaction(
+      async (tx) => {
+        const year = await tx.academicYear.findFirst({
+          where: { id: parsed.id, schoolId: actor.schoolId },
+          select: { updatedAt: true },
+        });
+        if (!year) return { status: "error", message: actor.messages.unavailable };
+        if (year.updatedAt.toISOString() !== parsed.revision)
+          return academicCalendarConflict(actor.messages);
+        return syncAcademicCalendarForYear(
+          tx,
+          actor,
+          parsed.id,
+          "Academic calendar generated manually by school administrator.",
+        );
+      },
+      { isolationLevel: "Serializable" },
+    );
+  } catch (error) {
+    console.error("ACADEMIC_CALENDAR_SYNC_UNAVAILABLE");
     return databaseError(error, actor.messages);
   }
 }

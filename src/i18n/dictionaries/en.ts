@@ -402,6 +402,7 @@ const en = {
     notActive: "Not active yet",
     nonArchivedYears: "Non-archived years",
     selectedYearTerms: "Terms in selected year",
+    selectedYearWeeks: "School weeks in selected year",
     yearsTitle: "Academic years",
     yearsDescription:
       "Select a year to manage its terms. Only one academic year can be active at a time.",
@@ -423,6 +424,23 @@ const en = {
     noTermsOther: "This record has no terms. Check its lifecycle status.",
     createFirstTerm: "Create first term",
     selectYear: "Select an academic year in the table to see its terms.",
+    syncCalendar: "Generate calendar",
+    regenerateCalendar: "Regenerate calendar",
+    syncCalendarTitle: "Generate school calendar for {name}?",
+    syncCalendarDescription:
+      "The system uses term date ranges to generate Monday–Friday school days and school weeks. Existing calendar rows are rebuilt at this stage.",
+    calendarWeeksTitle: "School weeks for {name}",
+    calendarWeeksDescription:
+      "Teacher dashboard weeks, attendance, homework, comments and exam records will be linked to these real school days.",
+    calendarWeeksFooter: "{count} school weeks shown",
+    calendarWeekColumn: "School week",
+    calendarWeekLabel: "Week {sequence}",
+    instructionalDaysColumn: "School days",
+    instructionalDayCount: "{count} days",
+    noCalendarWeeks: "No school weeks for this year",
+    noCalendarWeeksDescription:
+      "Create the terms, then generate the school weeks automatically.",
+    createCalendarWeeks: "Create school weeks",
   },
   academicStructure: {
     eyebrow: "ACADEMIC STRUCTURE",
@@ -606,6 +624,9 @@ const en = {
       "Terms are not activated or closed separately; they are managed together with the academic year.",
     restoreTermRule: "A term can only be restored while its academic year is a draft.",
     yearActivated: "Academic year activated.",
+    calendarSynced: "{weeks} school weeks and {days} school days generated.",
+    calendarNeedsInstructionalDays:
+      "No Monday–Friday school days could be generated from the term dates.",
     yearClosed: "Academic year closed.",
     yearArchived: "Academic year archived.",
     yearRestored: "Academic year restored as a draft.",

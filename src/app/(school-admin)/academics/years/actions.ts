@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { AcademicCalendarState } from "@/lib/academic-calendar-validation";
 import {
+  manageAcademicCalendarSync,
   manageAcademicTerm,
   manageAcademicTransition,
   manageAcademicYear,
@@ -35,4 +36,11 @@ export async function changeAcademicCalendarStatus(
   form: FormData,
 ) {
   return refreshCalendar(await manageAcademicTransition(form));
+}
+
+export async function syncAcademicCalendar(
+  _state: AcademicCalendarState,
+  form: FormData,
+) {
+  return refreshCalendar(await manageAcademicCalendarSync(form));
 }

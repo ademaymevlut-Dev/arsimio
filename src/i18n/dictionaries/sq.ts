@@ -403,6 +403,7 @@ const sq = {
     notActive: "Ende jo aktiv",
     nonArchivedYears: "Vite të paarkivuara",
     selectedYearTerms: "Semestrat e vitit të zgjedhur",
+    selectedYearWeeks: "Javët shkollore të vitit të zgjedhur",
     yearsTitle: "Vitet shkollore",
     yearsDescription:
       "Zgjidhni një vit për të menaxhuar semestrat. Vetëm një vit shkollor mund të jetë aktiv.",
@@ -424,6 +425,23 @@ const sq = {
     noTermsOther: "Ky regjistrim nuk ka semestra. Kontrolloni statusin e tij.",
     createFirstTerm: "Krijo semestrin e parë",
     selectYear: "Zgjidhni një vit shkollor në tabelë për të parë semestrat.",
+    syncCalendar: "Krijo kalendarin",
+    regenerateCalendar: "Rikrijo kalendarin",
+    syncCalendarTitle: "Të krijohet kalendari shkollor për {name}?",
+    syncCalendarDescription:
+      "Sistemi përdor datat e semestrave për të krijuar ditët shkollore nga e hëna në të premte dhe javët shkollore. Rreshtat ekzistues të kalendarit rikrijohen në këtë fazë.",
+    calendarWeeksTitle: "Javët shkollore për {name}",
+    calendarWeeksDescription:
+      "Javët në dashboard-in e mësuesit, mungesat, detyrat, komentet dhe provimet do të lidhen me këto ditë reale shkollore.",
+    calendarWeeksFooter: "Shfaqen {count} javë shkollore",
+    calendarWeekColumn: "Java shkollore",
+    calendarWeekLabel: "Week {sequence}",
+    instructionalDaysColumn: "Ditë shkollore",
+    instructionalDayCount: "{count} ditë",
+    noCalendarWeeks: "Nuk ka javë shkollore për këtë vit",
+    noCalendarWeeksDescription:
+      "Krijoni semestrat dhe pastaj krijoni automatikisht javët shkollore.",
+    createCalendarWeeks: "Krijo javët shkollore",
   },
   academicStructure: {
     eyebrow: "STRUKTURA AKADEMIKE",
@@ -607,6 +625,9 @@ const sq = {
       "Semestrat nuk aktivizohen ose mbyllen veçmas; menaxhohen së bashku me vitin shkollor.",
     restoreTermRule: "Semestri mund të rikthehet vetëm kur viti është draft.",
     yearActivated: "Viti shkollor u aktivizua.",
+    calendarSynced: "U krijuan {weeks} javë shkollore dhe {days} ditë shkollore.",
+    calendarNeedsInstructionalDays:
+      "Nga datat e semestrave nuk u krijuan ditë shkollore nga e hëna në të premte.",
     yearClosed: "Viti shkollor u mbyll.",
     yearArchived: "Viti shkollor u arkivua.",
     yearRestored: "Viti shkollor u rikthye si draft.",

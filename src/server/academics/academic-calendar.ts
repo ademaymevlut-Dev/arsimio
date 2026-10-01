@@ -23,6 +23,31 @@ export type AcademicTermRecord = {
   revision: string;
 };
 
+export type AcademicCalendarDayRecord = {
+  id: string;
+  date: string;
+  weekday: "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY";
+  dayType:
+    | "INSTRUCTIONAL"
+    | "HOLIDAY"
+    | "BREAK"
+    | "ADMIN_CLOSED"
+    | "EXAM"
+    | "EVENT";
+  isInstructionalDay: boolean;
+};
+
+export type AcademicWeekRecord = {
+  id: string;
+  sequence: number;
+  academicTermId: string | null;
+  termName: string | null;
+  startDate: string;
+  endDate: string;
+  instructionalDayCount: number;
+  days: AcademicCalendarDayRecord[];
+};
+
 export type AcademicYearRecord = {
   id: string;
   name: string;
@@ -31,6 +56,7 @@ export type AcademicYearRecord = {
   status: "DRAFT" | "ACTIVE" | "CLOSED" | "ARCHIVED";
   revision: string;
   terms: AcademicTermRecord[];
+  weeks: AcademicWeekRecord[];
 };
 
 export async function getAcademicCalendar(
@@ -64,17 +90,41 @@ export async function getAcademicCalendar(
           },
         },
       },
+      academicWeeks: {
+        orderBy: [{ sequence: "asc" }, { startDate: "asc" }],
+        select: {
+          id: true,
+          sequence: true,
+          academicTermId: true,
+          startDate: true,
+          endDate: true,
+          instructionalDayCount: true,
+          academicTerm: {
+            select: {
+              name: true,
+              translations: {
+                select: { locale: true, name: true },
+              },
+            },
+          },
+          calendarDays: {
+            orderBy: { date: "asc" },
+            select: {
+              id: true,
+              date: true,
+              weekday: true,
+              dayType: true,
+              isInstructionalDay: true,
+            },
+          },
+        },
+      },
     },
   });
 
-  return years.map((year) => ({
-    id: year.id,
-    name: year.name,
-    startDate: dateOnlyValue(year.startDate),
-    endDate: dateOnlyValue(year.endDate),
-    status: year.status,
-    revision: year.updatedAt.toISOString(),
-    terms: year.terms.map((term) => {
+  return years.map((year) => {
+    const termNamesById = new Map<string, string>();
+    const terms = year.terms.map((term) => {
       const translationMap = new Map(
         term.translations.map((translation) => [
           translation.locale,
@@ -87,12 +137,14 @@ export async function getAcademicCalendar(
           translationMap.get(code) ?? "",
         ]),
       ) as LocalizedNames;
+      const name =
+        translationMap.get(locale) ??
+        translationMap.get(defaultLocale) ??
+        term.name;
+      termNamesById.set(term.id, name);
       return {
         id: term.id,
-        name:
-          translationMap.get(locale) ??
-          translationMap.get(defaultLocale) ??
-          term.name,
+        name,
         names,
         sequence: term.sequence,
         startDate: dateOnlyValue(term.startDate),
@@ -100,8 +152,47 @@ export async function getAcademicCalendar(
         status: term.status,
         revision: term.updatedAt.toISOString(),
       };
-    }),
-  }));
+    });
+    return {
+      id: year.id,
+      name: year.name,
+      startDate: dateOnlyValue(year.startDate),
+      endDate: dateOnlyValue(year.endDate),
+      status: year.status,
+      revision: year.updatedAt.toISOString(),
+      terms,
+      weeks: year.academicWeeks.map((week) => {
+        const termName = week.academicTermId
+          ? termNamesById.get(week.academicTermId)
+          : null;
+        return {
+          id: week.id,
+          sequence: week.sequence,
+          academicTermId: week.academicTermId,
+          termName:
+            termName ??
+            week.academicTerm?.translations.find(
+              (translation) => translation.locale === locale,
+            )?.name ??
+            week.academicTerm?.translations.find(
+              (translation) => translation.locale === defaultLocale,
+            )?.name ??
+            week.academicTerm?.name ??
+            null,
+          startDate: dateOnlyValue(week.startDate),
+          endDate: dateOnlyValue(week.endDate),
+          instructionalDayCount: week.instructionalDayCount,
+          days: week.calendarDays.map((day) => ({
+            id: day.id,
+            date: dateOnlyValue(day.date),
+            weekday: day.weekday,
+            dayType: day.dayType,
+            isInstructionalDay: day.isInstructionalDay,
+          })),
+        };
+      }),
+    };
+  });
 }
 
 export const getAcademicCalendarSummary = cache(async (schoolId: string) => {
@@ -141,6 +232,9 @@ export type AcademicDateContext = {
   timeZone: string;
   academicYearId: string;
   academicTermId: string | null;
+  academicWeekId: string | null;
+  academicCalendarDayId: string | null;
+  isInstructionalDay: boolean | null;
 };
 
 /**
@@ -184,11 +278,27 @@ export async function getAcademicDateContext(
     },
   });
   if (!year) return null;
+  const calendarDay = await prisma.academicCalendarDay.findFirst({
+    where: {
+      schoolId,
+      academicYearId: year.id,
+      date: calendarDate,
+    },
+    select: {
+      id: true,
+      academicWeekId: true,
+      academicTermId: true,
+      isInstructionalDay: true,
+    },
+  });
 
   return {
     calendarDate: dateOnlyValue(calendarDate),
     timeZone: school.timezone,
     academicYearId: year.id,
-    academicTermId: year.terms[0]?.id ?? null,
+    academicTermId: calendarDay?.academicTermId ?? year.terms[0]?.id ?? null,
+    academicWeekId: calendarDay?.academicWeekId ?? null,
+    academicCalendarDayId: calendarDay?.id ?? null,
+    isInstructionalDay: calendarDay?.isInstructionalDay ?? null,
   };
 }

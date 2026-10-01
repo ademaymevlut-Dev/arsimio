@@ -1,8 +1,10 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
 import { SUPPORTED_LOCALES, type Locale, type LocalizedNames } from "@/i18n/config";
 import { formatMessage } from "@/i18n/format";
 import { tr } from "@/i18n/dictionaries/tr";
+import { buildAcademicCalendarPlan } from "@/lib/academic-week-generation";
 import {
   dateOnlyValue,
   type AcademicCalendarState,
@@ -81,6 +83,106 @@ function termSnapshot(term: {
     status: term.status,
     archivedAt: term.archivedAt?.toISOString() ?? null,
     archivedById: term.archivedById ?? null,
+  };
+}
+
+export async function syncAcademicCalendarForYear(
+  tx: Prisma.TransactionClient,
+  actor: ActorContext,
+  academicYearId: string,
+  reason = "Academic calendar weeks and days generated from academic terms.",
+): Promise<AcademicCalendarState> {
+  const year = await tx.academicYear.findFirst({
+    where: { id: academicYearId, schoolId: actor.schoolId },
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      terms: {
+        where: { status: { not: "ARCHIVED" } },
+        orderBy: [{ sequence: "asc" }, { startDate: "asc" }],
+        select: {
+          id: true,
+          sequence: true,
+          startDate: true,
+          endDate: true,
+        },
+      },
+    },
+  });
+  if (!year) return unavailable(actor.messages);
+  if (year.status === "ARCHIVED" || year.status === "CLOSED")
+    return {
+      status: "error",
+      message: actor.messages.ruleViolation,
+    };
+  if (!year.terms.length)
+    return {
+      status: "error",
+      message: actor.messages.yearNeedsTerm,
+    };
+
+  const plan = buildAcademicCalendarPlan(year.terms);
+  if (!plan.days.length)
+    return {
+      status: "error",
+      message: actor.messages.calendarNeedsInstructionalDays,
+    };
+
+  await tx.academicCalendarDay.deleteMany({
+    where: { schoolId: actor.schoolId, academicYearId: year.id },
+  });
+  await tx.academicWeek.deleteMany({
+    where: { schoolId: actor.schoolId, academicYearId: year.id },
+  });
+
+  const weekIds = new Map(
+    plan.weeks.map((week) => [week.key, randomUUID()] as const),
+  );
+  await tx.academicWeek.createMany({
+    data: plan.weeks.map((week) => ({
+      id: weekIds.get(week.key) as string,
+      schoolId: actor.schoolId,
+      academicYearId: year.id,
+      academicTermId: week.academicTermId,
+      sequence: week.sequence,
+      startDate: week.startDate,
+      endDate: week.endDate,
+      instructionalDayCount: week.instructionalDayCount,
+    })),
+  });
+  await tx.academicCalendarDay.createMany({
+    data: plan.days.map((day) => ({
+      schoolId: actor.schoolId,
+      academicYearId: year.id,
+      academicWeekId: weekIds.get(day.weekKey) as string,
+      academicTermId: day.academicTermId,
+      date: day.date,
+      weekday: day.weekday,
+      dayType: "INSTRUCTIONAL",
+      isInstructionalDay: true,
+    })),
+  });
+
+  await audit(tx, actor, {
+    action: "academic.calendar.synced",
+    entityType: "AcademicYear",
+    entityId: year.id,
+    afterData: {
+      name: year.name,
+      weeks: plan.weeks.length,
+      days: plan.days.length,
+    },
+    changedFields: ["academicWeeks", "academicCalendarDays"],
+    reason,
+  });
+
+  return {
+    status: "success",
+    message: formatMessage(actor.messages.calendarSynced, {
+      weeks: plan.weeks.length,
+      days: plan.days.length,
+    }),
   };
 }
 
@@ -422,6 +524,11 @@ export async function transitionAcademicYear(
         status: "error",
         message: actor.messages.yearNeedsTerm,
       };
+    if (!buildAcademicCalendarPlan(current.terms).days.length)
+      return {
+        status: "error",
+        message: actor.messages.calendarNeedsInstructionalDays,
+      };
     previousActiveYear = await tx.academicYear.findFirst({
       where: {
         schoolId: actor.schoolId,
@@ -505,6 +612,13 @@ export async function transitionAcademicYear(
         `Activated automatically with academic year ${current.name}.`,
       );
     }
+    const calendarResult = await syncAcademicCalendarForYear(
+      tx,
+      actor,
+      current.id,
+      `Generated automatically while activating academic year ${current.name}.`,
+    );
+    if (calendarResult.status === "error") return calendarResult;
   } else if (input.transition === "close") {
     const termsToClose = current.terms.filter(
       (term) => term.status !== "CLOSED",

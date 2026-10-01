@@ -519,6 +519,7 @@ export const tr = {
     notActive: "Henüz etkin değil",
     nonArchivedYears: "Arşiv dışı yıl",
     selectedYearTerms: "Seçili yılın dönemleri",
+    selectedYearWeeks: "Seçili yılın okul haftaları",
     yearsTitle: "Öğretim yılları",
     yearsDescription:
       "Bir yılı seçerek dönemlerini yönetin. Okulda aynı anda yalnız bir öğretim yılı aktif olabilir.",
@@ -542,6 +543,23 @@ export const tr = {
       "Bu kayıt dönem içermiyor. Yaşam döngüsü durumunu kontrol edin.",
     createFirstTerm: "İlk dönemi oluştur",
     selectYear: "Dönemleri görmek için tablodan bir öğretim yılı seçin.",
+    syncCalendar: "Takvimi oluştur",
+    regenerateCalendar: "Takvimi yenile",
+    syncCalendarTitle: "{name} okul takvimi oluşturulsun mu?",
+    syncCalendarDescription:
+      "Sistem dönem tarihlerini kullanarak Pazartesi–Cuma okul günlerini ve okul haftalarını üretir. Var olan takvim kayıtları bu aşamada yeniden oluşturulur.",
+    calendarWeeksTitle: "{name} okul haftaları",
+    calendarWeeksDescription:
+      "Öğretmen dashboard haftası, yoklama, ödev, yorum ve sınav kayıtları bu gerçek okul günlerine bağlanacak.",
+    calendarWeeksFooter: "{count} okul haftası gösteriliyor",
+    calendarWeekColumn: "Okul haftası",
+    calendarWeekLabel: "Hafta {sequence}",
+    instructionalDaysColumn: "Okul günü",
+    instructionalDayCount: "{count} gün",
+    noCalendarWeeks: "Bu yıl için okul haftası yok",
+    noCalendarWeeksDescription:
+      "Dönemleri oluşturduktan sonra okul haftalarını otomatik üretin.",
+    createCalendarWeeks: "Okul haftalarını oluştur",
   },
   academicStructure: {
     eyebrow: "AKADEMİK YAPI",
@@ -728,6 +746,9 @@ export const tr = {
       "Dönemler ayrı ayrı etkinleştirilmez veya kapatılmaz; öğretim yılıyla birlikte yönetilir.",
     restoreTermRule: "Dönem yalnız öğretim yılı taslak durumundayken geri alınabilir.",
     yearActivated: "Öğretim yılı etkinleştirildi.",
+    calendarSynced: "{weeks} okul haftası ve {days} okul günü oluşturuldu.",
+    calendarNeedsInstructionalDays:
+      "Dönem tarihlerinden Pazartesi–Cuma okul günü üretilemedi.",
     yearClosed: "Öğretim yılı kapatıldı.",
     yearArchived: "Öğretim yılı arşivlendi.",
     yearRestored: "Öğretim yılı taslak olarak geri alındı.",

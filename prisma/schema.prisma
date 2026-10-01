@@ -248,6 +248,15 @@ enum TimetableSessionStatus {
   PASSIVE
 }
 
+enum AcademicCalendarDayType {
+  INSTRUCTIONAL
+  HOLIDAY
+  BREAK
+  ADMIN_CLOSED
+  EXAM
+  EVENT
+}
+
 model School {
   id              String       @id @default(uuid()) @db.Uuid
   slug            String       @unique @db.VarChar(80)
@@ -286,6 +295,8 @@ model School {
   scheduleProfileVersions      ScheduleProfileVersion[]
   schedulePeriods              SchedulePeriod[]
   schedulePeriodTranslations   SchedulePeriodTranslation[]
+  academicWeeks                AcademicWeek[]
+  academicCalendarDays         AcademicCalendarDay[]
   academicYearClassSections    AcademicYearClassSection[]
   academicYearSetupRuns        AcademicYearSetupRun[]
   subjects                     Subject[]
@@ -638,6 +649,8 @@ model AcademicYear {
   updatedBy                    User?                         @relation("AcademicYearUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
   archivedBy                   User?                         @relation("AcademicYearArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
   terms                        AcademicTerm[]
+  academicWeeks                AcademicWeek[]
+  academicCalendarDays         AcademicCalendarDay[]
   curricula                    AcademicYearCurriculum[]
   classSections                AcademicYearClassSection[]
   courseOfferings              CourseOffering[]
@@ -671,12 +684,14 @@ model AcademicTerm {
   createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school       School                    @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  academicYear AcademicYear              @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  createdBy    User?                     @relation("AcademicTermCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  updatedBy    User?                     @relation("AcademicTermUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  archivedBy   User?                     @relation("AcademicTermArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  translations AcademicTermTranslation[]
+  school        School                    @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear  AcademicYear              @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  createdBy     User?                     @relation("AcademicTermCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  updatedBy     User?                     @relation("AcademicTermUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  archivedBy    User?                     @relation("AcademicTermArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  translations  AcademicTermTranslation[]
+  academicWeeks AcademicWeek[]
+  calendarDays  AcademicCalendarDay[]
 
   @@unique([academicYearId, sequence])
   @@unique([academicYearId, name])
@@ -700,6 +715,56 @@ model AcademicTermTranslation {
   @@id([academicTermId, locale])
   @@index([schoolId, locale])
   @@map("academic_term_translations")
+}
+
+model AcademicWeek {
+  id                    String   @id @default(uuid()) @db.Uuid
+  schoolId              String   @map("school_id") @db.Uuid
+  academicYearId        String   @map("academic_year_id") @db.Uuid
+  academicTermId        String?  @map("academic_term_id") @db.Uuid
+  sequence              Int
+  startDate             DateTime @map("start_date") @db.Date
+  endDate               DateTime @map("end_date") @db.Date
+  instructionalDayCount Int      @default(0) @map("instructional_day_count")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school       School                @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear AcademicYear          @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  academicTerm AcademicTerm?         @relation(fields: [academicTermId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  calendarDays AcademicCalendarDay[]
+
+  @@unique([academicYearId, sequence])
+  @@unique([id, schoolId, academicYearId])
+  @@index([schoolId, academicYearId, startDate])
+  @@index([schoolId, academicTermId, sequence])
+  @@map("academic_weeks")
+}
+
+model AcademicCalendarDay {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  schoolId           String                  @map("school_id") @db.Uuid
+  academicYearId     String                  @map("academic_year_id") @db.Uuid
+  academicWeekId     String                  @map("academic_week_id") @db.Uuid
+  academicTermId     String?                 @map("academic_term_id") @db.Uuid
+  date               DateTime                @db.Date
+  weekday            TimetableWeekday
+  dayType            AcademicCalendarDayType @default(INSTRUCTIONAL) @map("day_type")
+  isInstructionalDay Boolean                 @default(true) @map("is_instructional_day")
+  note               String?                 @db.VarChar(500)
+  createdAt          DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school       School        @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear AcademicYear  @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  academicWeek AcademicWeek  @relation(fields: [academicWeekId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+  academicTerm AcademicTerm? @relation(fields: [academicTermId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([academicYearId, date])
+  @@unique([id, schoolId, academicYearId])
+  @@index([schoolId, academicYearId, date])
+  @@index([schoolId, academicWeekId, weekday])
+  @@map("academic_calendar_days")
 }
 
 model EducationStageDefinition {
