@@ -376,7 +376,7 @@ export async function persistTeacherProfile(
         where: { id: existing.id },
         data: {
           category: input.category,
-          title: input.title,
+          title: input.title.tr,
           status: input.teacherStatus,
           note: input.note,
         },
@@ -387,12 +387,30 @@ export async function persistTeacherProfile(
           schoolId: actor.schoolId,
           employmentId: employment.id,
           category: input.category,
-          title: input.title,
+          title: input.title.tr,
           status: input.teacherStatus,
           note: input.note,
         },
         select: { id: true },
       });
+
+  for (const [locale, title] of Object.entries(input.title)) {
+    await tx.teacherProfileTranslation.upsert({
+      where: {
+        teacherProfileId_locale: {
+          teacherProfileId: profile.id,
+          locale,
+        },
+      },
+      update: { title },
+      create: {
+        schoolId: actor.schoolId,
+        teacherProfileId: profile.id,
+        locale,
+        title,
+      },
+    });
+  }
 
   await tx.teacherSubjectCapability.deleteMany({
     where: {
@@ -436,7 +454,7 @@ export async function persistTeacherProfile(
       status: input.teacherStatus,
       subjectIds,
     },
-    changedFields: ["teacherProfile", "subjectCapabilities"],
+    changedFields: ["teacherProfile", "teacherProfileTranslations", "subjectCapabilities"],
   });
   return {
     status: "success",

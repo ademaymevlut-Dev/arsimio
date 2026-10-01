@@ -284,6 +284,7 @@ model School {
   employments                 Employment[]
   employmentLifecycleEvents   EmploymentLifecycleEvent[]
   teacherProfiles             TeacherProfile[]
+  teacherProfileTranslations  TeacherProfileTranslation[]
   teacherSubjectCapabilities  TeacherSubjectCapability[]
   numberSequences             SchoolNumberSequence[]
   studentProfiles             StudentProfile[]
@@ -1279,15 +1280,32 @@ model TeacherProfile {
   createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school       School                     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  employment   Employment                 @relation(fields: [employmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  school       School                      @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employment   Employment                  @relation(fields: [employmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
   capabilities TeacherSubjectCapability[]
+  translations TeacherProfileTranslation[]
 
   @@unique([schoolId, employmentId])
   @@unique([employmentId, schoolId])
   @@unique([id, schoolId])
   @@index([schoolId, status, category])
   @@map("teacher_profiles")
+}
+
+model TeacherProfileTranslation {
+  teacherProfileId String   @map("teacher_profile_id") @db.Uuid
+  schoolId         String   @map("school_id") @db.Uuid
+  locale           String   @db.VarChar(10)
+  title            String   @db.VarChar(120)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  teacherProfile TeacherProfile @relation(fields: [teacherProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([teacherProfileId, locale])
+  @@index([schoolId, locale])
+  @@map("teacher_profile_translations")
 }
 
 model TeacherSubjectCapability {

@@ -18,6 +18,30 @@ function translatedName(
   return item.translations?.[0]?.name ?? item.defaultName ?? item.name ?? "—";
 }
 
+function translatedTitle(item: {
+  title: string;
+  translations?: { title: string }[];
+}) {
+  return item.translations?.[0]?.title ?? item.title;
+}
+
+function titleTranslations(item: {
+  title: string;
+  translations?: { locale: string; title: string }[];
+}) {
+  const values = Object.fromEntries(
+    item.translations?.map((translation) => [
+      translation.locale,
+      translation.title,
+    ]) ?? [],
+  );
+  return {
+    tr: values.tr ?? item.title,
+    sq: values.sq ?? item.title,
+    en: values.en ?? item.title,
+  };
+}
+
 function contact(
   points: { kind: string; value: string; isPrimaryForPerson: boolean }[],
   kind: "PHONE" | "EMAIL",
@@ -90,12 +114,8 @@ export async function getStaffRegistrationContext(
     people: people.map((person) => ({
       id: person.id,
       fullName: fullName(person),
-      hint: [
-        person.studentProfile ? `Ogrenci no ${person.studentProfile.studentNumber}` : null,
-        person.guardianRelationships.length ? "Veli" : null,
-      ]
-        .filter(Boolean)
-        .join(" · "),
+      studentNumber: person.studentProfile?.studentNumber ?? null,
+      isGuardian: person.guardianRelationships.length > 0,
     })),
   };
 }
@@ -126,7 +146,9 @@ export async function getStaffDirectory(
       person: true,
       department: { include: { translations: { where: { locale }, take: 1 } } },
       position: { include: { translations: { where: { locale }, take: 1 } } },
-      teacherProfile: true,
+      teacherProfile: {
+        include: { translations: { where: { locale }, take: 1 } },
+      },
     },
   });
   return rows.map((row) => ({
@@ -141,7 +163,7 @@ export async function getStaffDirectory(
     isTeacher: Boolean(row.teacherProfile && !row.teacherProfile.archivedAt),
     teacherTitle:
       row.teacherProfile && !row.teacherProfile.archivedAt
-        ? row.teacherProfile.title
+        ? translatedTitle(row.teacherProfile)
         : null,
   }));
 }
@@ -169,6 +191,7 @@ export async function getStaffDetail(
       lifecycleEvents: { orderBy: [{ effectiveOn: "desc" }, { createdAt: "desc" }] },
       teacherProfile: {
         include: {
+          translations: true,
           capabilities: {
             include: {
               subject: {
@@ -213,7 +236,8 @@ export async function getStaffDetail(
       ? {
           id: teacherProfile.id,
           category: teacherProfile.category,
-          title: teacherProfile.title,
+          title: translatedTitle(teacherProfile),
+          titleTranslations: titleTranslations(teacherProfile),
           status: teacherProfile.status,
           note: teacherProfile.note,
           subjectIds: teacherProfile.capabilities.map(
@@ -262,6 +286,7 @@ export async function getTeacherDirectory(schoolId: string, locale: string) {
           position: { include: { translations: { where: { locale }, take: 1 } } },
         },
       },
+      translations: { where: { locale }, take: 1 },
       capabilities: {
         include: {
           subject: { include: { translations: { where: { locale }, take: 1 } } },
@@ -274,7 +299,7 @@ export async function getTeacherDirectory(schoolId: string, locale: string) {
     employmentId: profile.employmentId,
     staffNumber: profile.employment.staffNumber,
     fullName: fullName(profile.employment.person),
-    title: profile.title,
+    title: translatedTitle(profile),
     category: profile.category,
     status: profile.status,
     employmentStatus: profile.employment.status,
@@ -286,7 +311,11 @@ export async function getTeacherDirectory(schoolId: string, locale: string) {
   }));
 }
 
-export async function getTeacherPortalHome(schoolId: string, personId: string) {
+export async function getTeacherPortalHome(
+  schoolId: string,
+  personId: string,
+  locale: string,
+) {
   const profile = await getPrisma().teacherProfile.findFirst({
     where: {
       schoolId,
@@ -300,7 +329,12 @@ export async function getTeacherPortalHome(schoolId: string, personId: string) {
     },
     include: {
       employment: { include: { person: true } },
-      capabilities: { include: { subject: true } },
+      translations: { where: { locale }, take: 1 },
+      capabilities: {
+        include: {
+          subject: { include: { translations: { where: { locale }, take: 1 } } },
+        },
+      },
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -308,10 +342,12 @@ export async function getTeacherPortalHome(schoolId: string, personId: string) {
   return {
     fullName: fullName(profile.employment.person),
     staffNumber: profile.employment.staffNumber,
-    title: profile.title,
+    title: translatedTitle(profile),
     category: profile.category,
     status: profile.status,
     employmentStatus: profile.employment.status,
-    subjects: profile.capabilities.map((capability) => capability.subject.name),
+    subjects: profile.capabilities.map((capability) =>
+      translatedName(capability.subject),
+    ),
   };
 }

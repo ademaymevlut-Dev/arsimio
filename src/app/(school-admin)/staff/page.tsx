@@ -16,7 +16,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { EmploymentStatus } from "@/generated/prisma/client";
-import { getSchoolLocale } from "@/i18n/server";
+import { formatMessage } from "@/i18n/format";
+import { getDictionary, getSchoolLocale } from "@/i18n/server";
 import { requireSchoolPermission } from "@/server/authorization/guards";
 import { getStaffDirectory } from "@/server/staff/staff";
 
@@ -44,24 +45,33 @@ export default async function StaffPage({
     tenant.school.defaultLocale,
   );
   const selectedStatus = statusValue(query.status);
-  const staff = await getStaffDirectory(tenant.school.id, locale, {
-    query: query.q,
-    status: selectedStatus,
-  });
+  const [staff, dictionary] = await Promise.all([
+    getStaffDirectory(tenant.school.id, locale, {
+      query: query.q,
+      status: selectedStatus,
+    }),
+    getDictionary(locale),
+  ]);
+  const text = dictionary.staff;
   const canManage = permissions.includes("hr.staff.manage");
+  const statusLabels: Record<EmploymentStatus, string> = {
+    ACTIVE: text.active,
+    ON_LEAVE: text.onLeave,
+    ENDED: text.ended,
+  };
 
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="PERSONEL"
-        title="Personel"
-        description="Okuldaki calisanlarin temel personel kayitlarini yonetin."
+        eyebrow={text.eyebrow}
+        title={text.title}
+        description={text.description}
         actions={
           canManage ? (
             <Button asChild>
               <Link href="/staff/new">
                 <Plus aria-hidden />
-                Personel ekle
+                {text.newStaff}
               </Link>
             </Button>
           ) : undefined
@@ -70,7 +80,7 @@ export default async function StaffPage({
 
       <form className="grid gap-4 rounded-xl border bg-card p-5 sm:grid-cols-[minmax(0,1fr)_220px_auto] sm:items-end">
         <div>
-          <Label htmlFor="staff-search">Ara</Label>
+          <Label htmlFor="staff-search">{text.searchLabel}</Label>
           <Input
             id="staff-search"
             name="q"
@@ -80,37 +90,37 @@ export default async function StaffPage({
           />
         </div>
         <div>
-          <Label htmlFor="staff-status">Durum</Label>
+          <Label htmlFor="staff-status">{text.statusLabel}</Label>
           <NativeSelect
             id="staff-status"
             name="status"
             defaultValue={selectedStatus ?? ""}
             className="mt-2"
           >
-            <option value="">Tum durumlar</option>
-            <option value="ACTIVE">Aktif</option>
-            <option value="ON_LEAVE">Izin / pasif</option>
-            <option value="ENDED">Ayrildi</option>
+            <option value="">{text.allStatuses}</option>
+            <option value="ACTIVE">{text.active}</option>
+            <option value="ON_LEAVE">{text.onLeave}</option>
+            <option value="ENDED">{text.ended}</option>
           </NativeSelect>
         </div>
         <Button type="submit" variant="outline" className="h-10">
-          Filtrele
+          {text.filter}
         </Button>
       </form>
 
       <DataTableShell
-        title="Personel listesi"
-        description="Bu liste maas, banka veya sozlesme bilgisi gostermez."
-        footer={`${staff.length} kayit gosteriliyor`}
+        title={text.listTitle}
+        description={text.listDescription}
+        footer={formatMessage(text.recordsFooter, { count: staff.length })}
       >
         {staff.length === 0 ? (
           <TableEmptyState
-            title="Personel kaydi yok"
-            description="Ilk personel kaydini yeni kisiyle veya mevcut kisi uzerinden olusturun."
+            title={text.noStaff}
+            description={text.noStaffDescription}
             action={
               canManage ? (
                 <Button asChild>
-                  <Link href="/staff/new">Personel ekle</Link>
+                  <Link href="/staff/new">{text.addStaff}</Link>
                 </Button>
               ) : undefined
             }
@@ -119,14 +129,14 @@ export default async function StaffPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>No</TableHead>
-                <TableHead>Personel</TableHead>
-                <TableHead>Departman</TableHead>
-                <TableHead>Pozisyon</TableHead>
-                <TableHead>Ogretmen</TableHead>
-                <TableHead>Durum</TableHead>
+                <TableHead>{text.staffNumber}</TableHead>
+                <TableHead>{text.staffMember}</TableHead>
+                <TableHead>{text.department}</TableHead>
+                <TableHead>{text.position}</TableHead>
+                <TableHead>{text.teacher}</TableHead>
+                <TableHead>{text.statusLabel}</TableHead>
                 <TableHead className="w-12">
-                  <span className="sr-only">Islemler</span>
+                  <span className="sr-only">{dictionary.common.actions}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -155,7 +165,7 @@ export default async function StaffPage({
                             : "outline"
                       }
                     >
-                      {person.status}
+                      {statusLabels[person.status]}
                     </Badge>
                   </TableCell>
                   <TableCell>

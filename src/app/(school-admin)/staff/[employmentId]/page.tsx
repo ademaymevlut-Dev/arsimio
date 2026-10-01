@@ -6,7 +6,7 @@ import {
   dateOnlyValue,
 } from "@/lib/academic-calendar-validation";
 import { validSchoolId } from "@/lib/platform-school-validation";
-import { getSchoolLocale } from "@/i18n/server";
+import { getDictionary, getSchoolLocale } from "@/i18n/server";
 import { requireSchoolPermission } from "@/server/authorization/guards";
 import { getStaffDetail } from "@/server/staff/staff";
 
@@ -26,19 +26,18 @@ export default async function StaffDetailPage({
     membership.preferredLocale,
     tenant.school.defaultLocale,
   );
-  const staff = await getStaffDetail(
-    tenant.school.id,
-    route.employmentId,
-    locale,
-  );
+  const [staff, dictionary] = await Promise.all([
+    getStaffDetail(tenant.school.id, route.employmentId, locale),
+    getDictionary(locale),
+  ]);
   if (!staff) notFound();
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="PERSONEL DETAY"
+        eyebrow={dictionary.staff.detailEyebrow}
         title={staff.fullName}
-        description="Personel durumu, ogretmen profili ve ogretmen hesabi."
+        description={dictionary.staff.detailDescription}
       />
       <StaffDetailManager
         staff={staff}
@@ -48,6 +47,7 @@ export default async function StaffDetailPage({
         defaultEffectiveOn={dateOnlyValue(
           dateOnlyInTimeZone(new Date(), tenant.school.timezone),
         )}
+        messages={dictionary.staff}
       />
     </div>
   );

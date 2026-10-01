@@ -4,7 +4,7 @@ import {
   dateOnlyInTimeZone,
   dateOnlyValue,
 } from "@/lib/academic-calendar-validation";
-import { getSchoolLocale } from "@/i18n/server";
+import { getDictionary, getSchoolLocale } from "@/i18n/server";
 import { requireSchoolPermission } from "@/server/authorization/guards";
 import { getStaffRegistrationContext } from "@/server/staff/staff";
 
@@ -16,14 +16,17 @@ export default async function NewStaffPage() {
     membership.preferredLocale,
     tenant.school.defaultLocale,
   );
-  const context = await getStaffRegistrationContext(tenant.school.id, locale);
+  const [context, dictionary] = await Promise.all([
+    getStaffRegistrationContext(tenant.school.id, locale),
+    getDictionary(locale),
+  ]);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="PERSONEL"
-        title="Personel ekle"
-        description="Yeni kisi olusturarak veya mevcut kisi kaydini secerek personel kaydi acin."
+        eyebrow={dictionary.staff.eyebrow}
+        title={dictionary.staff.newPageTitle}
+        description={dictionary.staff.newPageDescription}
       />
       <StaffRegistrationForm
         departments={context.departments}
@@ -32,6 +35,7 @@ export default async function NewStaffPage() {
         defaultHiredOn={dateOnlyValue(
           dateOnlyInTimeZone(new Date(), tenant.school.timezone),
         )}
+        messages={dictionary.staff}
       />
     </div>
   );

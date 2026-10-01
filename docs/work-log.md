@@ -2,6 +2,14 @@
 
 Bu günlük yapılan teknik ve ürün çalışmalarını tarih sırasıyla kaydeder. Gizli anahtarlar, parolalar ve bağlantı dizeleri bu belgeye yazılmaz.
 
+## 2026-10-01 — Staff/öğretmen i18n ve üç dilli öğretmen unvanı düzeltmesi
+
+- Canlı HorizonEdu örnek kaydı salt-okunur incelendi: `Djellza Gashi` için öğretmen unvanı tek `TeacherProfile.title = "Sınıf Öğretmeni"` alanında duruyordu.
+- `TeacherProfileTranslation` tablosu eklendi. Mevcut öğretmen profilleri migration sırasında `tr/sq/en` locale satırlarına mevcut title değeriyle backfill edilir; okul daha sonra üç dili formdan düzeltebilir.
+- Personel, personel kayıt, personel detay, öğretmen listesi ve öğretmen portalı metinleri `dictionary.staff` altına taşındı. Türkçe, Arnavutça ve İngilizce sözlükler eklendi.
+- Öğretmen profili formundaki `Ana unvan` tek alan olmaktan çıkarıldı; artık `titleTr`, `titleSq`, `titleEn` zorunlu alanlarıyla kaydedilir. Servis legacy `teacher_profiles.title` alanını Türkçe değerle uyumlu tutar ve translation satırlarını upsert eder.
+- `pnpm exec prisma validate`, `pnpm exec tsc --noEmit`, `pnpm test` (74/74), `pnpm lint` ve `pnpm build` başarılıdır. Canlı migration bu turda çalıştırılmadı; push/deploy sonrası `pnpm db:deploy` gerekir.
+
 ## 2026-10-01 — Paket 3A personel ve öğretmen çekirdeği yerel teslim
 
 - Kullanıcının 06 numaralı karar belgesindeki ek yanıtları okundu. Paket 3A'nın maaş, banka, izin, bordro, sözleşme revizyonu ve belge/fotoğraf yükleme olmadan yalnız temel personel/öğretmen çekirdeği olması kesinleşti.

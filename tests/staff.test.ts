@@ -97,13 +97,17 @@ test("teacher profile keeps capability subjects separate from annual assignments
       employmentId,
       category: "BRANCH",
       teacherStatus: "ACTIVE",
-      title: "Tarih Ogretmeni",
+      titleTr: "Tarih Ogretmeni",
+      titleSq: "Mësues historie",
+      titleEn: "History Teacher",
       subjectIds: [subjectOne, subjectTwo, subjectOne],
     }),
   );
   assert.equal(parsed.success, true);
   if (parsed.success) {
     assert.deepEqual(parsed.data.subjectIds, [subjectOne, subjectTwo]);
-    assert.equal(parsed.data.title, "Tarih Ogretmeni");
+    assert.equal(parsed.data.title.tr, "Tarih Ogretmeni");
+    assert.equal(parsed.data.title.sq, "Mësues historie");
+    assert.equal(parsed.data.title.en, "History Teacher");
   }
 });

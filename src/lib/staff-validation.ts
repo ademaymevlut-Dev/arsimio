@@ -48,7 +48,9 @@ export type StaffField =
   | "exitReason"
   | "note"
   | "category"
-  | "title"
+  | "titleTr"
+  | "titleSq"
+  | "titleEn"
   | "teacherStatus"
   | "subjectIds";
 
@@ -86,7 +88,7 @@ export type EmploymentTransitionInput = {
 export type TeacherProfileInput = {
   employmentId: string;
   category: TeacherCategory;
-  title: string;
+  title: { tr: string; sq: string; en: string };
   teacherStatus: TeacherStatus;
   note: string | null;
   subjectIds: string[];
@@ -258,7 +260,9 @@ export function parseTeacherProfile(form: FormData): Parsed<TeacherProfileInput>
     typeof categoryRaw === "string" && TEACHER_CATEGORIES.has(categoryRaw as TeacherCategory)
       ? (categoryRaw as TeacherCategory)
       : null;
-  const title = text(form.get("title"), 120);
+  const titleTr = text(form.get("titleTr"), 120);
+  const titleSq = text(form.get("titleSq"), 120);
+  const titleEn = text(form.get("titleEn"), 120);
   const statusRaw = form.get("teacherStatus");
   const teacherStatus =
     typeof statusRaw === "string" && TEACHER_STATUSES.has(statusRaw as TeacherStatus)
@@ -273,7 +277,9 @@ export function parseTeacherProfile(form: FormData): Parsed<TeacherProfileInput>
 
   if (!validSchoolId(employmentId)) fieldErrors.record = "Personel kaydi gecersiz.";
   if (!category) fieldErrors.category = "Ogretmen turu secin.";
-  if (!title) fieldErrors.title = "Unvan zorunlu.";
+  if (!titleTr) fieldErrors.titleTr = "Turkce unvan zorunlu.";
+  if (!titleSq) fieldErrors.titleSq = "Arnavutca unvan zorunlu.";
+  if (!titleEn) fieldErrors.titleEn = "Ingilizce unvan zorunlu.";
   if (!teacherStatus) fieldErrors.teacherStatus = "Durum gecersiz.";
   if (provided(noteRaw) && !note) fieldErrors.note = "Not gecersiz.";
 
@@ -281,7 +287,9 @@ export function parseTeacherProfile(form: FormData): Parsed<TeacherProfileInput>
     Object.keys(fieldErrors).length ||
     !validSchoolId(employmentId) ||
     !category ||
-    !title ||
+    !titleTr ||
+    !titleSq ||
+    !titleEn ||
     !teacherStatus
   ) return invalid(fieldErrors);
 
@@ -290,7 +298,7 @@ export function parseTeacherProfile(form: FormData): Parsed<TeacherProfileInput>
     data: {
       employmentId,
       category,
-      title,
+      title: { tr: titleTr, sq: titleSq, en: titleEn },
       teacherStatus,
       note,
       subjectIds: [...new Set(subjectIds)],

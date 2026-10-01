@@ -12,7 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getSchoolLocale } from "@/i18n/server";
+import { formatMessage } from "@/i18n/format";
+import { getDictionary, getSchoolLocale } from "@/i18n/server";
 import { requireSchoolPermission } from "@/server/authorization/guards";
 import { getTeacherDirectory } from "@/server/staff/staff";
 
@@ -24,28 +25,32 @@ export default async function TeachersPage() {
     membership.preferredLocale,
     tenant.school.defaultLocale,
   );
-  const teachers = await getTeacherDirectory(tenant.school.id, locale);
+  const [teachers, dictionary] = await Promise.all([
+    getTeacherDirectory(tenant.school.id, locale),
+    getDictionary(locale),
+  ]);
+  const text = dictionary.staff;
 
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="OGRETMENLER"
-        title="Ogretmenler"
-        description="Ogretmen profillerini ve okutabilecegi dersleri izleyin. Gercek yil/sinif/ders atamasi sonraki modulde yapilacak."
+        eyebrow={text.teachersEyebrow}
+        title={text.teachersTitle}
+        description={text.teachersDescription}
       />
 
       <DataTableShell
-        title="Ogretmen listesi"
-        description="Bu ekran profil bilgisidir; haftalik ders programi ve sinif sorumlulugu sonraki adimda eklenecek."
-        footer={`${teachers.length} ogretmen gosteriliyor`}
+        title={text.teachersListTitle}
+        description={text.teachersListDescription}
+        footer={formatMessage(text.teachersFooter, { count: teachers.length })}
       >
         {teachers.length === 0 ? (
           <TableEmptyState
-            title="Ogretmen profili yok"
-            description="Personel detayindan bir calisani ogretmen profiline cevirin."
+            title={text.noTeachers}
+            description={text.noTeachersDescription}
             action={
               <Button asChild>
-                <Link href="/staff">Personel listesine git</Link>
+                <Link href="/staff">{text.goToStaff}</Link>
               </Button>
             }
           />
@@ -53,14 +58,14 @@ export default async function TeachersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Personel no</TableHead>
-                <TableHead>Ogretmen</TableHead>
-                <TableHead>Unvan</TableHead>
-                <TableHead>Tur</TableHead>
-                <TableHead>Dersler</TableHead>
-                <TableHead>Durum</TableHead>
+                <TableHead>{text.staffNumber}</TableHead>
+                <TableHead>{text.teacher}</TableHead>
+                <TableHead>{text.titleColumn}</TableHead>
+                <TableHead>{text.typeColumn}</TableHead>
+                <TableHead>{text.subjects}</TableHead>
+                <TableHead>{text.statusLabel}</TableHead>
                 <TableHead className="w-12">
-                  <span className="sr-only">Islemler</span>
+                  <span className="sr-only">{dictionary.common.actions}</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -79,7 +84,11 @@ export default async function TeachersPage() {
                     </Link>
                   </TableCell>
                   <TableCell>{teacher.title}</TableCell>
-                  <TableCell>{teacher.category}</TableCell>
+                  <TableCell>
+                    {teacher.category === "CLASSROOM"
+                      ? text.classroomTeacher
+                      : text.branchTeacher}
+                  </TableCell>
                   <TableCell>
                     {teacher.subjects.length
                       ? teacher.subjects.join(", ")
@@ -94,7 +103,12 @@ export default async function TeachersPage() {
                           : "warning"
                       }
                     >
-                      {teacher.status} / {teacher.employmentStatus}
+                      {teacher.status === "ACTIVE" ? text.active : text.onLeave} /{" "}
+                      {teacher.employmentStatus === "ACTIVE"
+                        ? text.active
+                        : teacher.employmentStatus === "ON_LEAVE"
+                          ? text.onLeave
+                          : text.ended}
                     </Badge>
                   </TableCell>
                   <TableCell>
