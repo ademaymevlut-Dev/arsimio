@@ -25,6 +25,14 @@ function translatedTitle(item: {
   return item.translations?.[0]?.title ?? item.title;
 }
 
+function dateValue(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function timeValue(date: Date) {
+  return date.toISOString().slice(11, 16);
+}
+
 function titleTranslations(item: {
   title: string;
   translations?: { locale: string; title: string }[];
@@ -70,6 +78,45 @@ function contact(
     null
   );
 }
+
+function classSectionLabel(section: {
+  classSectionDefinition: {
+    code: string;
+    displayLabel: string | null;
+    gradeLevel: { displayLabel: string; sequence: number };
+  };
+}) {
+  return (
+    section.classSectionDefinition.displayLabel ??
+    `${section.classSectionDefinition.gradeLevel.displayLabel}/${section.classSectionDefinition.code}`
+  );
+}
+
+function schedulePeriodLabel(period: {
+  defaultName: string;
+  translations?: { name: string }[];
+  startTime: Date;
+  endTime: Date;
+}) {
+  const name = period.translations?.[0]?.name ?? period.defaultName;
+  return `${name} (${timeValue(period.startTime)}–${timeValue(period.endTime)})`;
+}
+
+const WEEKDAY_VALUES = [
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+] as const;
+
+const WEEKDAY_ORDER = new Map([
+  ["MONDAY", 1],
+  ["TUESDAY", 2],
+  ["WEDNESDAY", 3],
+  ["THURSDAY", 4],
+  ["FRIDAY", 5],
+]);
 
 export type StaffDirectoryFilter = {
   query?: string;
@@ -394,30 +441,115 @@ export async function getTeacherPortalHome(
   personId: string,
   locale: string,
 ) {
-  const profile = await getPrisma().teacherProfile.findFirst({
-    where: {
-      schoolId,
-      archivedAt: null,
-      employment: {
+  const db = getPrisma();
+  const [profile, activeYear] = await Promise.all([
+    db.teacherProfile.findFirst({
+      where: {
         schoolId,
-        personId,
         archivedAt: null,
-        status: { in: ["ACTIVE", "ON_LEAVE"] },
-      },
-    },
-    include: {
-      employment: { include: { person: true } },
-      translations: { where: { locale }, take: 1 },
-      capabilities: {
-        include: {
-          subject: { include: { translations: { where: { locale }, take: 1 } } },
+        employment: {
+          schoolId,
+          personId,
+          archivedAt: null,
+          status: { in: ["ACTIVE", "ON_LEAVE"] },
         },
       },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+      include: {
+        employment: { include: { person: true } },
+        translations: { where: { locale }, take: 1 },
+        capabilities: {
+          include: {
+            subject: {
+              include: { translations: { where: { locale }, take: 1 } },
+            },
+          },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+    }),
+    db.academicYear.findFirst({
+      where: { schoolId, status: "ACTIVE", archivedAt: null },
+      orderBy: [{ startDate: "desc" }],
+      select: { id: true, name: true, startDate: true, endDate: true },
+    }),
+  ]);
   if (!profile) return null;
+  const timetableSessions = activeYear
+    ? await db.timetableSession.findMany({
+        where: {
+          schoolId,
+          academicYearId: activeYear.id,
+          teacherProfileId: profile.id,
+          status: "ACTIVE",
+          archivedAt: null,
+        },
+        include: {
+          schedulePeriod: {
+            include: { translations: { where: { locale }, take: 1 } },
+          },
+          participants: {
+            where: { status: "ACTIVE", archivedAt: null },
+            include: {
+              courseOffering: {
+                include: {
+                  subject: {
+                    include: {
+                      translations: { where: { locale }, take: 1 },
+                    },
+                  },
+                  academicYearClassSection: {
+                    include: {
+                      classSectionDefinition: {
+                        include: { gradeLevel: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      })
+    : [];
+  const schedulePeriodsById = new Map<
+    string,
+    {
+      id: string;
+      label: string;
+      sequence: number;
+      startTime: string;
+      endTime: string;
+    }
+  >();
+  for (const session of timetableSessions) {
+    schedulePeriodsById.set(session.schedulePeriod.id, {
+      id: session.schedulePeriod.id,
+      label: schedulePeriodLabel(session.schedulePeriod),
+      sequence: session.schedulePeriod.sequence,
+      startTime: timeValue(session.schedulePeriod.startTime),
+      endTime: timeValue(session.schedulePeriod.endTime),
+    });
+  }
+  const schedulePeriods = [...schedulePeriodsById.values()].sort(
+    (first, second) =>
+      first.sequence - second.sequence ||
+      first.startTime.localeCompare(second.startTime) ||
+      first.label.localeCompare(second.label, locale),
+  );
+  const sortedSessions = [...timetableSessions].sort((first, second) => {
+    const weekday =
+      (WEEKDAY_ORDER.get(first.weekday) ?? 99) -
+      (WEEKDAY_ORDER.get(second.weekday) ?? 99);
+    if (weekday !== 0) return weekday;
+    return (
+      first.schedulePeriod.sequence - second.schedulePeriod.sequence ||
+      timeValue(first.schedulePeriod.startTime).localeCompare(
+        timeValue(second.schedulePeriod.startTime),
+      )
+    );
+  });
   return {
+    id: profile.id,
     fullName: fullName(profile.employment.person),
     staffNumber: profile.employment.staffNumber,
     title: translatedTitle(profile),
@@ -427,5 +559,39 @@ export async function getTeacherPortalHome(
     subjects: profile.capabilities.map((capability) =>
       translatedName(capability.subject),
     ),
+    activeYear: activeYear
+      ? {
+          id: activeYear.id,
+          name: activeYear.name,
+          startDate: dateValue(activeYear.startDate),
+          endDate: dateValue(activeYear.endDate),
+        }
+      : null,
+    weeklySchedule: {
+      weekdays: [...WEEKDAY_VALUES],
+      periods: schedulePeriods,
+      sessions: sortedSessions.map((session) => ({
+        id: session.id,
+        weekday: session.weekday,
+        schedulePeriodId: session.schedulePeriodId,
+        periodLabel: schedulePeriodLabel(session.schedulePeriod),
+        participants: session.participants
+          .map((participant) => ({
+            id: participant.id,
+            courseTeacherAssignmentId: participant.courseTeacherAssignmentId,
+            courseOfferingId: participant.courseOfferingId,
+            classLabel: classSectionLabel(
+              participant.courseOffering.academicYearClassSection,
+            ),
+            subjectName: translatedName(participant.courseOffering.subject),
+            track: participant.courseOffering.subject.track,
+          }))
+          .sort(
+            (first, second) =>
+              first.classLabel.localeCompare(second.classLabel, locale) ||
+              first.subjectName.localeCompare(second.subjectName, locale),
+          ),
+      })),
+    },
   };
 }
