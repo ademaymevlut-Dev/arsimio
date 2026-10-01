@@ -71,7 +71,7 @@ export async function getAccountDirectory(
 export async function getPersonAccountForPerson(
   schoolId: string,
   personId: string,
-  portal: "STUDENT" | "GUARDIAN",
+  portal: "STUDENT" | "GUARDIAN" | "TEACHER",
 ) {
   const account = await getPrisma().personAccount.findFirst({
     where: { schoolId, personId, portal, archivedAt: null },

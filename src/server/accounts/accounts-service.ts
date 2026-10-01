@@ -11,7 +11,7 @@ export type CreatePersonAccountInput = {
   actorMembershipId: string;
   personId: string;
   studentProfileId?: string | null;
-  portal: Extract<AccountPortal, "STUDENT" | "GUARDIAN">;
+  portal: Extract<AccountPortal, "STUDENT" | "GUARDIAN" | "TEACHER">;
   username: string;
   defaultLocale: string;
 };
@@ -41,6 +41,7 @@ function fullName(person: {
 export function portalStartPath(portal: AccountPortal | null | undefined) {
   if (portal === "GUARDIAN") return "/guardian";
   if (portal === "STUDENT") return "/student";
+  if (portal === "TEACHER") return "/teacher";
   return "/dashboard";
 }
 
@@ -74,6 +75,15 @@ async function resolvePortalEligibility(
         },
         select: { id: true },
       },
+      employments: {
+        where: {
+          schoolId: input.schoolId,
+          archivedAt: null,
+          status: { in: ["ACTIVE", "ON_LEAVE"] },
+          teacherProfile: { is: { archivedAt: null } },
+        },
+        select: { id: true },
+      },
     },
   });
   if (!person)
@@ -96,6 +106,11 @@ async function resolvePortalEligibility(
     return {
       ok: false as const,
       message: "Veli hesabi icin kisinin en az bir aktif cocuk iliskisi olmali.",
+    };
+  if (input.portal === "TEACHER" && person.employments.length === 0)
+    return {
+      ok: false as const,
+      message: "Ogretmen hesabi icin kisinin aktif ogretmen profili olmali.",
     };
   return { ok: true as const, person };
 }

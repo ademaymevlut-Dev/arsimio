@@ -66,6 +66,8 @@ const en = {
     academicStructure: "Classes and subjects",
     students: "Students",
     guardians: "Guardians",
+    staff: "Staff",
+    teachers: "Teachers",
     accounts: "User accounts",
     navigationLabel: "School administration menu",
     schoolManagement: "School administration",

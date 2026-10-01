@@ -84,6 +84,12 @@ const schoolPermissions = [
   "guardians.manage",
   "accounts.read",
   "accounts.manage",
+  "hr.staff.read",
+  "hr.staff.manage",
+  "hr.catalog.read",
+  "hr.catalog.manage",
+  "teachers.read",
+  "teachers.manage",
 ];
 const platformPermissions = [
   "platform.schools.read",

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpenCheck,
+  BriefcaseBusiness,
   CalendarRange,
   Check,
   Circle,
@@ -14,6 +15,7 @@ import {
   Menu,
   GraduationCap,
   ShieldCheck,
+  UserRoundCheck,
   UserRoundCog,
   UsersRound,
 } from "lucide-react";
@@ -71,6 +73,20 @@ function createNavigation(messages: AppDictionary["shell"]) {
     label: messages.guardians,
     icon: UsersRound,
     permission: "guardians.read",
+  },
+  {
+    group: messages.people,
+    href: "/staff",
+    label: messages.staff,
+    icon: BriefcaseBusiness,
+    permission: "hr.staff.read",
+  },
+  {
+    group: messages.people,
+    href: "/teachers",
+    label: messages.teachers,
+    icon: UserRoundCheck,
+    permission: "teachers.read",
   },
   {
     group: messages.people,

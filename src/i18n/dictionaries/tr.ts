@@ -65,6 +65,8 @@ export const tr = {
     academicStructure: "Sınıflar ve dersler",
     students: "Öğrenciler",
     guardians: "Veliler",
+    staff: "Personel",
+    teachers: "Öğretmenler",
     accounts: "Kullanıcı hesapları",
     navigationLabel: "Okul yönetimi menüsü",
     schoolManagement: "Okul yönetimi",

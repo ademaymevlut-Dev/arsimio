@@ -18,6 +18,8 @@ export async function createPersonAccountAction(
     const studentId = form.get("studentProfileId");
     revalidatePath("/accounts");
     revalidatePath("/guardians");
+    revalidatePath("/staff");
+    revalidatePath("/teachers");
     if (typeof studentId === "string" && studentId)
       revalidatePath(`/students/${studentId}`);
   }
@@ -32,6 +34,8 @@ export async function resetPersonAccountPasswordAction(
   if (result.status === "success") {
     revalidatePath("/accounts");
     revalidatePath("/guardians");
+    revalidatePath("/staff");
+    revalidatePath("/teachers");
   }
   return result;
 }
@@ -44,6 +48,8 @@ export async function suspendPersonAccountAction(
   if (result.status === "success") {
     revalidatePath("/accounts");
     revalidatePath("/guardians");
+    revalidatePath("/staff");
+    revalidatePath("/teachers");
   }
   return result;
 }

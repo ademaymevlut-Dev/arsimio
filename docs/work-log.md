@@ -2,6 +2,23 @@
 
 Bu günlük yapılan teknik ve ürün çalışmalarını tarih sırasıyla kaydeder. Gizli anahtarlar, parolalar ve bağlantı dizeleri bu belgeye yazılmaz.
 
+## 2026-10-01 — Paket 3A personel ve öğretmen çekirdeği yerel teslim
+
+- Kullanıcının 06 numaralı karar belgesindeki ek yanıtları okundu. Paket 3A'nın maaş, banka, izin, bordro, sözleşme revizyonu ve belge/fotoğraf yükleme olmadan yalnız temel personel/öğretmen çekirdeği olması kesinleşti.
+- Prisma şemasına üç dilli departman/pozisyon katalogları, okul kapsamında otomatik `STAFF_NUMBER`, `Employment`, `EmploymentLifecycleEvent`, `TeacherProfile` ve `TeacherSubjectCapability` modelleri eklendi. Açık personel kaydı aynı kişi için tek tutulur; ayrılan personel `ENDED`, doğum/uzun izin gibi geçici durumlar `ON_LEAVE` + not/sebep ile saklanır.
+- Migration mevcut okullara başlangıç departman/pozisyon kataloglarını üç dilde ekler ve `hr.staff.*`, `hr.catalog.*`, `teachers.*` permission'larını `SCHOOL_ADMIN` rollerine bağlar. Canlı veritabanına deploy bu turda yapılmadı; migration dosyası push/deploy sonrası uygulanacaktır.
+- Okul Admin'e `/staff`, `/staff/new`, `/staff/[employmentId]` ve `/teachers` ekranları eklendi. Personel yeni kişiyle veya mevcut `Person` seçilerek açılır; öğretmen profili personel detayından oluşturulur; ders capability bilgisi yalnız profil/aday havuzu bilgisidir, yıllık sınıf/ders/saat ataması değildir.
+- `TEACHER` portal hesabı manuel açılabilir hale getirildi; uygunluk için kişinin aktif öğretmen profili olması gerekir. `STAFF` portalı açılmadı. `/teacher` ilk sürümde yalnız öğretmenin adı, personel no, unvan, tür, durum ve okutabileceği dersleri gösterir.
+- 74/74 birim testi, ESLint, Prisma validate/generate, TypeScript ve production Webpack build geçti. Yeni doğrulama testleri mevcut kişiyle personel, yeni kişi validasyonu, ayrılış sebebi ve öğretmen capability ayrımını kapsar.
+
+## 2026-10-01 — Paket 2A canlı kabul ve Paket 3A karar turu
+
+- Kullanıcı canlı ortamda veli hesabı oluşturdu, geçici parolayı aldı, veli olarak giriş yaptı, zorunlu parola değiştirme ekranına yönlendirildi, yeni parolayla tekrar giriş yaptı ve doğru öğrenci kayıtlarının geldiğini doğruladı.
+- Admin kullanıcısının `Kullanıcı hesapları` ekranından aktiflendiği doğrulandı. Bu geri bildirim Paket 2A profil hesapları için canlı kabul olarak kaydedildi.
+- Bir sonraki kontrollü adım personel ve öğretmen çekirdeği olarak belirlendi. HR'nin tamamı tek teslimde yapılmayacak; önce personel/öğretmen temel kaydı ve sonraki program/öğretmen portalı modüllerinin dayanacağı çekirdek kurulacak.
+- [06 numaralı karar belgesi](./06-personel-ogretmen-karar-sorulari.md) açıldı. Sorular; Paket 3A sınırı, personel numarası, mevcut kişi seçimi, departman/pozisyon katalogları, çalışma türleri, zorunlu alanlar, ayrılma/yeniden işe giriş, öğretmen profili, ders capability, öğretmen hesabı, hassas HR permission'ları ve belge/fotoğraf kapsamını içerir.
+- Bu turda Prisma şeması, migration, uygulama kodu veya canlı veritabanı değiştirilmedi. Kullanıcı yanıtlarından sonra Paket 3A teknik teslimi hazırlanacaktır.
+
 ## 2026-10-01 — Paket 2A profil hesapları uygulaması
 
 - Kullanıcının 05 numaralı karar belgesindeki yanıtları okundu. H05 boş bırakılmış olsa da H07 cevabına dayanarak sistem üretimli geçici parola seçildi; H11 için ilk sürümde Okul Admin'in serbest rol seçmemesi, portal türünün güvenli sistem rolünü otomatik bağlaması kararı uygulandı.

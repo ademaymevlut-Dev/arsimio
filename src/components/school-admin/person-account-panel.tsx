@@ -30,7 +30,7 @@ export function PersonAccountPanel({
   canManage,
 }: {
   title: string;
-  portal: "SCHOOL_ADMIN" | "STUDENT" | "GUARDIAN";
+  portal: "SCHOOL_ADMIN" | "STUDENT" | "GUARDIAN" | "TEACHER";
   personId: string;
   studentProfileId?: string;
   existingAccount: ExistingAccount;

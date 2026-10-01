@@ -18,6 +18,7 @@ Arsimio sıfırdan geliştirilen yeni bir üründür. Eski HorizonEdu/Flask proj
 - [Kişi, öğrenci, veli ve personel mimarisi](./03-kisi-ogrenci-personel-veli-veri-mimarisi.md): Gerçek kişi, hesap, üyelik, öğrenci, veli ve çalışma ilişkisinin ayrıştırılması için öneri ve karar soruları.
 - [Kişi, öğrenci, veli ve personel teknik tasarımı](./04-kisi-ogrenci-veli-personel-teknik-tasarim.md): Onaylanan kararların nihai ER modeli, tablo/kısıtları, ayrı portal hesapları ve adım adım uygulama paketleri.
 - [Profil hesapları karar soruları](./05-profil-hesaplari-karar-sorulari.md): Paket 2 için öğrenci/veli hesap açma, geçici parola, portal yönlendirmesi, askıya alma ve mevcut Okul Admin hesaplarını kişiye bağlama kararları.
+- [Personel ve öğretmen çekirdeği kararları](./06-personel-ogretmen-karar-sorulari.md): Paket 3 için departman, pozisyon, employment, teacher profile, ders capability ve öğretmen hesabı sınırlarını netleştiren karar turu.
 - [Migration çalışma düzeni](./database-migrations.md): Artımlı şema geliştirme, uygulanan migration, SQL kısıtları ve doğrulama.
 - [İki okul pilotu](./two-school-pilot.md): Sıradaki teslim; iki domain, markalı giriş, üyelik/yetki ve veri izolasyonu kabul planı.
 - [Pilot kurulum ve doğrulama](./pilot-setup.md): Canlı adresler, ilk hesap aktivasyonu, komutlar ve açık kabul işleri.

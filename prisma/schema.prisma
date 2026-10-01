@@ -134,6 +134,7 @@ enum ContactKind {
 
 enum SchoolSequenceKind {
   STUDENT_NUMBER
+  STAFF_NUMBER
 }
 
 enum StudentStatus {
@@ -187,6 +188,48 @@ enum AccountPortal {
   STAFF
 }
 
+enum EmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  ENDED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  FIXED_TERM
+  CONTRACTOR
+  INTERN
+}
+
+enum EmploymentExitReason {
+  RESIGNED
+  TERMINATED
+  CONTRACT_ENDED
+  MATERNITY_LEAVE
+  HEALTH
+  RELOCATION
+  OTHER
+  UNKNOWN
+}
+
+enum EmploymentLifecycleEventType {
+  HIRED
+  ON_LEAVE
+  REACTIVATED
+  ENDED
+}
+
+enum TeacherCategory {
+  CLASSROOM
+  BRANCH
+}
+
+enum TeacherStatus {
+  ACTIVE
+  INACTIVE
+}
+
 model School {
   id              String       @id @default(uuid()) @db.Uuid
   slug            String       @unique @db.VarChar(80)
@@ -234,6 +277,14 @@ model School {
   personIdentities            PersonIdentity[]
   personContactPoints         PersonContactPoint[]
   personAccounts              PersonAccount[]
+  staffDepartments            StaffDepartment[]
+  staffDepartmentTranslations StaffDepartmentTranslation[]
+  staffPositions              StaffPosition[]
+  staffPositionTranslations   StaffPositionTranslation[]
+  employments                 Employment[]
+  employmentLifecycleEvents   EmploymentLifecycleEvent[]
+  teacherProfiles             TeacherProfile[]
+  teacherSubjectCapabilities  TeacherSubjectCapability[]
   numberSequences             SchoolNumberSequence[]
   studentProfiles             StudentProfile[]
   guardianRelationships       GuardianRelationship[]
@@ -752,10 +803,11 @@ model Subject {
   createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school          School               @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  translations    SubjectTranslation[]
-  curriculumItems CurriculumItem[]
-  courseOfferings CourseOffering[]
+  school              School                     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  translations        SubjectTranslation[]
+  curriculumItems     CurriculumItem[]
+  courseOfferings     CourseOffering[]
+  teacherCapabilities TeacherSubjectCapability[]
 
   @@unique([id, schoolId])
   @@index([schoolId, archivedAt, name])
@@ -1018,6 +1070,7 @@ model Person {
   studentProfile        StudentProfile?
   guardianRelationships GuardianRelationship[] @relation("GuardianPerson")
   accounts              PersonAccount[]
+  employments           Employment[]
 
   @@unique([id, schoolId])
   @@index([schoolId, status, lastName, firstName])
@@ -1089,6 +1142,167 @@ model PersonContactPoint {
   @@unique([schoolId, personId, kind, normalizedValue])
   @@index([schoolId, personId, archivedAt])
   @@map("person_contact_points")
+}
+
+model StaffDepartment {
+  id          String    @id @default(uuid()) @db.Uuid
+  schoolId    String    @map("school_id") @db.Uuid
+  code        String    @db.VarChar(50)
+  defaultName String    @map("default_name") @db.VarChar(120)
+  archivedAt  DateTime? @map("archived_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school       School                       @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  translations StaffDepartmentTranslation[]
+  employments  Employment[]
+
+  @@unique([schoolId, code])
+  @@unique([id, schoolId])
+  @@index([schoolId, archivedAt, defaultName])
+  @@map("staff_departments")
+}
+
+model StaffDepartmentTranslation {
+  departmentId String   @map("department_id") @db.Uuid
+  schoolId     String   @map("school_id") @db.Uuid
+  locale       String   @db.VarChar(10)
+  name         String   @db.VarChar(120)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  department StaffDepartment @relation(fields: [departmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  school     School          @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([departmentId, locale])
+  @@unique([schoolId, locale, name], map: "sdt_school_locale_name_key")
+  @@index([schoolId, locale])
+  @@map("staff_department_translations")
+}
+
+model StaffPosition {
+  id          String    @id @default(uuid()) @db.Uuid
+  schoolId    String    @map("school_id") @db.Uuid
+  code        String    @db.VarChar(50)
+  defaultName String    @map("default_name") @db.VarChar(120)
+  archivedAt  DateTime? @map("archived_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school       School                     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  translations StaffPositionTranslation[]
+  employments  Employment[]
+
+  @@unique([schoolId, code])
+  @@unique([id, schoolId])
+  @@index([schoolId, archivedAt, defaultName])
+  @@map("staff_positions")
+}
+
+model StaffPositionTranslation {
+  positionId String   @map("position_id") @db.Uuid
+  schoolId   String   @map("school_id") @db.Uuid
+  locale     String   @db.VarChar(10)
+  name       String   @db.VarChar(120)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  position StaffPosition @relation(fields: [positionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  school   School        @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([positionId, locale])
+  @@unique([schoolId, locale, name], map: "spt_school_locale_name_key")
+  @@index([schoolId, locale])
+  @@map("staff_position_translations")
+}
+
+model Employment {
+  id           String                @id @default(uuid()) @db.Uuid
+  schoolId     String                @map("school_id") @db.Uuid
+  personId     String                @map("person_id") @db.Uuid
+  departmentId String                @map("department_id") @db.Uuid
+  positionId   String                @map("position_id") @db.Uuid
+  staffNumber  String                @map("staff_number") @db.VarChar(40)
+  type         EmploymentType
+  status       EmploymentStatus      @default(ACTIVE)
+  hiredOn      DateTime              @map("hired_on") @db.Date
+  endedOn      DateTime?             @map("ended_on") @db.Date
+  exitReason   EmploymentExitReason? @map("exit_reason")
+  note         String?               @db.VarChar(500)
+  archivedAt   DateTime?             @map("archived_at") @db.Timestamptz(6)
+  createdAt    DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school          School                     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  person          Person                     @relation(fields: [personId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  department      StaffDepartment            @relation(fields: [departmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  position        StaffPosition              @relation(fields: [positionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  lifecycleEvents EmploymentLifecycleEvent[]
+  teacherProfile  TeacherProfile?
+
+  @@unique([schoolId, staffNumber])
+  @@unique([id, schoolId])
+  @@index([schoolId, status, archivedAt])
+  @@index([schoolId, personId, status])
+  @@index([schoolId, departmentId])
+  @@index([schoolId, positionId])
+  @@map("employments")
+}
+
+model EmploymentLifecycleEvent {
+  id           String                       @id @default(uuid()) @db.Uuid
+  schoolId     String                       @map("school_id") @db.Uuid
+  employmentId String                       @map("employment_id") @db.Uuid
+  type         EmploymentLifecycleEventType
+  effectiveOn  DateTime                     @map("effective_on") @db.Date
+  exitReason   EmploymentExitReason?        @map("exit_reason")
+  note         String?                      @db.VarChar(500)
+  createdAt    DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employment Employment @relation(fields: [employmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([schoolId, employmentId, effectiveOn])
+  @@index([schoolId, type, effectiveOn])
+  @@map("employment_lifecycle_events")
+}
+
+model TeacherProfile {
+  id           String          @id @default(uuid()) @db.Uuid
+  schoolId     String          @map("school_id") @db.Uuid
+  employmentId String          @map("employment_id") @db.Uuid
+  category     TeacherCategory
+  title        String          @db.VarChar(120)
+  status       TeacherStatus   @default(ACTIVE)
+  note         String?         @db.VarChar(500)
+  archivedAt   DateTime?       @map("archived_at") @db.Timestamptz(6)
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school       School                     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employment   Employment                 @relation(fields: [employmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  capabilities TeacherSubjectCapability[]
+
+  @@unique([schoolId, employmentId])
+  @@unique([employmentId, schoolId])
+  @@unique([id, schoolId])
+  @@index([schoolId, status, category])
+  @@map("teacher_profiles")
+}
+
+model TeacherSubjectCapability {
+  schoolId         String   @map("school_id") @db.Uuid
+  teacherProfileId String   @map("teacher_profile_id") @db.Uuid
+  subjectId        String   @map("subject_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  school         School         @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  teacherProfile TeacherProfile @relation(fields: [teacherProfileId, schoolId], references: [id, schoolId], onDelete: Cascade, onUpdate: Restrict)
+  subject        Subject        @relation(fields: [subjectId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([teacherProfileId, subjectId])
+  @@index([schoolId, subjectId])
+  @@map("teacher_subject_capabilities")
 }
 
 model SchoolNumberSequence {

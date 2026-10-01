@@ -40,7 +40,9 @@ export default async function AccountsPage() {
                       ? "SCHOOL_ADMIN"
                       : account.portal === "GUARDIAN"
                         ? "GUARDIAN"
-                        : "STUDENT"
+                        : account.portal === "TEACHER"
+                          ? "TEACHER"
+                          : "STUDENT"
                   }
                   personId={account.personId}
                   existingAccount={account}

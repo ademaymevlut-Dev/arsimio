@@ -66,6 +66,8 @@ const sq = {
     academicStructure: "Klasat dhe lëndët",
     students: "Nxënësit",
     guardians: "Prindërit",
+    staff: "Personeli",
+    teachers: "Mësuesit",
     accounts: "Llogaritë e përdoruesve",
     navigationLabel: "Menyja e administrimit të shkollës",
     schoolManagement: "Administrimi i shkollës",

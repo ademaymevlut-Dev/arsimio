@@ -23,7 +23,7 @@ export type AccountState = {
 export type CreateAccountInput = {
   personId: string;
   studentProfileId: string | null;
-  portal: Extract<AccountPortal, "STUDENT" | "GUARDIAN">;
+  portal: Extract<AccountPortal, "STUDENT" | "GUARDIAN" | "TEACHER">;
   username: string;
 };
 
@@ -58,7 +58,7 @@ export function parseCreatePersonAccount(form: FormData):
     !uuid.test(studentProfileId)
   )
     errors.studentProfileId = "Ogrenci kaydi gecersiz.";
-  if (portal !== "STUDENT" && portal !== "GUARDIAN")
+  if (portal !== "STUDENT" && portal !== "GUARDIAN" && portal !== "TEACHER")
     errors.portal = "Hesap turu gecersiz.";
   if (!username)
     errors.username =
@@ -82,7 +82,7 @@ export function parseCreatePersonAccount(form: FormData):
         typeof studentProfileId === "string" && studentProfileId.length > 0
           ? studentProfileId
           : null,
-      portal: portal as Extract<AccountPortal, "STUDENT" | "GUARDIAN">,
+      portal: portal as Extract<AccountPortal, "STUDENT" | "GUARDIAN" | "TEACHER">,
       username: username!,
     },
   };

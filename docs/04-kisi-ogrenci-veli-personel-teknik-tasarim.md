@@ -2,11 +2,11 @@
 
 Tarih: 2026-09-30 — son durum 2026-10-01
 
-Durum: `PAKET 1 TAMAMLANDI — PAKET 2A YEREL KOD + DB HAZIR`
+Durum: `PAKET 1 VE 2A TAMAMLANDI — PAKET 3A KARARLARI BEKLENİYOR`
 
 Girdi: [03 — Kişi, öğrenci, veli, personel ve öğretmen veri mimarisi](./03-kisi-ogrenci-personel-veli-veri-mimarisi.md)
 
-> Bu belge hedef şemayı, kısıtları ve uygulama paketlerini tanımlar. Paket 1 kişi–öğrenci–veli omurgası uygulanmıştır; Paket 2A profil hesapları yerel kod ve DB migration olarak hazırlanmıştır. Kararlar ve uygulama notu [05 numaralı belgede](./05-profil-hesaplari-karar-sorulari.md) tutulur.
+> Bu belge hedef şemayı, kısıtları ve uygulama paketlerini tanımlar. Paket 1 kişi–öğrenci–veli omurgası ve Paket 2A profil hesapları kullanıcı tarafından canlıda kabul edilmiştir. Paket 3A personel/öğretmen çekirdeği kararları [06 numaralı belgede](./06-personel-ogretmen-karar-sorulari.md) yürütülür.
 
 ## 1. Kesinleşen ürün kararları
 
@@ -671,4 +671,4 @@ Bu konular ilgili uygulama paketine gelindiğinde kararlaştırılacaktır; Pake
 
 ## 18. Sıradaki kontrollü adım
 
-Sıradaki kontrollü adım **Paket 2A migration'ın canlıya uygulanması ve kullanıcı kabulüdür**. Öğrenci/veli hesabı, geçici parola, ilk giriş, askıya alma, portal yönlendirmesi ve mevcut Okul Admin hesaplarının `Person` ile eşleştirilmesi yerelde hazırlanmıştır. Öğretmen/personel hesap ekranı, personel çekirdeğinin kurulacağı Paket 3'e bırakılır.
+Sıradaki kontrollü adım **Paket 3A personel ve öğretmen çekirdeği kararlarının tamamlanmasıdır**. Personel kaydı, departman/pozisyon katalogları, öğretmen profili, ders capability ve öğretmen hesabı sınırları [06 numaralı karar belgesinde](./06-personel-ogretmen-karar-sorulari.md) cevaplanacaktır. Yanıtlar tamamlanmadan migration veya canlı personel verisi değişikliği yapılmaz.

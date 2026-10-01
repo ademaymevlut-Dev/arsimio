@@ -2,7 +2,7 @@
 
 Tarih: 2026-10-01
 
-Durum: `CEVAPLANDI / PAKET 2A YEREL KOD HAZIR`
+Durum: `TAMAMLANDI / CANLI KABUL`
 
 Kapsam: Paket 2 — `PersonAccount`, öğrenci/veli giriş hesapları, parola yaşam döngüsü ve portal yönlendirmesi
 
@@ -246,3 +246,17 @@ Paket 2A yerelde additive olarak uygulandı:
 - Öğrenci detayında öğrenci hesabı, anne/baba kartlarında veli hesabı açma/sıfırlama/askıya alma işlemleri eklendi.
 - `/guardian` ve `/student` portal başlangıçları yalnız eldeki gerçek öğrenci/veli verilerini gösterir.
 - Öğretmen/personel hesabı UI'si Paket 3'teki personel profili tasarımına bırakıldı.
+
+## 7. 2026-10-01 canlı kabul notu
+
+Kullanıcı canlı ortamda şu akışı doğruladı:
+
+1. Okul Admin veli için hesap oluşturdu.
+2. Sistem geçici parola gösterdi.
+3. Veli geçici parola ile giriş yaptı ve parola değiştirme ekranına yönlendirildi.
+4. Veli yeni parolayı belirledi.
+5. Veli yeni parolayla tekrar giriş yaptı.
+6. Veli portalında doğru öğrenci kayıtları görüntülendi.
+7. Admin kullanıcısı hesaplar ekranından aktiflendi.
+
+Bu doğrulama Paket 2A profil hesapları için canlı kabul olarak kaydedildi.
