@@ -437,11 +437,6 @@ export async function persistStudentComments(
               academicYearId: participant.academicYearId,
               academicYearClassSectionId:
                 participant.academicYearClassSectionId,
-              validFrom: { lte: calendarDay.date },
-              OR: [
-                { validTo: null },
-                { validTo: { gte: calendarDay.date } },
-              ],
             },
           },
         },
