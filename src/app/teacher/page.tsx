@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { signOut } from "@/app/login/actions";
+import { LessonTopicDialog } from "@/components/teacher/lesson-topic-dialog";
 import { TeacherWeekSelector } from "@/components/teacher/teacher-week-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -309,47 +310,80 @@ export default async function TeacherPortalPage({
                                       key={session.id}
                                       className="space-y-2 rounded-lg border border-border bg-card p-2"
                                     >
-                                      {session.participants.map((participant) => (
-                                        <div
-                                          key={participant.id}
-                                          className="rounded-md bg-muted/40 p-2"
-                                        >
-                                          <p className="font-medium">
-                                            {participant.subjectName}
-                                          </p>
-                                          <p className="text-xs text-muted-foreground">
-                                            {text.classSectionColumn}:{" "}
-                                            {participant.classLabel} ·{" "}
-                                            {trackLabel(participant.track, text)}
-                                          </p>
-                                          <div className="mt-2 flex flex-wrap gap-2">
-                                            <Button
-                                              type="button"
-                                              size="xs"
-                                              variant="info"
-                                              disabled
-                                            >
-                                              {text.attendanceCta}
-                                            </Button>
-                                            <Button
-                                              type="button"
-                                              size="xs"
-                                              variant="success"
-                                              disabled
-                                            >
-                                              {text.commentCta}
-                                            </Button>
-                                            <Button
-                                              type="button"
-                                              size="xs"
-                                              variant="warning"
-                                              disabled
-                                            >
-                                              {text.homeworkCta}
-                                            </Button>
+                                      {session.participants.map((participant) => {
+                                        const lessonTopicEntry =
+                                          participant.lessonTopicEntries.find(
+                                            (entry) =>
+                                              entry.academicCalendarDayId ===
+                                              day.id,
+                                          );
+                                        const contextLabel = `${weekdayLabel(
+                                          day.weekday,
+                                          text,
+                                        )} (${formatDate(
+                                          day.date,
+                                          locale,
+                                        )}) · ${period.label} · ${
+                                          participant.classLabel
+                                        } · ${participant.subjectName}`;
+
+                                        return (
+                                          <div
+                                            key={participant.id}
+                                            className="rounded-md bg-muted/40 p-2"
+                                          >
+                                            <p className="font-medium">
+                                              {participant.subjectName}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                              {text.classSectionColumn}:{" "}
+                                              {participant.classLabel} ·{" "}
+                                              {trackLabel(
+                                                participant.track,
+                                                text,
+                                              )}
+                                            </p>
+                                            <div className="mt-2 flex flex-wrap gap-2">
+                                              <LessonTopicDialog
+                                                timetableParticipantId={
+                                                  participant.id
+                                                }
+                                                academicCalendarDayId={day.id}
+                                                initialContent={
+                                                  lessonTopicEntry?.content ??
+                                                  ""
+                                                }
+                                                contextLabel={contextLabel}
+                                                messages={text}
+                                              />
+                                              <Button
+                                                type="button"
+                                                size="xs"
+                                                variant="info"
+                                                disabled
+                                              >
+                                                {text.attendanceCta}
+                                              </Button>
+                                              <Button
+                                                type="button"
+                                                size="xs"
+                                                variant="success"
+                                                disabled
+                                              >
+                                                {text.commentCta}
+                                              </Button>
+                                              <Button
+                                                type="button"
+                                                size="xs"
+                                                variant="warning"
+                                                disabled
+                                              >
+                                                {text.homeworkCta}
+                                              </Button>
+                                            </div>
                                           </div>
-                                        </div>
-                                      ))}
+                                        );
+                                      })}
                                     </div>
                                   ))}
                                 </div>

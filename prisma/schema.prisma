@@ -319,6 +319,7 @@ model School {
   courseTeacherAssignments     CourseTeacherAssignment[]
   timetableSessions            TimetableSession[]
   timetableSessionParticipants TimetableSessionParticipant[]
+  lessonTopicEntries           LessonTopicEntry[]
   numberSequences              SchoolNumberSequence[]
   studentProfiles              StudentProfile[]
   guardianRelationships        GuardianRelationship[]
@@ -658,6 +659,7 @@ model AcademicYear {
   courseTeacherAssignments     CourseTeacherAssignment[]
   timetableSessions            TimetableSession[]
   timetableSessionParticipants TimetableSessionParticipant[]
+  lessonTopicEntries           LessonTopicEntry[]
   setupRuns                    AcademicYearSetupRun[]
   enrollments                  Enrollment[]
   studentGroupPlacements       StudentGroupPlacement[]
@@ -755,10 +757,11 @@ model AcademicCalendarDay {
   createdAt          DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school       School        @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  academicYear AcademicYear  @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  academicWeek AcademicWeek  @relation(fields: [academicWeekId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
-  academicTerm AcademicTerm? @relation(fields: [academicTermId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  school             School             @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear       AcademicYear       @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  academicWeek       AcademicWeek       @relation(fields: [academicWeekId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+  academicTerm       AcademicTerm?      @relation(fields: [academicTermId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  lessonTopicEntries LessonTopicEntry[]
 
   @@unique([academicYearId, date])
   @@unique([id, schoolId, academicYearId])
@@ -1384,6 +1387,7 @@ model TeacherProfile {
   homeroomAssignments HomeroomTeacherAssignment[]
   courseAssignments   CourseTeacherAssignment[]
   timetableSessions   TimetableSession[]
+  lessonTopicEntries  LessonTopicEntry[]
 
   @@unique([schoolId, employmentId])
   @@unique([employmentId, schoolId])
@@ -1526,12 +1530,40 @@ model TimetableSessionParticipant {
   courseTeacherAssignment  CourseTeacherAssignment  @relation(fields: [courseTeacherAssignmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
   courseOffering           CourseOffering           @relation(fields: [courseOfferingId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
   academicYearClassSection AcademicYearClassSection @relation(fields: [academicYearClassSectionId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+  lessonTopicEntries       LessonTopicEntry[]
 
   @@unique([id, schoolId])
+  @@unique([id, schoolId, academicYearId], map: "tsp_id_school_year_key")
   @@index([schoolId, academicYearId, academicYearClassSectionId, status], map: "tsp_class_slot_lookup_idx")
   @@index([schoolId, academicYearId, courseTeacherAssignmentId, status], map: "tsp_assignment_lookup_idx")
   @@index([schoolId, timetableSessionId, status], map: "tsp_session_status_idx")
   @@map("timetable_session_participants")
+}
+
+model LessonTopicEntry {
+  id                            String   @id @default(uuid()) @db.Uuid
+  schoolId                      String   @map("school_id") @db.Uuid
+  academicYearId                String   @map("academic_year_id") @db.Uuid
+  academicCalendarDayId         String   @map("academic_calendar_day_id") @db.Uuid
+  timetableSessionParticipantId String   @map("timetable_session_participant_id") @db.Uuid
+  teacherProfileId              String   @map("teacher_profile_id") @db.Uuid
+  content                       String   @db.Text
+  createdByUserId               String?  @map("created_by_user_id") @db.Uuid
+  updatedByUserId               String?  @map("updated_by_user_id") @db.Uuid
+  createdAt                     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school                      School                      @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear                AcademicYear                @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  academicCalendarDay         AcademicCalendarDay         @relation(fields: [academicCalendarDayId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+  timetableSessionParticipant TimetableSessionParticipant @relation(fields: [timetableSessionParticipantId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+  teacherProfile              TeacherProfile              @relation(fields: [teacherProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([timetableSessionParticipantId, academicCalendarDayId], map: "lte_participant_day_key")
+  @@unique([id, schoolId])
+  @@index([schoolId, academicYearId, academicCalendarDayId], map: "lte_day_lookup_idx")
+  @@index([schoolId, teacherProfileId, academicCalendarDayId], map: "lte_teacher_day_lookup_idx")
+  @@map("lesson_topic_entries")
 }
 
 model SchoolNumberSequence {

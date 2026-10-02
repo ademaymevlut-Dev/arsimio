@@ -514,6 +514,14 @@ export async function getTeacherPortalHome(
           participants: {
             where: { status: "ACTIVE", archivedAt: null },
             include: {
+              lessonTopicEntries: {
+                select: {
+                  id: true,
+                  academicCalendarDayId: true,
+                  content: true,
+                  updatedAt: true,
+                },
+              },
               courseOffering: {
                 include: {
                   subject: {
@@ -615,6 +623,12 @@ export async function getTeacherPortalHome(
             effectiveTo: participant.effectiveTo
               ? dateValue(participant.effectiveTo)
               : null,
+            lessonTopicEntries: participant.lessonTopicEntries.map((entry) => ({
+              id: entry.id,
+              academicCalendarDayId: entry.academicCalendarDayId,
+              content: entry.content,
+              updatedAt: entry.updatedAt.toISOString(),
+            })),
           }))
           .sort(
             (first, second) =>

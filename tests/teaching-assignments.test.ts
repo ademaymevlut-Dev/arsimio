@@ -7,6 +7,7 @@ import {
   parseTeachingAssignmentTransition,
   parseWeeklySchedulePlacement,
 } from "../src/lib/teaching-validation";
+import { parseLessonTopic } from "../src/lib/teacher-cta-validation";
 
 function form(values: Record<string, string>) {
   const data = new FormData();
@@ -20,6 +21,7 @@ const courseOfferingId = "4f62dcb1-3972-4198-985b-12ea6da6e4cc";
 const assignmentId = "eb2c5d9f-d24d-4434-9640-5df0b7a9f081";
 const schedulePeriodId = "3d27c070-8cde-45e4-a0e0-10cbd3aaf7ea";
 const timetableParticipantId = "ef7be8cc-5b14-4d5f-b913-8ce93bbf08f4";
+const academicCalendarDayId = "a3bd7f23-46d5-4d46-bef6-6eb3e549cc41";
 const revision = "2026-10-01T12:00:00.000Z";
 
 test("homeroom assignment accepts teacher, class and date", () => {
@@ -149,5 +151,39 @@ test("timetable participant transition validates revision and date", () => {
   if (!parsed.success) {
     assert.ok(parsed.state.fieldErrors?.record);
     assert.ok(parsed.state.fieldErrors?.effectiveOn);
+  }
+});
+
+test("lesson topic accepts one note with emoji and new lines", () => {
+  const parsed = parseLessonTopic(
+    form({
+      timetableParticipantId,
+      academicCalendarDayId,
+      content: "  Kesirlerde toplama çalışıldı 😊\nKitap sayfa 42  ",
+    }),
+  );
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.timetableParticipantId, timetableParticipantId);
+    assert.equal(parsed.data.academicCalendarDayId, academicCalendarDayId);
+    assert.equal(
+      parsed.data.content,
+      "Kesirlerde toplama çalışıldı 😊\nKitap sayfa 42",
+    );
+  }
+});
+
+test("lesson topic rejects invalid context and blank note", () => {
+  const parsed = parseLessonTopic(
+    form({
+      timetableParticipantId: "not-a-uuid",
+      academicCalendarDayId,
+      content: "   ",
+    }),
+  );
+  assert.equal(parsed.success, false);
+  if (!parsed.success) {
+    assert.ok(parsed.state.fieldErrors?.timetableParticipantId);
+    assert.ok(parsed.state.fieldErrors?.content);
   }
 });
