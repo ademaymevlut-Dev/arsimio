@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { signOut } from "@/app/login/actions";
+import { TeacherWeekSelector } from "@/components/teacher/teacher-week-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -124,10 +124,14 @@ export default async function TeacherPortalPage({
     selectedWeekIndex < home.weeklySchedule.weeks.length - 1
       ? home.weeklySchedule.weeks[selectedWeekIndex + 1]
       : null;
-  const weekHref = (week: { id: string }) => ({
-    pathname: "/teacher",
-    query: { week: week.id },
-  });
+  const weekOptions = home.weeklySchedule.weeks.map((week) => ({
+    id: week.id,
+    label: formatMessage(text.weekOptionLabel, {
+      sequence: week.sequence,
+      start: formatDate(week.startDate, locale),
+      end: formatDate(week.endDate, locale),
+    }),
+  }));
 
   return (
     <main className="min-h-svh bg-background p-4 sm:p-8">
@@ -218,76 +222,20 @@ export default async function TeacherPortalPage({
               </p>
             ) : null}
             {selectedWeek ? (
-              <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-muted/30 p-3">
-                <form
-                  action="/teacher"
-                  method="get"
-                  className="flex flex-wrap items-end gap-2"
-                >
-                  <label className="space-y-1 text-sm font-medium">
-                    <span>{text.selectWeek}</span>
-                    <select
-                      name="week"
-                      defaultValue={selectedWeek.id}
-                      className="h-8 rounded-md border border-border bg-background px-2 text-sm"
-                    >
-                      {home.weeklySchedule.weeks.map((week) => (
-                        <option key={week.id} value={week.id}>
-                          {formatMessage(text.weekOptionLabel, {
-                            sequence: week.sequence,
-                            start: formatDate(week.startDate, locale),
-                            end: formatDate(week.endDate, locale),
-                          })}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <Button type="submit" variant="outline" size="sm">
-                    {dictionary.language.apply}
-                  </Button>
-                </form>
-                <div className="flex flex-wrap gap-2">
-                  {previousWeek ? (
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={weekHref(previousWeek)}>
-                        {text.previousWeek}
-                      </Link>
-                    </Button>
-                  ) : (
-                    <Button type="button" variant="outline" size="sm" disabled>
-                      {text.previousWeek}
-                    </Button>
-                  )}
-                  {currentWeek ? (
-                    <Button
-                      asChild
-                      variant={
-                        currentWeek.id === selectedWeek.id
-                          ? "default"
-                          : "outline"
-                      }
-                      size="sm"
-                    >
-                      <Link href={weekHref(currentWeek)}>
-                        {text.currentWeek}
-                      </Link>
-                    </Button>
-                  ) : (
-                    <Button type="button" variant="outline" size="sm" disabled>
-                      {text.currentWeek}
-                    </Button>
-                  )}
-                  {nextWeek ? (
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={weekHref(nextWeek)}>{text.nextWeek}</Link>
-                    </Button>
-                  ) : (
-                    <Button type="button" variant="outline" size="sm" disabled>
-                      {text.nextWeek}
-                    </Button>
-                  )}
-                </div>
-              </div>
+              <TeacherWeekSelector
+                key={selectedWeek.id}
+                weeks={weekOptions}
+                selectedWeekId={selectedWeek.id}
+                previousWeekId={previousWeek?.id ?? null}
+                currentWeekId={currentWeek?.id ?? null}
+                nextWeekId={nextWeek?.id ?? null}
+                labels={{
+                  selectWeek: text.selectWeek,
+                  previousWeek: text.previousWeek,
+                  currentWeek: text.currentWeek,
+                  nextWeek: text.nextWeek,
+                }}
+              />
             ) : null}
             {!selectedWeek ? (
               <p className="text-sm text-muted-foreground">
