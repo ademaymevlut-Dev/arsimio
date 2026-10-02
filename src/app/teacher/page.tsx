@@ -56,8 +56,11 @@ function formatDate(value: string, locale: keyof typeof HTML_LOCALES) {
   }).format(new Date(`${value}T00:00:00Z`));
 }
 
-function activeOnDate(record: { effectiveFrom: string; effectiveTo: string | null }, date: string) {
-  return record.effectiveFrom <= date && (!record.effectiveTo || record.effectiveTo >= date);
+function visibleOnTeacherSchedule(
+  record: { effectiveTo: string | null },
+  date: string,
+) {
+  return !record.effectiveTo || record.effectiveTo >= date;
 }
 
 export default async function TeacherPortalPage({
@@ -275,13 +278,16 @@ export default async function TeacherPortalPage({
                             []
                           )
                             .filter((session) =>
-                              activeOnDate(session, day.date),
+                              visibleOnTeacherSchedule(session, day.date),
                             )
                             .map((session) => ({
                               ...session,
                               participants: session.participants.filter(
                                 (participant) =>
-                                  activeOnDate(participant, day.date),
+                                  visibleOnTeacherSchedule(
+                                    participant,
+                                    day.date,
+                                  ),
                               ),
                             }))
                             .filter(
