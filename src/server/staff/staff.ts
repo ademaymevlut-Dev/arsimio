@@ -522,6 +522,15 @@ export async function getTeacherPortalHome(
                   updatedAt: true,
                 },
               },
+              homeworkEntries: {
+                select: {
+                  id: true,
+                  academicCalendarDayId: true,
+                  title: true,
+                  content: true,
+                  updatedAt: true,
+                },
+              },
               courseOffering: {
                 include: {
                   subject: {
@@ -626,6 +635,13 @@ export async function getTeacherPortalHome(
             lessonTopicEntries: participant.lessonTopicEntries.map((entry) => ({
               id: entry.id,
               academicCalendarDayId: entry.academicCalendarDayId,
+              content: entry.content,
+              updatedAt: entry.updatedAt.toISOString(),
+            })),
+            homeworkEntries: participant.homeworkEntries.map((entry) => ({
+              id: entry.id,
+              academicCalendarDayId: entry.academicCalendarDayId,
+              title: entry.title,
               content: entry.content,
               updatedAt: entry.updatedAt.toISOString(),
             })),

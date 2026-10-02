@@ -7,7 +7,10 @@ import {
   parseTeachingAssignmentTransition,
   parseWeeklySchedulePlacement,
 } from "../src/lib/teaching-validation";
-import { parseLessonTopic } from "../src/lib/teacher-cta-validation";
+import {
+  parseHomework,
+  parseLessonTopic,
+} from "../src/lib/teacher-cta-validation";
 
 function form(values: Record<string, string>) {
   const data = new FormData();
@@ -184,6 +187,44 @@ test("lesson topic rejects invalid context and blank note", () => {
   assert.equal(parsed.success, false);
   if (!parsed.success) {
     assert.ok(parsed.state.fieldErrors?.timetableParticipantId);
+    assert.ok(parsed.state.fieldErrors?.content);
+  }
+});
+
+test("homework accepts title and teacher note with emoji and new lines", () => {
+  const parsed = parseHomework(
+    form({
+      timetableParticipantId,
+      academicCalendarDayId,
+      title: "  Kesirler çalışma kağıdı 😊  ",
+      content: "  1-20 arası soruları çözün.\nDeftere yazılacak.  ",
+    }),
+  );
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.timetableParticipantId, timetableParticipantId);
+    assert.equal(parsed.data.academicCalendarDayId, academicCalendarDayId);
+    assert.equal(parsed.data.title, "Kesirler çalışma kağıdı 😊");
+    assert.equal(
+      parsed.data.content,
+      "1-20 arası soruları çözün.\nDeftere yazılacak.",
+    );
+  }
+});
+
+test("homework rejects invalid context, blank title and blank note", () => {
+  const parsed = parseHomework(
+    form({
+      timetableParticipantId,
+      academicCalendarDayId: "not-a-uuid",
+      title: "   ",
+      content: "   ",
+    }),
+  );
+  assert.equal(parsed.success, false);
+  if (!parsed.success) {
+    assert.ok(parsed.state.fieldErrors?.academicCalendarDayId);
+    assert.ok(parsed.state.fieldErrors?.title);
     assert.ok(parsed.state.fieldErrors?.content);
   }
 });

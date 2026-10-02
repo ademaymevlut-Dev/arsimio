@@ -6,6 +6,7 @@ export type TeacherCtaField =
   | "record"
   | "timetableParticipantId"
   | "academicCalendarDayId"
+  | "title"
   | "content";
 
 export type TeacherCtaState = {
@@ -18,6 +19,13 @@ export type TeacherCtaState = {
 export type LessonTopicInput = {
   timetableParticipantId: string;
   academicCalendarDayId: string;
+  content: string;
+};
+
+export type HomeworkInput = {
+  timetableParticipantId: string;
+  academicCalendarDayId: string;
+  title: string;
   content: string;
 };
 
@@ -42,6 +50,18 @@ function normalizeContent(value: FormDataEntryValue | null) {
   if (
     normalized.length < 1 ||
     normalized.length > 5000 ||
+    UNSAFE_CONTROL_CHARACTERS.test(normalized)
+  )
+    return null;
+  return normalized;
+}
+
+function normalizeTitle(value: FormDataEntryValue | null) {
+  if (typeof value !== "string") return null;
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (
+    normalized.length < 1 ||
+    normalized.length > 200 ||
     UNSAFE_CONTROL_CHARACTERS.test(normalized)
   )
     return null;
@@ -76,6 +96,40 @@ export function parseLessonTopic(
     data: {
       timetableParticipantId,
       academicCalendarDayId,
+      content,
+    },
+  };
+}
+
+export function parseHomework(form: FormData): Parsed<HomeworkInput> {
+  const timetableParticipantId = form.get("timetableParticipantId");
+  const academicCalendarDayId = form.get("academicCalendarDayId");
+  const title = normalizeTitle(form.get("title"));
+  const content = normalizeContent(form.get("content"));
+  const fieldErrors: TeacherCtaState["fieldErrors"] = {};
+
+  if (!validSchoolId(timetableParticipantId))
+    fieldErrors.timetableParticipantId = "Program kaydı geçersiz.";
+  if (!validSchoolId(academicCalendarDayId))
+    fieldErrors.academicCalendarDayId = "Gün kaydı geçersiz.";
+  if (!title) fieldErrors.title = "Ödev başlığı 1-200 karakter olmalı.";
+  if (!content) fieldErrors.content = "Ödev notu 1-5000 karakter olmalı.";
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(timetableParticipantId) ||
+    !validSchoolId(academicCalendarDayId) ||
+    !title ||
+    !content
+  )
+    return invalid(fieldErrors);
+
+  return {
+    success: true,
+    data: {
+      timetableParticipantId,
+      academicCalendarDayId,
+      title,
       content,
     },
   };

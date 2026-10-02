@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { signOut } from "@/app/login/actions";
+import { HomeworkDialog } from "@/components/teacher/homework-dialog";
 import { LessonTopicDialog } from "@/components/teacher/lesson-topic-dialog";
 import { TeacherWeekSelector } from "@/components/teacher/teacher-week-selector";
 import { Badge } from "@/components/ui/badge";
@@ -317,6 +318,12 @@ export default async function TeacherPortalPage({
                                               entry.academicCalendarDayId ===
                                               day.id,
                                           );
+                                        const homeworkEntry =
+                                          participant.homeworkEntries.find(
+                                            (entry) =>
+                                              entry.academicCalendarDayId ===
+                                              day.id,
+                                          );
                                         const contextLabel = `${weekdayLabel(
                                           day.weekday,
                                           text,
@@ -372,14 +379,20 @@ export default async function TeacherPortalPage({
                                               >
                                                 {text.commentCta}
                                               </Button>
-                                              <Button
-                                                type="button"
-                                                size="xs"
-                                                variant="warning"
-                                                disabled
-                                              >
-                                                {text.homeworkCta}
-                                              </Button>
+                                              <HomeworkDialog
+                                                timetableParticipantId={
+                                                  participant.id
+                                                }
+                                                academicCalendarDayId={day.id}
+                                                initialTitle={
+                                                  homeworkEntry?.title ?? ""
+                                                }
+                                                initialContent={
+                                                  homeworkEntry?.content ?? ""
+                                                }
+                                                contextLabel={contextLabel}
+                                                messages={text}
+                                              />
                                             </div>
                                           </div>
                                         );

@@ -5,12 +5,16 @@ import { headers } from "next/headers";
 import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/db";
 import {
+  parseHomework,
   parseLessonTopic,
   type TeacherCtaState,
 } from "@/lib/teacher-cta-validation";
 import { requirePortalAccount } from "@/server/accounts/portal-guards";
 import { isSameOrigin } from "@/server/auth/identifiers";
-import { persistLessonTopic } from "@/server/teacher-portal/teacher-cta-service";
+import {
+  persistHomework,
+  persistLessonTopic,
+} from "@/server/teacher-portal/teacher-cta-service";
 
 function invalid(): TeacherCtaState {
   return { status: "error", message: "İstek doğrulanamadı." };
@@ -71,6 +75,46 @@ export async function saveLessonTopicAction(
     return result;
   } catch (errorValue) {
     console.error("TEACHER_LESSON_TOPIC_SAVE_UNAVAILABLE");
+    return databaseError(errorValue);
+  }
+}
+
+export async function saveHomeworkAction(
+  _state: TeacherCtaState,
+  form: FormData,
+): Promise<TeacherCtaState> {
+  const { user, tenant, account } = await requirePortalAccount("TEACHER");
+  const incoming = await headers();
+  if (
+    !isSameOrigin(
+      incoming.get("origin"),
+      incoming.get("host"),
+      process.env.NODE_ENV === "development",
+    )
+  )
+    return invalid();
+
+  const parsed = parseHomework(form);
+  if (!parsed.success) return parsed.state;
+
+  try {
+    const result = await getPrisma().$transaction(
+      (tx: Prisma.TransactionClient) =>
+        persistHomework(
+          tx,
+          {
+            schoolId: tenant.school.id,
+            actorUserId: user.id,
+            personId: account.personId,
+          },
+          parsed.data,
+        ),
+      { isolationLevel: "Serializable", timeout: 15000 },
+    );
+    if (result.status === "success") revalidatePath("/teacher");
+    return result;
+  } catch (errorValue) {
+    console.error("TEACHER_HOMEWORK_SAVE_UNAVAILABLE");
     return databaseError(errorValue);
   }
 }

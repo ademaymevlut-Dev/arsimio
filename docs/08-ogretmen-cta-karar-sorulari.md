@@ -1,7 +1,7 @@
 # 08 — Öğretmen dashboard CTA karar soruları
 
 Tarih: 2026-10-02  
-Durum: `YOKLAMA ÖNCESİ CEVAPLAR ALINDI · DERS KONUSU KODLANDI`  
+Durum: `YOKLAMA ÖNCESİ CEVAPLAR ALINDI · DERS KONUSU VE ÖDEV KODLANDI`
 Kapsam: Öğretmen portalında haftalık program hücrelerinden açılacak CTA işlemlerinin veri akışı, görünürlük kuralları ve ilk kodlama sırasını netleştirmek.
 
 Bu belge kodlama dokümanı değildir. Amaç, öğretmen dashboard’unda görünen sınıf/ders/gün/saat bağlamından hangi kayıtların üretileceğini netleştirmektir.
@@ -345,6 +345,9 @@ Evet Tarih sırasına göre listelenecek.
 
 **Cevabınız:**
 Ödevle ilgili bir bildirim olmayacak.
+
+**Kodlama notu:**
+Ev ödevi ilk sürümde `TimetableSessionParticipant + AcademicCalendarDay` bağlamında tek kayıt olarak uygulanır. Alanlar `Başlık` ve `Öğretmen notu`dur. Kayıt varsa aynı CTA ekranı mevcut kaydı getirir ve günceller; silme, teslim takibi, dosya eki ve otomatik bildirim yoktur.
 
 
 
