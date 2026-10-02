@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/db";
 import {
   parseHomework,
   parseLessonTopic,
+  parseStudentComments,
   type TeacherCtaState,
 } from "@/lib/teacher-cta-validation";
 import { requirePortalAccount } from "@/server/accounts/portal-guards";
@@ -14,6 +15,7 @@ import { isSameOrigin } from "@/server/auth/identifiers";
 import {
   persistHomework,
   persistLessonTopic,
+  persistStudentComments,
 } from "@/server/teacher-portal/teacher-cta-service";
 
 function invalid(): TeacherCtaState {
@@ -115,6 +117,46 @@ export async function saveHomeworkAction(
     return result;
   } catch (errorValue) {
     console.error("TEACHER_HOMEWORK_SAVE_UNAVAILABLE");
+    return databaseError(errorValue);
+  }
+}
+
+export async function saveStudentCommentsAction(
+  _state: TeacherCtaState,
+  form: FormData,
+): Promise<TeacherCtaState> {
+  const { user, tenant, account } = await requirePortalAccount("TEACHER");
+  const incoming = await headers();
+  if (
+    !isSameOrigin(
+      incoming.get("origin"),
+      incoming.get("host"),
+      process.env.NODE_ENV === "development",
+    )
+  )
+    return invalid();
+
+  const parsed = parseStudentComments(form);
+  if (!parsed.success) return parsed.state;
+
+  try {
+    const result = await getPrisma().$transaction(
+      (tx: Prisma.TransactionClient) =>
+        persistStudentComments(
+          tx,
+          {
+            schoolId: tenant.school.id,
+            actorUserId: user.id,
+            personId: account.personId,
+          },
+          parsed.data,
+        ),
+      { isolationLevel: "Serializable", timeout: 15000 },
+    );
+    if (result.status === "success") revalidatePath("/teacher");
+    return result;
+  } catch (errorValue) {
+    console.error("TEACHER_STUDENT_COMMENTS_SAVE_UNAVAILABLE");
     return databaseError(errorValue);
   }
 }

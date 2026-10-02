@@ -1,7 +1,7 @@
 # 08 — Öğretmen dashboard CTA karar soruları
 
 Tarih: 2026-10-02  
-Durum: `YOKLAMA ÖNCESİ CEVAPLAR ALINDI · DERS KONUSU VE ÖDEV KODLANDI`
+Durum: `YOKLAMA ÖNCESİ CEVAPLAR ALINDI · DERS KONUSU, ÖDEV VE COMMENT KODLANDI`
 Kapsam: Öğretmen portalında haftalık program hücrelerinden açılacak CTA işlemlerinin veri akışı, görünürlük kuralları ve ilk kodlama sırasını netleştirmek.
 
 Bu belge kodlama dokümanı değildir. Amaç, öğretmen dashboard’unda görünen sınıf/ders/gün/saat bağlamından hangi kayıtların üretileceğini netleştirmektir.
@@ -448,6 +448,9 @@ Sorumlu öğretmen sorumlu olduğu sınıfın öğrencileri için diğer öğret
 
 **Cevabınız:**
 Eveet düzenleyebilmeli. AUDIT'e gerek yok.  Güncellendi şeklinde bilgi verilebilir. O iyi bir fikir.
+
+**Kodlama notu:**
+Öğrenci yorumu ilk sürümde `TimetableSessionParticipant + AcademicCalendarDay + StudentProfile` bağlamında tekil kayıt olarak uygulanır. Öğretmen geniş modal içinde öğrencileri checkbox ile seçer, kategori seçer ve tek not yazar. Seçilen her öğrenci için ayrı kayıt oluşur; aynı öğrenci için aynı gün/ders/saat kaydı varsa güncellenir. Kategoriler: Green Card `+3`, Positive Comment `+1`, Information `0`, Negative Comment `-1`, Red Card `-3`.
 
 
 

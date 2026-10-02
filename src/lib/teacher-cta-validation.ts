@@ -6,6 +6,8 @@ export type TeacherCtaField =
   | "record"
   | "timetableParticipantId"
   | "academicCalendarDayId"
+  | "studentProfileIds"
+  | "category"
   | "title"
   | "content";
 
@@ -26,6 +28,26 @@ export type HomeworkInput = {
   timetableParticipantId: string;
   academicCalendarDayId: string;
   title: string;
+  content: string;
+};
+
+export const STUDENT_COMMENT_CATEGORY_POINTS = {
+  GREEN_CARD: 3,
+  POSITIVE: 1,
+  INFORMATION: 0,
+  NEGATIVE: -1,
+  RED_CARD: -3,
+} as const;
+
+export type StudentCommentCategoryInput =
+  keyof typeof STUDENT_COMMENT_CATEGORY_POINTS;
+
+export type StudentCommentsInput = {
+  timetableParticipantId: string;
+  academicCalendarDayId: string;
+  studentProfileIds: string[];
+  category: StudentCommentCategoryInput;
+  point: number;
   content: string;
 };
 
@@ -66,6 +88,15 @@ function normalizeTitle(value: FormDataEntryValue | null) {
   )
     return null;
   return normalized;
+}
+
+function validCommentCategory(
+  value: FormDataEntryValue | null,
+): value is StudentCommentCategoryInput {
+  return (
+    typeof value === "string" &&
+    value in STUDENT_COMMENT_CATEGORY_POINTS
+  );
 }
 
 export function parseLessonTopic(
@@ -130,6 +161,62 @@ export function parseHomework(form: FormData): Parsed<HomeworkInput> {
       timetableParticipantId,
       academicCalendarDayId,
       title,
+      content,
+    },
+  };
+}
+
+export function parseStudentComments(
+  form: FormData,
+): Parsed<StudentCommentsInput> {
+  const timetableParticipantId = form.get("timetableParticipantId");
+  const academicCalendarDayId = form.get("academicCalendarDayId");
+  const rawStudentProfileIds = form.getAll("studentProfileIds");
+  const category = form.get("category");
+  const content = normalizeContent(form.get("content"));
+  const studentProfileIds = [
+    ...new Set(
+      rawStudentProfileIds.filter(
+        (value): value is string =>
+          typeof value === "string" && validSchoolId(value),
+      ),
+    ),
+  ];
+  const fieldErrors: TeacherCtaState["fieldErrors"] = {};
+
+  if (!validSchoolId(timetableParticipantId))
+    fieldErrors.timetableParticipantId = "Program kaydı geçersiz.";
+  if (!validSchoolId(academicCalendarDayId))
+    fieldErrors.academicCalendarDayId = "Gün kaydı geçersiz.";
+  if (studentProfileIds.length < 1)
+    fieldErrors.studentProfileIds = "En az bir öğrenci seçin.";
+  if (rawStudentProfileIds.length !== studentProfileIds.length)
+    fieldErrors.studentProfileIds = "Öğrenci seçimi geçersiz.";
+  if (studentProfileIds.length > 80)
+    fieldErrors.studentProfileIds = "Bir işlemde en fazla 80 öğrenci seçilebilir.";
+  if (!validCommentCategory(category))
+    fieldErrors.category = "Yorum kategorisi seçin.";
+  if (!content) fieldErrors.content = "Yorum notu 1-5000 karakter olmalı.";
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(timetableParticipantId) ||
+    !validSchoolId(academicCalendarDayId) ||
+    studentProfileIds.length < 1 ||
+    studentProfileIds.length > 80 ||
+    !validCommentCategory(category) ||
+    !content
+  )
+    return invalid(fieldErrors);
+
+  return {
+    success: true,
+    data: {
+      timetableParticipantId,
+      academicCalendarDayId,
+      studentProfileIds,
+      category,
+      point: STUDENT_COMMENT_CATEGORY_POINTS[category],
       content,
     },
   };

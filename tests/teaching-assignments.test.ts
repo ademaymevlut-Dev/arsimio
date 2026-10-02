@@ -10,6 +10,7 @@ import {
 import {
   parseHomework,
   parseLessonTopic,
+  parseStudentComments,
 } from "../src/lib/teacher-cta-validation";
 
 function form(values: Record<string, string>) {
@@ -25,6 +26,8 @@ const assignmentId = "eb2c5d9f-d24d-4434-9640-5df0b7a9f081";
 const schedulePeriodId = "3d27c070-8cde-45e4-a0e0-10cbd3aaf7ea";
 const timetableParticipantId = "ef7be8cc-5b14-4d5f-b913-8ce93bbf08f4";
 const academicCalendarDayId = "a3bd7f23-46d5-4d46-bef6-6eb3e549cc41";
+const studentProfileId = "d4eb86d1-20c7-48ce-a015-a8dccdcf040e";
+const secondStudentProfileId = "5af27049-e372-477f-b3ad-f9218da37edb";
 const revision = "2026-10-01T12:00:00.000Z";
 
 test("homeroom assignment accepts teacher, class and date", () => {
@@ -225,6 +228,45 @@ test("homework rejects invalid context, blank title and blank note", () => {
   if (!parsed.success) {
     assert.ok(parsed.state.fieldErrors?.academicCalendarDayId);
     assert.ok(parsed.state.fieldErrors?.title);
+    assert.ok(parsed.state.fieldErrors?.content);
+  }
+});
+
+test("student comments accept multiple students, category points and emoji", () => {
+  const data = form({
+    timetableParticipantId,
+    academicCalendarDayId,
+    category: "GREEN_CARD",
+    content: "  Derse çok iyi katıldı 😊\nTebrikler.  ",
+  });
+  data.append("studentProfileIds", studentProfileId);
+  data.append("studentProfileIds", secondStudentProfileId);
+  const parsed = parseStudentComments(data);
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.deepEqual(parsed.data.studentProfileIds, [
+      studentProfileId,
+      secondStudentProfileId,
+    ]);
+    assert.equal(parsed.data.category, "GREEN_CARD");
+    assert.equal(parsed.data.point, 3);
+    assert.equal(parsed.data.content, "Derse çok iyi katıldı 😊\nTebrikler.");
+  }
+});
+
+test("student comments reject empty student selection, category and note", () => {
+  const parsed = parseStudentComments(
+    form({
+      timetableParticipantId,
+      academicCalendarDayId,
+      category: "UNKNOWN",
+      content: "   ",
+    }),
+  );
+  assert.equal(parsed.success, false);
+  if (!parsed.success) {
+    assert.ok(parsed.state.fieldErrors?.studentProfileIds);
+    assert.ok(parsed.state.fieldErrors?.category);
     assert.ok(parsed.state.fieldErrors?.content);
   }
 });

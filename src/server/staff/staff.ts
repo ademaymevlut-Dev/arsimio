@@ -531,6 +531,17 @@ export async function getTeacherPortalHome(
                   updatedAt: true,
                 },
               },
+              commentEntries: {
+                select: {
+                  id: true,
+                  academicCalendarDayId: true,
+                  studentProfileId: true,
+                  category: true,
+                  point: true,
+                  content: true,
+                  updatedAt: true,
+                },
+              },
               courseOffering: {
                 include: {
                   subject: {
@@ -542,6 +553,29 @@ export async function getTeacherPortalHome(
                     include: {
                       classSectionDefinition: {
                         include: { gradeLevel: true },
+                      },
+                      studentGroupPlacements: {
+                        where: {
+                          enrollment: {
+                            status: "ACTIVE",
+                            student: {
+                              status: "ACTIVE",
+                              person: {
+                                status: "ACTIVE",
+                                archivedAt: null,
+                              },
+                            },
+                          },
+                        },
+                        include: {
+                          enrollment: {
+                            include: {
+                              student: {
+                                include: { person: true },
+                              },
+                            },
+                          },
+                        },
                       },
                     },
                   },
@@ -645,6 +679,34 @@ export async function getTeacherPortalHome(
               content: entry.content,
               updatedAt: entry.updatedAt.toISOString(),
             })),
+            commentEntries: participant.commentEntries.map((entry) => ({
+              id: entry.id,
+              academicCalendarDayId: entry.academicCalendarDayId,
+              studentProfileId: entry.studentProfileId,
+              category: entry.category,
+              point: entry.point,
+              content: entry.content,
+              updatedAt: entry.updatedAt.toISOString(),
+            })),
+            students:
+              participant.courseOffering.academicYearClassSection.studentGroupPlacements
+                .map((placement) => ({
+                  id: placement.enrollment.student.id,
+                  placementId: placement.id,
+                  studentNumber: placement.enrollment.student.studentNumber,
+                  fullName: fullName(placement.enrollment.student.person),
+                  validFrom: dateValue(placement.validFrom),
+                  validTo: placement.validTo
+                    ? dateValue(placement.validTo)
+                    : null,
+                }))
+                .sort((first, second) =>
+                  first.studentNumber.localeCompare(
+                    second.studentNumber,
+                    locale,
+                    { numeric: true },
+                  ) || first.fullName.localeCompare(second.fullName, locale),
+                ),
           }))
           .sort(
             (first, second) =>
