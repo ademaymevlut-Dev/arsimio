@@ -7,6 +7,7 @@ import { formatMessage } from "@/i18n/format";
 import { getDictionary, getSchoolLocale } from "@/i18n/server";
 import { getPrisma } from "@/lib/db";
 import {
+  parseExamNotification,
   parseHomework,
   parseLessonTopic,
   parseStudentAttendance,
@@ -16,6 +17,7 @@ import {
 import { requirePortalAccount } from "@/server/accounts/portal-guards";
 import { isSameOrigin } from "@/server/auth/identifiers";
 import {
+  persistExamNotification,
   persistHomework,
   persistLessonTopic,
   persistStudentAttendance,
@@ -57,6 +59,10 @@ async function getTeacherPortalMessages(
       formatMessage(staff.lessonTopicSaved, { date }),
     homeworkUpdated: staff.homeworkUpdated,
     homeworkSaved: (date) => formatMessage(staff.homeworkSaved, { date }),
+    examNotificationUpdated: staff.examNotificationUpdated,
+    examNotificationSaved: (date) =>
+      formatMessage(staff.examNotificationSaved, { date }),
+    examNotificationConflict: staff.examNotificationConflict,
     studentCommentsSaved: (count) =>
       formatMessage(staff.studentCommentsSaved, { count }),
     studentAttendanceSaved: staff.studentAttendanceSaved,
@@ -147,6 +153,50 @@ export async function saveHomeworkAction(
     return result;
   } catch (errorValue) {
     console.error("TEACHER_HOMEWORK_SAVE_UNAVAILABLE");
+    return databaseError(errorValue);
+  }
+}
+
+export async function saveExamNotificationAction(
+  _state: TeacherCtaState,
+  form: FormData,
+): Promise<TeacherCtaState> {
+  const { user, tenant, account } = await requirePortalAccount("TEACHER");
+  const incoming = await headers();
+  if (
+    !isSameOrigin(
+      incoming.get("origin"),
+      incoming.get("host"),
+      process.env.NODE_ENV === "development",
+    )
+  )
+    return invalid();
+
+  const parsed = parseExamNotification(form);
+  if (!parsed.success) return parsed.state;
+  const messages = await getTeacherPortalMessages(
+    tenant.school.defaultLocale,
+  );
+
+  try {
+    const result = await getPrisma().$transaction(
+      (tx: Prisma.TransactionClient) =>
+        persistExamNotification(
+          tx,
+          {
+            schoolId: tenant.school.id,
+            actorUserId: user.id,
+            personId: account.personId,
+          },
+          parsed.data,
+          messages,
+        ),
+      { isolationLevel: "Serializable", timeout: 15000 },
+    );
+    if (result.status === "success") revalidatePath("/teacher");
+    return result;
+  } catch (errorValue) {
+    console.error("TEACHER_EXAM_NOTIFICATION_SAVE_UNAVAILABLE");
     return databaseError(errorValue);
   }
 }

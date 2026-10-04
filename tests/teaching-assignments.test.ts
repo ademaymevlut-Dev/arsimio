@@ -8,6 +8,7 @@ import {
   parseWeeklySchedulePlacement,
 } from "../src/lib/teaching-validation";
 import {
+  parseExamNotification,
   parseHomework,
   parseLessonTopic,
   parseStudentAttendance,
@@ -229,6 +230,37 @@ test("homework rejects invalid context, blank title and blank note", () => {
   if (!parsed.success) {
     assert.ok(parsed.state.fieldErrors?.academicCalendarDayId);
     assert.ok(parsed.state.fieldErrors?.title);
+    assert.ok(parsed.state.fieldErrors?.content);
+  }
+});
+
+test("exam notification accepts one note with emoji and new lines", () => {
+  const parsed = parseExamNotification(
+    form({
+      timetableParticipantId,
+      academicCalendarDayId,
+      content: "  1. dönem sınavı 😊\nKonular: kesirler  ",
+    }),
+  );
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.timetableParticipantId, timetableParticipantId);
+    assert.equal(parsed.data.academicCalendarDayId, academicCalendarDayId);
+    assert.equal(parsed.data.content, "1. dönem sınavı 😊\nKonular: kesirler");
+  }
+});
+
+test("exam notification rejects invalid context and blank note", () => {
+  const parsed = parseExamNotification(
+    form({
+      timetableParticipantId: "not-a-uuid",
+      academicCalendarDayId,
+      content: "   ",
+    }),
+  );
+  assert.equal(parsed.success, false);
+  if (!parsed.success) {
+    assert.ok(parsed.state.fieldErrors?.timetableParticipantId);
     assert.ok(parsed.state.fieldErrors?.content);
   }
 });

@@ -531,6 +531,14 @@ export async function getTeacherPortalHome(
                   updatedAt: true,
                 },
               },
+              examNotificationEntries: {
+                select: {
+                  id: true,
+                  academicCalendarDayId: true,
+                  content: true,
+                  updatedAt: true,
+                },
+              },
               commentEntries: {
                 select: {
                   id: true,
@@ -697,6 +705,13 @@ export async function getTeacherPortalHome(
               content: entry.content,
               updatedAt: entry.updatedAt.toISOString(),
             })),
+            examNotificationEntries:
+              participant.examNotificationEntries.map((entry) => ({
+                id: entry.id,
+                academicCalendarDayId: entry.academicCalendarDayId,
+                content: entry.content,
+                updatedAt: entry.updatedAt.toISOString(),
+              })),
             commentEntries: participant.commentEntries.map((entry) => ({
               id: entry.id,
               academicCalendarDayId: entry.academicCalendarDayId,

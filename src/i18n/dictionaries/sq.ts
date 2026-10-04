@@ -350,6 +350,7 @@ const sq = {
     attendanceCta: "Mungesat",
     commentCta: "Comment",
     homeworkCta: "Detyrë",
+    examNotificationCta: "Provimi",
     lessonTopicCta: "Tema e mësimit",
     lessonTopicDialogTitle: "Shënimi i temës së mësimit",
     lessonTopicDialogDescription:
@@ -370,6 +371,17 @@ const sq = {
     saveHomework: "Ruaj detyrën",
     homeworkUpdated: "Detyra u përditësua.",
     homeworkSaved: "Detyra u ruajt për {date}.",
+    examNotificationDialogTitle: "Njoftim provimi",
+    examNotificationDialogDescription:
+      "Ruani një njoftim provimi për këtë klasë, lëndë, ditë dhe orë. Nuk mund të krijohet provim i dytë për të njëjtën klasë në të njëjtën ditë.",
+    examNotificationNoteLabel: "Shënimi i provimit",
+    examNotificationPlaceholder:
+      "P.sh. Provimi i matematikës i periudhës së parë. Temat: thyesat dhe problemat...",
+    saveExamNotification: "Ruaj njoftimin e provimit",
+    examNotificationUpdated: "Njoftimi i provimit u përditësua.",
+    examNotificationSaved: "Njoftimi i provimit u ruajt për {date}.",
+    examNotificationConflict:
+      "Kjo klasë ka tashmë një njoftim provimi në ditën e zgjedhur. Ju lutemi planifikoni një ditë tjetër.",
     studentCommentsDialogTitle: "Koment për nxënësin",
     studentCommentsDialogDescription:
       "Zgjidhni nxënësit majtas, kategorinë e komentit në mes dhe shkruani shënimin djathtas. Për çdo nxënës të zgjedhur ruhet regjistrim veçmas; regjistrimet ekzistuese përditësohen.",

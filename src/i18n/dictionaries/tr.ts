@@ -449,6 +449,7 @@ export const tr = {
     attendanceCta: "Yoklama",
     commentCta: "Comment",
     homeworkCta: "Ödev",
+    examNotificationCta: "Sınav",
     lessonTopicCta: "Ders Konusu",
     lessonTopicDialogTitle: "Ders konusu notu",
     lessonTopicDialogDescription:
@@ -469,6 +470,17 @@ export const tr = {
     saveHomework: "Ödevi kaydet",
     homeworkUpdated: "Ödev güncellendi.",
     homeworkSaved: "Ödev {date} için kaydedildi.",
+    examNotificationDialogTitle: "Sınav bildirimi",
+    examNotificationDialogDescription:
+      "Bu sınıf, ders, gün ve saat için tek sınav bildirimi kaydedin. Aynı sınıfa aynı gün ikinci sınav oluşturulamaz.",
+    examNotificationNoteLabel: "Sınav notu",
+    examNotificationPlaceholder:
+      "Örn. 1. dönem matematik sınavı. Konular: kesirler ve problemler...",
+    saveExamNotification: "Sınav bildirimini kaydet",
+    examNotificationUpdated: "Sınav bildirimi güncellendi.",
+    examNotificationSaved: "Sınav bildirimi {date} için kaydedildi.",
+    examNotificationConflict:
+      "Bu sınıf için seçilen günde başka bir sınav bildirimi var. Lütfen farklı bir güne planlayın.",
     studentCommentsDialogTitle: "Öğrenci yorumu",
     studentCommentsDialogDescription:
       "Soldan öğrencileri seçin, ortadan yorum kategorisini belirleyin ve sağdaki not alanına yorumu yazın. Seçilen her öğrenci için ayrı kayıt oluşur; mevcut kayıt varsa güncellenir.",

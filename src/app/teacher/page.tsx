@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { signOut } from "@/app/login/actions";
 import { AttendanceDialog } from "@/components/teacher/attendance-dialog";
+import { ExamNotificationDialog } from "@/components/teacher/exam-notification-dialog";
 import { HomeworkDialog } from "@/components/teacher/homework-dialog";
 import { LessonTopicDialog } from "@/components/teacher/lesson-topic-dialog";
 import { StudentCommentsDialog } from "@/components/teacher/student-comments-dialog";
@@ -326,6 +327,12 @@ export default async function TeacherPortalPage({
                                               entry.academicCalendarDayId ===
                                               day.id,
                                           );
+                                        const examNotificationEntry =
+                                          participant.examNotificationEntries.find(
+                                            (entry) =>
+                                              entry.academicCalendarDayId ===
+                                              day.id,
+                                          );
                                         const commentEntries =
                                           participant.commentEntries.filter(
                                             (entry) =>
@@ -411,6 +418,18 @@ export default async function TeacherPortalPage({
                                                 }
                                                 initialContent={
                                                   homeworkEntry?.content ?? ""
+                                                }
+                                                contextLabel={contextLabel}
+                                                messages={text}
+                                              />
+                                              <ExamNotificationDialog
+                                                timetableParticipantId={
+                                                  participant.id
+                                                }
+                                                academicCalendarDayId={day.id}
+                                                initialContent={
+                                                  examNotificationEntry?.content ??
+                                                  ""
                                                 }
                                                 contextLabel={contextLabel}
                                                 messages={text}

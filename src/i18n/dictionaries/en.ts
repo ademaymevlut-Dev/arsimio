@@ -349,6 +349,7 @@ const en = {
     attendanceCta: "Attendance",
     commentCta: "Comment",
     homeworkCta: "Homework",
+    examNotificationCta: "Exam",
     lessonTopicCta: "Lesson topic",
     lessonTopicDialogTitle: "Lesson topic note",
     lessonTopicDialogDescription:
@@ -369,6 +370,17 @@ const en = {
     saveHomework: "Save homework",
     homeworkUpdated: "Homework updated.",
     homeworkSaved: "Homework saved for {date}.",
+    examNotificationDialogTitle: "Exam notification",
+    examNotificationDialogDescription:
+      "Save one exam notification for this class, subject, day and period. A second exam cannot be created for the same class on the same day.",
+    examNotificationNoteLabel: "Exam note",
+    examNotificationPlaceholder:
+      "Example: First term math exam. Topics: fractions and word problems...",
+    saveExamNotification: "Save exam notification",
+    examNotificationUpdated: "Exam notification updated.",
+    examNotificationSaved: "Exam notification saved for {date}.",
+    examNotificationConflict:
+      "This class already has an exam notification on the selected day. Please choose another date.",
     studentCommentsDialogTitle: "Student comments",
     studentCommentsDialogDescription:
       "Select students on the left, choose the comment category in the middle, and write the note on the right. A separate record is saved for every selected student; existing records are updated.",

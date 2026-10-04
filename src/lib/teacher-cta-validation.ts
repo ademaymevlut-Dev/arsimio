@@ -34,6 +34,12 @@ export type HomeworkInput = {
   content: string;
 };
 
+export type ExamNotificationInput = {
+  timetableParticipantId: string;
+  academicCalendarDayId: string;
+  content: string;
+};
+
 export const STUDENT_COMMENT_CATEGORY_POINTS = {
   GREEN_CARD: 3,
   POSITIVE: 1,
@@ -194,6 +200,39 @@ export function parseHomework(form: FormData): Parsed<HomeworkInput> {
       timetableParticipantId,
       academicCalendarDayId,
       title,
+      content,
+    },
+  };
+}
+
+export function parseExamNotification(
+  form: FormData,
+): Parsed<ExamNotificationInput> {
+  const timetableParticipantId = form.get("timetableParticipantId");
+  const academicCalendarDayId = form.get("academicCalendarDayId");
+  const content = normalizeContent(form.get("content"));
+  const fieldErrors: TeacherCtaState["fieldErrors"] = {};
+
+  if (!validSchoolId(timetableParticipantId))
+    fieldErrors.timetableParticipantId = "Program kaydı geçersiz.";
+  if (!validSchoolId(academicCalendarDayId))
+    fieldErrors.academicCalendarDayId = "Gün kaydı geçersiz.";
+  if (!content)
+    fieldErrors.content = "Sınav bildirimi notu 1-5000 karakter olmalı.";
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(timetableParticipantId) ||
+    !validSchoolId(academicCalendarDayId) ||
+    !content
+  )
+    return invalid(fieldErrors);
+
+  return {
+    success: true,
+    data: {
+      timetableParticipantId,
+      academicCalendarDayId,
       content,
     },
   };

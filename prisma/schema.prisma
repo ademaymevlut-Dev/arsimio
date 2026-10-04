@@ -334,6 +334,7 @@ model School {
   timetableSessionParticipants TimetableSessionParticipant[]
   lessonTopicEntries           LessonTopicEntry[]
   homeworkEntries              HomeworkEntry[]
+  examNotificationEntries      ExamNotificationEntry[]
   studentCommentEntries        StudentCommentEntry[]
   studentAttendanceRecords     StudentAttendanceRecord[]
   numberSequences              SchoolNumberSequence[]
@@ -677,6 +678,7 @@ model AcademicYear {
   timetableSessionParticipants TimetableSessionParticipant[]
   lessonTopicEntries           LessonTopicEntry[]
   homeworkEntries              HomeworkEntry[]
+  examNotificationEntries      ExamNotificationEntry[]
   studentCommentEntries        StudentCommentEntry[]
   studentAttendanceRecords     StudentAttendanceRecord[]
   setupRuns                    AcademicYearSetupRun[]
@@ -782,6 +784,7 @@ model AcademicCalendarDay {
   academicTerm       AcademicTerm?             @relation(fields: [academicTermId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
   lessonTopicEntries LessonTopicEntry[]
   homeworkEntries    HomeworkEntry[]
+  examEntries        ExamNotificationEntry[]
   commentEntries     StudentCommentEntry[]
   attendanceRecords  StudentAttendanceRecord[]
 
@@ -1113,6 +1116,7 @@ model AcademicYearClassSection {
   homeroomTeacherAssignments HomeroomTeacherAssignment[]
   timetableParticipants      TimetableSessionParticipant[]
   studentGroupPlacements     StudentGroupPlacement[]
+  examEntries                ExamNotificationEntry[]
   attendanceRecords          StudentAttendanceRecord[]
 
   @@unique([academicYearId, classSectionDefinitionId], map: "aycs_year_section_definition_key")
@@ -1412,6 +1416,7 @@ model TeacherProfile {
   timetableSessions       TimetableSession[]
   lessonTopicEntries      LessonTopicEntry[]
   homeworkEntries         HomeworkEntry[]
+  examNotificationEntries ExamNotificationEntry[]
   commentEntries          StudentCommentEntry[]
   openedAttendanceRecords StudentAttendanceRecord[]   @relation("StudentAttendanceOpenedTeacher")
   lateAttendanceRecords   StudentAttendanceRecord[]   @relation("StudentAttendanceLateTeacher")
@@ -1559,6 +1564,7 @@ model TimetableSessionParticipant {
   academicYearClassSection AcademicYearClassSection  @relation(fields: [academicYearClassSectionId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
   lessonTopicEntries       LessonTopicEntry[]
   homeworkEntries          HomeworkEntry[]
+  examNotificationEntries  ExamNotificationEntry[]
   commentEntries           StudentCommentEntry[]
   openedAttendanceRecords  StudentAttendanceRecord[] @relation("StudentAttendanceOpenedParticipant")
   lateAttendanceRecords    StudentAttendanceRecord[] @relation("StudentAttendanceLateParticipant")
@@ -1622,6 +1628,34 @@ model HomeworkEntry {
   @@index([schoolId, academicYearId, academicCalendarDayId], map: "he_day_lookup_idx")
   @@index([schoolId, teacherProfileId, academicCalendarDayId], map: "he_teacher_day_lookup_idx")
   @@map("homework_entries")
+}
+
+model ExamNotificationEntry {
+  id                            String   @id @default(uuid()) @db.Uuid
+  schoolId                      String   @map("school_id") @db.Uuid
+  academicYearId                String   @map("academic_year_id") @db.Uuid
+  academicCalendarDayId         String   @map("academic_calendar_day_id") @db.Uuid
+  academicYearClassSectionId    String   @map("academic_year_class_section_id") @db.Uuid
+  timetableSessionParticipantId String   @map("timetable_session_participant_id") @db.Uuid
+  teacherProfileId              String   @map("teacher_profile_id") @db.Uuid
+  content                       String   @db.Text
+  createdByUserId               String?  @map("created_by_user_id") @db.Uuid
+  updatedByUserId               String?  @map("updated_by_user_id") @db.Uuid
+  createdAt                     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school                      School                      @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  academicYear                AcademicYear                @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  academicCalendarDay         AcademicCalendarDay         @relation(fields: [academicCalendarDayId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+  academicYearClassSection    AcademicYearClassSection    @relation(fields: [academicYearClassSectionId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+  timetableSessionParticipant TimetableSessionParticipant @relation(fields: [timetableSessionParticipantId, schoolId, academicYearId], references: [id, schoolId, academicYearId], onDelete: Restrict, onUpdate: Restrict)
+  teacherProfile              TeacherProfile              @relation(fields: [teacherProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([academicCalendarDayId, academicYearClassSectionId], map: "ene_day_section_key")
+  @@unique([id, schoolId])
+  @@index([schoolId, academicYearId, academicCalendarDayId], map: "ene_day_lookup_idx")
+  @@index([schoolId, teacherProfileId, academicCalendarDayId], map: "ene_teacher_day_lookup_idx")
+  @@map("exam_notification_entries")
 }
 
 model StudentCommentEntry {
