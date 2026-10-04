@@ -10,6 +10,7 @@ import {
 import {
   parseHomework,
   parseLessonTopic,
+  parseStudentAttendance,
   parseStudentComments,
 } from "../src/lib/teacher-cta-validation";
 
@@ -268,5 +269,43 @@ test("student comments reject empty student selection, category and note", () =>
     assert.ok(parsed.state.fieldErrors?.studentProfileIds);
     assert.ok(parsed.state.fieldErrors?.category);
     assert.ok(parsed.state.fieldErrors?.content);
+  }
+});
+
+test("student attendance accepts absent, late and clear changes", () => {
+  const data = form({
+    timetableParticipantId,
+    academicCalendarDayId,
+  });
+  data.append("absentStudentProfileIds", studentProfileId);
+  data.append("lateStudentProfileIds", secondStudentProfileId);
+  data.append("clearStudentProfileIds", teacherProfileId);
+  const parsed = parseStudentAttendance(data);
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.deepEqual(parsed.data.absentStudentProfileIds, [studentProfileId]);
+    assert.deepEqual(parsed.data.lateStudentProfileIds, [
+      secondStudentProfileId,
+    ]);
+    assert.deepEqual(parsed.data.clearStudentProfileIds, [teacherProfileId]);
+  }
+});
+
+test("student attendance rejects no-op and overlapping student changes", () => {
+  const noChange = parseStudentAttendance(
+    form({ timetableParticipantId, academicCalendarDayId }),
+  );
+  assert.equal(noChange.success, false);
+  if (!noChange.success) {
+    assert.ok(noChange.state.fieldErrors?.studentProfileIds);
+  }
+
+  const data = form({ timetableParticipantId, academicCalendarDayId });
+  data.append("absentStudentProfileIds", studentProfileId);
+  data.append("lateStudentProfileIds", studentProfileId);
+  const overlapping = parseStudentAttendance(data);
+  assert.equal(overlapping.success, false);
+  if (!overlapping.success) {
+    assert.ok(overlapping.state.fieldErrors?.studentProfileIds);
   }
 });

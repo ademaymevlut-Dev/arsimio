@@ -577,6 +577,24 @@ export async function getTeacherPortalHome(
                           },
                         },
                       },
+                      attendanceRecords: {
+                        where: {
+                          schoolId,
+                          academicYearId: activeYear.id,
+                        },
+                        include: {
+                          openedTeacherProfile: {
+                            include: {
+                              employment: { include: { person: true } },
+                            },
+                          },
+                          lateTeacherProfile: {
+                            include: {
+                              employment: { include: { person: true } },
+                            },
+                          },
+                        },
+                      },
                     },
                   },
                 },
@@ -688,6 +706,23 @@ export async function getTeacherPortalHome(
               content: entry.content,
               updatedAt: entry.updatedAt.toISOString(),
             })),
+            attendanceRecords:
+              participant.courseOffering.academicYearClassSection.attendanceRecords.map(
+                (entry) => ({
+                  id: entry.id,
+                  academicCalendarDayId: entry.academicCalendarDayId,
+                  studentProfileId: entry.studentProfileId,
+                  status: entry.status,
+                  openedAt: entry.openedAt.toISOString(),
+                  openedBy: fullName(
+                    entry.openedTeacherProfile.employment.person,
+                  ),
+                  lateAt: entry.lateAt?.toISOString() ?? null,
+                  lateBy: entry.lateTeacherProfile
+                    ? fullName(entry.lateTeacherProfile.employment.person)
+                    : null,
+                }),
+              ),
             students:
               participant.courseOffering.academicYearClassSection.studentGroupPlacements
                 .map((placement) => ({

@@ -10,6 +10,7 @@ import {
 import { PageHeader } from "@/components/admin/page-header";
 import { DataTableShell } from "@/components/admin/data-table-shell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { requireSchoolPermission } from "@/server/authorization/guards";
 import { getAcademicCalendarSummary } from "@/server/academics/academic-calendar";
+import { getTodayAttendanceRecords } from "@/server/attendance/attendance";
 import { formatMessage } from "@/i18n/format";
 import { getDictionary, getSchoolLocale } from "@/i18n/server";
 
@@ -34,7 +36,10 @@ export default async function DashboardPage() {
     membership.preferredLocale,
     tenant.school.defaultLocale,
   );
-  const dictionary = await getDictionary(locale);
+  const [dictionary, attendanceRecords] = await Promise.all([
+    getDictionary(locale),
+    getTodayAttendanceRecords(tenant.school.id, locale),
+  ]);
   const messages = dictionary.dashboard;
   const roleNames = membership.roles.map(({ role }) => role.name);
   const setup = [
@@ -137,6 +142,84 @@ export default async function DashboardPage() {
           </p>
         </div>
       </section>
+      <DataTableShell
+        title={messages.attendanceTodayTitle}
+        description={messages.attendanceTodayDescription}
+        footer={
+          attendanceRecords.length
+            ? formatMessage(messages.attendanceFooter, {
+                count: attendanceRecords.length,
+              })
+            : messages.attendanceEmpty
+        }
+      >
+        <Table className="min-w-[1120px]">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead scope="col">{messages.attendanceStatus}</TableHead>
+              <TableHead scope="col">{messages.attendanceClass}</TableHead>
+              <TableHead scope="col">{messages.attendanceStudent}</TableHead>
+              <TableHead scope="col">{messages.attendanceLesson}</TableHead>
+              <TableHead scope="col">{messages.attendanceTeacher}</TableHead>
+              <TableHead scope="col">{messages.attendanceLateInfo}</TableHead>
+              <TableHead scope="col">{messages.attendanceGuardian}</TableHead>
+              <TableHead scope="col">
+                {messages.attendanceGuardianPhone}
+              </TableHead>
+              <TableHead scope="col">{messages.attendanceSms}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {attendanceRecords.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={9}
+                  className="py-8 text-center text-muted-foreground"
+                >
+                  {messages.attendanceEmpty}
+                </TableCell>
+              </TableRow>
+            ) : (
+              attendanceRecords.map((record) => (
+                <TableRow key={record.id}>
+                  <TableCell>
+                    <Badge
+                      variant={record.status === "ABSENT" ? "danger" : "warning"}
+                    >
+                      {record.status === "ABSENT"
+                        ? dictionary.staff.attendanceAbsent
+                        : dictionary.staff.attendanceLate}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{record.classLabel}</TableCell>
+                  <TableCell>
+                    <span className="font-medium">{record.studentName}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      No: {record.studentNumber}
+                    </span>
+                  </TableCell>
+                  <TableCell>{record.lessonLabel}</TableCell>
+                  <TableCell>{record.openedTeacherName}</TableCell>
+                  <TableCell>
+                    {record.lateInfo ?? messages.attendanceNoLateInfo}
+                  </TableCell>
+                  <TableCell>
+                    {record.guardianName ?? messages.attendanceNoGuardian}
+                  </TableCell>
+                  <TableCell>
+                    {record.guardianPhone ?? messages.attendanceNoPhone}
+                  </TableCell>
+                  <TableCell>
+                    <Button type="button" size="xs" variant="outline" disabled>
+                      {messages.attendanceSmsDisabled}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </DataTableShell>
       <DataTableShell
         title={messages.roadmap}
         description={messages.roadmapDescription}

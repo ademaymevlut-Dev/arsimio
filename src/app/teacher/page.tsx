@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { signOut } from "@/app/login/actions";
+import { AttendanceDialog } from "@/components/teacher/attendance-dialog";
 import { HomeworkDialog } from "@/components/teacher/homework-dialog";
 import { LessonTopicDialog } from "@/components/teacher/lesson-topic-dialog";
 import { StudentCommentsDialog } from "@/components/teacher/student-comments-dialog";
@@ -331,6 +332,12 @@ export default async function TeacherPortalPage({
                                               entry.academicCalendarDayId ===
                                               day.id,
                                           );
+                                        const attendanceRecords =
+                                          participant.attendanceRecords.filter(
+                                            (entry) =>
+                                              entry.academicCalendarDayId ===
+                                              day.id,
+                                          );
                                         const contextLabel = `${weekdayLabel(
                                           day.weekday,
                                           text,
@@ -370,14 +377,18 @@ export default async function TeacherPortalPage({
                                                 contextLabel={contextLabel}
                                                 messages={text}
                                               />
-                                              <Button
-                                                type="button"
-                                                size="xs"
-                                                variant="info"
-                                                disabled
-                                              >
-                                                {text.attendanceCta}
-                                              </Button>
+                                              <AttendanceDialog
+                                                timetableParticipantId={
+                                                  participant.id
+                                                }
+                                                academicCalendarDayId={day.id}
+                                                students={participant.students}
+                                                existingAttendance={
+                                                  attendanceRecords
+                                                }
+                                                contextLabel={contextLabel}
+                                                messages={text}
+                                              />
                                               <StudentCommentsDialog
                                                 timetableParticipantId={
                                                   participant.id
