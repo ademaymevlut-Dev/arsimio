@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useActionState } from "react";
 import {
+  saveEmploymentContractAction,
   saveStaffHrProfileAction,
   saveTeacherProfileAction,
   transitionEmploymentAction,
@@ -84,6 +85,24 @@ type StaffDetail = {
   email: string | null;
   photoUrl: string | null;
   photoUpdatedAt: string | null;
+  contracts: {
+    id: string;
+    contractNumber: string;
+    type:
+      | "INDEFINITE"
+      | "FIXED_TERM"
+      | "PART_TIME"
+      | "SERVICE"
+      | "INTERN"
+      | "OTHER";
+    status: "ACTIVE" | "ENDED" | "CANCELLED";
+    startedOn: string;
+    endedOn: string | null;
+    note: string | null;
+    createdAt: string;
+    updatedAt: string;
+    revision: string;
+  }[];
   identities: {
     id: string;
     type: "NATIONAL_ID" | "PASSPORT";
@@ -132,6 +151,8 @@ export function StaffDetailManager({
   canManageStaff,
   canManageTeachers,
   canManageAccounts,
+  canReadContracts,
+  canManageContracts,
   canManageIdentity,
   identityProtectionReady,
   defaultEffectiveOn,
@@ -142,6 +163,8 @@ export function StaffDetailManager({
   canManageStaff: boolean;
   canManageTeachers: boolean;
   canManageAccounts: boolean;
+  canReadContracts: boolean;
+  canManageContracts: boolean;
   canManageIdentity: boolean;
   identityProtectionReady: boolean;
   defaultEffectiveOn: string;
@@ -164,6 +187,10 @@ export function StaffDetailManager({
     StaffState,
     FormData
   >(saveStaffHrProfileAction, initialState);
+  const [contractState, contractAction, contractPending] = useActionState<
+    StaffState,
+    FormData
+  >(saveEmploymentContractAction, initialState);
   function employmentStatusLabel(value: string) {
     if (value === "ACTIVE") return messages.active;
     if (value === "ON_LEAVE") return messages.onLeave;
@@ -173,7 +200,30 @@ export function StaffDetailManager({
   function identityTypeLabel(value: "NATIONAL_ID" | "PASSPORT") {
     return value === "PASSPORT" ? messages.passport : messages.nationalId;
   }
+  function contractTypeLabel(value: StaffDetail["contracts"][number]["type"]) {
+    const labels = {
+      INDEFINITE: messages.contractTypeIndefinite,
+      FIXED_TERM: messages.contractTypeFixedTerm,
+      PART_TIME: messages.contractTypePartTime,
+      SERVICE: messages.contractTypeService,
+      INTERN: messages.contractTypeIntern,
+      OTHER: messages.contractTypeOther,
+    };
+    return labels[value] ?? value;
+  }
+  function contractStatusLabel(
+    value: StaffDetail["contracts"][number]["status"],
+  ) {
+    const labels = {
+      ACTIVE: messages.contractStatusActive,
+      ENDED: messages.contractStatusEnded,
+      CANCELLED: messages.contractStatusCancelled,
+    };
+    return labels[value] ?? value;
+  }
   const hrProfile = staff.hrProfile;
+  const activeContract =
+    staff.contracts.find((contract) => contract.status === "ACTIVE") ?? null;
 
   return (
     <div className="space-y-6">
@@ -234,6 +284,332 @@ export function StaffDetailManager({
           </dl>
         </CardContent>
       </Card>
+
+      {canReadContracts ? (
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle>{messages.contractsTitle}</CardTitle>
+            <CardDescription>{messages.contractsDescription}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+              <p className="font-medium">{messages.activeContract}</p>
+              {activeContract ? (
+                <div className="mt-2 grid gap-2 sm:grid-cols-4">
+                  <div>
+                    <span className="text-muted-foreground">
+                      {messages.contractNumber}
+                    </span>
+                    <p className="font-medium">{activeContract.contractNumber}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">
+                      {messages.contractType}
+                    </span>
+                    <p className="font-medium">
+                      {contractTypeLabel(activeContract.type)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">
+                      {messages.contractStartedOn}
+                    </span>
+                    <p className="font-medium">
+                      {formatDate(activeContract.startedOn, locale)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">
+                      {messages.contractEndedOn}
+                    </span>
+                    <p className="font-medium">
+                      {formatDate(activeContract.endedOn, locale)}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-1 text-muted-foreground">
+                  {messages.noActiveContract}
+                </p>
+              )}
+            </div>
+
+            {canManageContracts ? (
+              <form
+                action={contractAction}
+                className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2"
+              >
+                <input type="hidden" name="employmentId" value={staff.id} />
+                <div className="space-y-2">
+                  <Label htmlFor="newContractNumber">
+                    {messages.contractNumber}
+                  </Label>
+                  <Input
+                    id="newContractNumber"
+                    name="contractNumber"
+                    disabled={contractPending}
+                    aria-invalid={Boolean(contractState.fieldErrors?.contractNumber)}
+                    required
+                  />
+                  <FieldError
+                    state={contractState}
+                    field="contractNumber"
+                    id="new-contract-number-error"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newContractType">{messages.contractType}</Label>
+                  <NativeSelect
+                    id="newContractType"
+                    name="contractType"
+                    disabled={contractPending}
+                    defaultValue="FIXED_TERM"
+                  >
+                    <option value="INDEFINITE">
+                      {messages.contractTypeIndefinite}
+                    </option>
+                    <option value="FIXED_TERM">
+                      {messages.contractTypeFixedTerm}
+                    </option>
+                    <option value="PART_TIME">
+                      {messages.contractTypePartTime}
+                    </option>
+                    <option value="SERVICE">{messages.contractTypeService}</option>
+                    <option value="INTERN">{messages.contractTypeIntern}</option>
+                    <option value="OTHER">{messages.contractTypeOther}</option>
+                  </NativeSelect>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newContractStatus">
+                    {messages.contractStatus}
+                  </Label>
+                  <NativeSelect
+                    id="newContractStatus"
+                    name="contractStatus"
+                    disabled={contractPending}
+                    defaultValue="ACTIVE"
+                  >
+                    <option value="ACTIVE">
+                      {messages.contractStatusActive}
+                    </option>
+                    <option value="ENDED">{messages.contractStatusEnded}</option>
+                    <option value="CANCELLED">
+                      {messages.contractStatusCancelled}
+                    </option>
+                  </NativeSelect>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newContractStartedOn">
+                    {messages.contractStartedOn}
+                  </Label>
+                  <Input
+                    id="newContractStartedOn"
+                    name="contractStartedOn"
+                    type="date"
+                    defaultValue={defaultEffectiveOn}
+                    disabled={contractPending}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newContractEndedOn">
+                    {messages.contractEndedOn}
+                  </Label>
+                  <Input
+                    id="newContractEndedOn"
+                    name="contractEndedOn"
+                    type="date"
+                    disabled={contractPending}
+                  />
+                  <FieldError
+                    state={contractState}
+                    field="contractEndedOn"
+                    id="new-contract-ended-on-error"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="newContractNote">{messages.contractNote}</Label>
+                  <Textarea
+                    id="newContractNote"
+                    name="contractNote"
+                    rows={3}
+                    disabled={contractPending}
+                  />
+                </div>
+                <div className="space-y-3 sm:col-span-2">
+                  <ActionAlert state={contractState} />
+                  <Button type="submit" disabled={contractPending}>
+                    {messages.saveContract}
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">
+                {messages.contractHistory}
+              </h3>
+              {staff.contracts.length ? (
+                staff.contracts.map((contract) => (
+                  <details key={contract.id} className="rounded-lg border p-3">
+                    <summary className="cursor-pointer text-sm font-medium">
+                      {contract.contractNumber} · {contractTypeLabel(contract.type)} ·{" "}
+                      {contractStatusLabel(contract.status)}
+                    </summary>
+                    <div className="mt-3 grid gap-3 text-sm sm:grid-cols-4">
+                      <div>
+                        <span className="text-muted-foreground">
+                          {messages.contractStartedOn}
+                        </span>
+                        <p>{formatDate(contract.startedOn, locale)}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          {messages.contractEndedOn}
+                        </span>
+                        <p>{formatDate(contract.endedOn, locale)}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          {messages.updatedAt}
+                        </span>
+                        <p>{formatDate(contract.updatedAt.slice(0, 10), locale)}</p>
+                      </div>
+                      <div className="sm:col-span-4">
+                        <span className="text-muted-foreground">
+                          {messages.contractNote}
+                        </span>
+                        <p>{contract.note ?? "—"}</p>
+                      </div>
+                    </div>
+                    {canManageContracts ? (
+                      <form
+                        action={contractAction}
+                        className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-2"
+                      >
+                        <input type="hidden" name="employmentId" value={staff.id} />
+                        <input type="hidden" name="contractId" value={contract.id} />
+                        <input
+                          type="hidden"
+                          name="revision"
+                          value={contract.revision}
+                        />
+                        <div className="space-y-2">
+                          <Label htmlFor={`contractNumber-${contract.id}`}>
+                            {messages.contractNumber}
+                          </Label>
+                          <Input
+                            id={`contractNumber-${contract.id}`}
+                            name="contractNumber"
+                            defaultValue={contract.contractNumber}
+                            disabled={contractPending}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`contractType-${contract.id}`}>
+                            {messages.contractType}
+                          </Label>
+                          <NativeSelect
+                            id={`contractType-${contract.id}`}
+                            name="contractType"
+                            defaultValue={contract.type}
+                            disabled={contractPending}
+                          >
+                            <option value="INDEFINITE">
+                              {messages.contractTypeIndefinite}
+                            </option>
+                            <option value="FIXED_TERM">
+                              {messages.contractTypeFixedTerm}
+                            </option>
+                            <option value="PART_TIME">
+                              {messages.contractTypePartTime}
+                            </option>
+                            <option value="SERVICE">
+                              {messages.contractTypeService}
+                            </option>
+                            <option value="INTERN">
+                              {messages.contractTypeIntern}
+                            </option>
+                            <option value="OTHER">
+                              {messages.contractTypeOther}
+                            </option>
+                          </NativeSelect>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`contractStatus-${contract.id}`}>
+                            {messages.contractStatus}
+                          </Label>
+                          <NativeSelect
+                            id={`contractStatus-${contract.id}`}
+                            name="contractStatus"
+                            defaultValue={contract.status}
+                            disabled={contractPending}
+                          >
+                            <option value="ACTIVE">
+                              {messages.contractStatusActive}
+                            </option>
+                            <option value="ENDED">
+                              {messages.contractStatusEnded}
+                            </option>
+                            <option value="CANCELLED">
+                              {messages.contractStatusCancelled}
+                            </option>
+                          </NativeSelect>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`contractStartedOn-${contract.id}`}>
+                            {messages.contractStartedOn}
+                          </Label>
+                          <Input
+                            id={`contractStartedOn-${contract.id}`}
+                            name="contractStartedOn"
+                            type="date"
+                            defaultValue={contract.startedOn}
+                            disabled={contractPending}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`contractEndedOn-${contract.id}`}>
+                            {messages.contractEndedOn}
+                          </Label>
+                          <Input
+                            id={`contractEndedOn-${contract.id}`}
+                            name="contractEndedOn"
+                            type="date"
+                            defaultValue={contract.endedOn ?? ""}
+                            disabled={contractPending}
+                          />
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label htmlFor={`contractNote-${contract.id}`}>
+                            {messages.contractNote}
+                          </Label>
+                          <Textarea
+                            id={`contractNote-${contract.id}`}
+                            name="contractNote"
+                            defaultValue={contract.note ?? ""}
+                            rows={3}
+                            disabled={contractPending}
+                          />
+                        </div>
+                        <Button type="submit" disabled={contractPending}>
+                          {messages.updateContract}
+                        </Button>
+                      </form>
+                    ) : null}
+                  </details>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {messages.noContracts}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader className="border-b">

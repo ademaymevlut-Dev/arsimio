@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   parseCreateEmployment,
   parseEmploymentTransition,
+  parseSaveEmploymentContract,
   parseStaffCatalogItem,
   parseStaffCatalogTransition,
   parseTeacherProfile,
@@ -24,6 +25,7 @@ const employmentId = "2f9d5c1e-874c-4cef-9584-07ff73e74827";
 const departmentId = "25a01724-71bb-48bc-879c-1298c951d3c0";
 const positionId = "8bc89aad-a709-451c-aa20-e2505b5be0fd";
 const catalogId = "4e7a0b1a-0b18-4af9-86ac-3e57adfd7767";
+const contractId = "5b2985f2-a8c4-4fa2-bf7c-43ce4f2620d7";
 const subjectOne = "0b9a5fbf-d073-42c6-a314-a6de017409a1";
 const subjectTwo = "32bbbf77-cb2a-4b2e-83ac-6b138c0e0d4a";
 const revision = "2026-10-01T12:00:00.000Z";
@@ -150,6 +152,42 @@ test("staff HR profile accepts address, emergency contact and protected identity
   );
   assert.equal(invalid.success, false);
   if (!invalid.success) assert.ok(invalid.state.fieldErrors?.identityCountry);
+});
+
+test("employment contract parser accepts manual contract numbers and optional end dates", () => {
+  const parsed = parseSaveEmploymentContract(
+    form({
+      employmentId,
+      contractNumber: "PRAKTIKE-2025/10-BI",
+      contractType: "INTERN",
+      contractStatus: "ACTIVE",
+      contractStartedOn: "2026-10-01",
+      contractEndedOn: "",
+      contractNote: "Manual school contract reference.",
+    }),
+  );
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.contractId, null);
+    assert.equal(parsed.data.contractNumber, "PRAKTIKE-2025/10-BI");
+    assert.equal(parsed.data.type, "INTERN");
+    assert.equal(parsed.data.endedOn, null);
+  }
+
+  const update = parseSaveEmploymentContract(
+    form({
+      employmentId,
+      contractId,
+      revision,
+      contractNumber: "PRAKTIKE-2025/10-BI",
+      contractType: "INTERN",
+      contractStatus: "ENDED",
+      contractStartedOn: "2026-10-01",
+      contractEndedOn: "2026-09-30",
+    }),
+  );
+  assert.equal(update.success, false);
+  if (!update.success) assert.ok(update.state.fieldErrors?.contractEndedOn);
 });
 
 test("staff catalog item requires a code and three translated names", () => {

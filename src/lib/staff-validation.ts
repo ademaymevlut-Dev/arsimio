@@ -1,4 +1,6 @@
 import type {
+  EmploymentContractStatus,
+  EmploymentContractType,
   EmploymentExitReason,
   EmploymentType,
   IdentityType,
@@ -17,6 +19,19 @@ const EMPLOYMENT_TYPES = new Set<EmploymentType>([
   "FIXED_TERM",
   "CONTRACTOR",
   "INTERN",
+]);
+const CONTRACT_TYPES = new Set<EmploymentContractType>([
+  "INDEFINITE",
+  "FIXED_TERM",
+  "PART_TIME",
+  "SERVICE",
+  "INTERN",
+  "OTHER",
+]);
+const CONTRACT_STATUSES = new Set<EmploymentContractStatus>([
+  "ACTIVE",
+  "ENDED",
+  "CANCELLED",
 ]);
 
 const EXIT_REASONS = new Set<EmploymentExitReason>([
@@ -78,6 +93,13 @@ export type StaffField =
   | "identityType"
   | "identityValue"
   | "identityCountry"
+  | "contractId"
+  | "contractNumber"
+  | "contractType"
+  | "contractStatus"
+  | "contractStartedOn"
+  | "contractEndedOn"
+  | "contractNote"
   | "catalogKind"
   | "catalogId"
   | "code"
@@ -147,6 +169,18 @@ export type UpdateStaffHrProfileInput = {
     value: string;
     countryCode: string | null;
   } | null;
+};
+
+export type SaveEmploymentContractInput = {
+  employmentId: string;
+  contractId: string | null;
+  revision: string | null;
+  contractNumber: string;
+  type: EmploymentContractType;
+  status: EmploymentContractStatus;
+  startedOn: Date;
+  endedOn: Date | null;
+  note: string | null;
 };
 
 export type StaffCatalogKind = "department" | "position";
@@ -508,6 +542,82 @@ export function parseUpdateStaffHrProfile(
               countryCode: identityCountry,
             }
           : null,
+    },
+  };
+}
+
+export function parseSaveEmploymentContract(
+  form: FormData,
+  messages: StaffMessages = tr.staff,
+): Parsed<SaveEmploymentContractInput> {
+  const employmentId = form.get("employmentId");
+  const contractIdRaw = form.get("contractId");
+  const contractId =
+    typeof contractIdRaw === "string" && contractIdRaw ? contractIdRaw : null;
+  const revisionRaw = form.get("revision");
+  const revision =
+    typeof revisionRaw === "string" && revisionRaw ? revisionRaw : null;
+  const contractNumber = text(form.get("contractNumber"), 80);
+  const typeRaw = form.get("contractType");
+  const type =
+    typeof typeRaw === "string" &&
+    CONTRACT_TYPES.has(typeRaw as EmploymentContractType)
+      ? (typeRaw as EmploymentContractType)
+      : null;
+  const statusRaw = form.get("contractStatus");
+  const status =
+    typeof statusRaw === "string" &&
+    CONTRACT_STATUSES.has(statusRaw as EmploymentContractStatus)
+      ? (statusRaw as EmploymentContractStatus)
+      : null;
+  const startedOn = parseDateOnly(form.get("contractStartedOn"));
+  const endedOnRaw = form.get("contractEndedOn");
+  const endedOn = endedOnRaw === "" ? null : parseDateOnly(endedOnRaw);
+  const noteRaw = form.get("contractNote");
+  const note = optionalText(noteRaw, 1000);
+  const fieldErrors: StaffState["fieldErrors"] = {};
+
+  if (!validSchoolId(employmentId)) fieldErrors.record = messages.failed;
+  if (contractId && !validSchoolId(contractId))
+    fieldErrors.contractId = messages.invalid;
+  if (contractId && !validRevision(revision))
+    fieldErrors.record = messages.conflict;
+  if (!contractNumber) fieldErrors.contractNumber = messages.invalidContractNumber;
+  if (!type) fieldErrors.contractType = messages.invalid;
+  if (!status) fieldErrors.contractStatus = messages.invalid;
+  if (!startedOn) fieldErrors.contractStartedOn = messages.invalidDate;
+  if (provided(endedOnRaw) && !endedOn)
+    fieldErrors.contractEndedOn = messages.invalidDate;
+  if (startedOn && endedOn && endedOn < startedOn)
+    fieldErrors.contractEndedOn = messages.invalidContractDates;
+  if (provided(noteRaw) && !note) fieldErrors.contractNote = messages.invalid;
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(employmentId) ||
+    (contractId && (!validSchoolId(contractId) || !validRevision(revision))) ||
+    !contractNumber ||
+    !type ||
+    !status ||
+    !startedOn
+  )
+    return {
+      success: false,
+      state: { status: "error", message: messages.invalid, fieldErrors },
+    };
+
+  return {
+    success: true,
+    data: {
+      employmentId,
+      contractId,
+      revision,
+      contractNumber,
+      type,
+      status,
+      startedOn,
+      endedOn,
+      note,
     },
   };
 }

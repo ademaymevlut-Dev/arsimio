@@ -7,6 +7,7 @@ import type {
   StaffCatalogTransitionInput,
   StaffMessages,
   StaffState,
+  SaveEmploymentContractInput,
   TeacherProfileInput,
   UploadStaffPhotoInput,
   UpdateStaffHrProfileInput,
@@ -629,6 +630,18 @@ export async function persistEmploymentTransition(
       },
       data: { status: "INACTIVE" },
     });
+    await tx.employmentContract.updateMany({
+      where: {
+        schoolId: actor.schoolId,
+        employmentId: employment.id,
+        status: "ACTIVE",
+      },
+      data: {
+        status: "ENDED",
+        endedOn: input.effectiveOn,
+        note: input.note,
+      },
+    });
   }
   await tx.employmentLifecycleEvent.create({
     data: {
@@ -655,10 +668,136 @@ export async function persistEmploymentTransition(
       effectiveOn: dateValue(input.effectiveOn),
       exitReason: input.exitReason,
       teacherProfileInactivated: input.transition === "end",
+      activeContractEnded: input.transition === "end",
     },
-    changedFields: ["employment.status", "employment.note", "lifecycle"],
+    changedFields: [
+      "employment.status",
+      "employment.note",
+      "lifecycle",
+      ...(input.transition === "end" ? ["employmentContract.status"] : []),
+    ],
   });
   return { status: "success", message: "Personel durumu guncellendi." };
+}
+
+export async function persistEmploymentContract(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: SaveEmploymentContractInput,
+  messages: StaffMessages,
+): Promise<StaffState> {
+  const employment = await tx.employment.findFirst({
+    where: {
+      id: input.employmentId,
+      schoolId: actor.schoolId,
+      archivedAt: null,
+    },
+    select: { id: true, staffNumber: true, status: true },
+  });
+  if (!employment) return error(messages.unavailable);
+
+  const existing = input.contractId
+    ? await tx.employmentContract.findFirst({
+        where: {
+          id: input.contractId,
+          schoolId: actor.schoolId,
+          employmentId: employment.id,
+        },
+      })
+    : null;
+  if (input.contractId && !existing) return error(messages.contractUnavailable);
+  if (
+    existing &&
+    input.revision &&
+    existing.updatedAt.toISOString() !== input.revision
+  )
+    return error(messages.conflict);
+
+  const duplicateNumber = await tx.employmentContract.findFirst({
+    where: {
+      schoolId: actor.schoolId,
+      contractNumber: input.contractNumber,
+      ...(input.contractId ? { id: { not: input.contractId } } : {}),
+    },
+    select: { id: true },
+  });
+  if (duplicateNumber)
+    return error(messages.contractNumberDuplicate, {
+      contractNumber: messages.contractNumberDuplicate,
+    });
+
+  if (input.status === "ACTIVE") {
+    if (employment.status === "ENDED")
+      return error(messages.contractRequiresOpenEmployment, {
+        contractStatus: messages.contractRequiresOpenEmployment,
+      });
+    const activeContract = await tx.employmentContract.findFirst({
+      where: {
+        schoolId: actor.schoolId,
+        employmentId: employment.id,
+        status: "ACTIVE",
+        ...(input.contractId ? { id: { not: input.contractId } } : {}),
+      },
+      select: { id: true },
+    });
+    if (activeContract)
+      return error(messages.activeContractExists, {
+        contractStatus: messages.activeContractExists,
+      });
+  }
+
+  const data = {
+    contractNumber: input.contractNumber,
+    type: input.type,
+    status: input.status,
+    startedOn: input.startedOn,
+    endedOn: input.endedOn,
+    note: input.note,
+  };
+  const contract = existing
+    ? await tx.employmentContract.update({
+        where: { id: existing.id },
+        data,
+      })
+    : await tx.employmentContract.create({
+        data: {
+          schoolId: actor.schoolId,
+          employmentId: employment.id,
+          ...data,
+        },
+      });
+
+  await audit(tx, actor, {
+    action: existing ? "employment_contract.updated" : "employment_contract.created",
+    entityType: "EmploymentContract",
+    entityId: contract.id,
+    beforeData: existing
+      ? {
+          contractNumber: existing.contractNumber,
+          type: existing.type,
+          status: existing.status,
+          startedOn: dateValue(existing.startedOn),
+          endedOn: existing.endedOn ? dateValue(existing.endedOn) : null,
+          note: existing.note,
+        }
+      : undefined,
+    afterData: {
+      employmentId: employment.id,
+      staffNumber: employment.staffNumber,
+      contractNumber: contract.contractNumber,
+      type: contract.type,
+      status: contract.status,
+      startedOn: dateValue(contract.startedOn),
+      endedOn: contract.endedOn ? dateValue(contract.endedOn) : null,
+      note: contract.note,
+    },
+    changedFields: ["employmentContract"],
+  });
+  return {
+    status: "success",
+    message: existing ? messages.contractUpdated : messages.contractCreated,
+    entityId: contract.id,
+  };
 }
 
 export async function persistTeacherProfile(

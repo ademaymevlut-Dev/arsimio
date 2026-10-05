@@ -28,7 +28,12 @@ export default async function StaffDetailPage({
     tenant.school.defaultLocale,
   );
   const [staff, dictionary] = await Promise.all([
-    getStaffDetail(tenant.school.id, route.employmentId, locale),
+    getStaffDetail(
+      tenant.school.id,
+      route.employmentId,
+      locale,
+      permissions.includes("hr.contracts.read"),
+    ),
     getDictionary(locale),
   ]);
   if (!staff) notFound();
@@ -45,6 +50,8 @@ export default async function StaffDetailPage({
         canManageStaff={permissions.includes("hr.staff.manage")}
         canManageTeachers={permissions.includes("teachers.manage")}
         canManageAccounts={permissions.includes("accounts.manage")}
+        canReadContracts={permissions.includes("hr.contracts.read")}
+        canManageContracts={permissions.includes("hr.contracts.manage")}
         canManageIdentity={permissions.includes("persons.identity.manage")}
         identityProtectionReady={identityProtectionIsReady()}
         defaultEffectiveOn={dateOnlyValue(

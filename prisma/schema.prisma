@@ -217,6 +217,21 @@ enum EmploymentType {
   INTERN
 }
 
+enum EmploymentContractType {
+  INDEFINITE
+  FIXED_TERM
+  PART_TIME
+  SERVICE
+  INTERN
+  OTHER
+}
+
+enum EmploymentContractStatus {
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
 enum EmploymentExitReason {
   RESIGNED
   TERMINATED
@@ -327,6 +342,7 @@ model School {
   staffPositionTranslations       StaffPositionTranslation[]
   employments                     Employment[]
   employmentHrProfiles            EmploymentHrProfile[]
+  employmentContracts             EmploymentContract[]
   employmentLifecycleEvents       EmploymentLifecycleEvent[]
   teacherProfiles                 TeacherProfile[]
   teacherProfileTranslations      TeacherProfileTranslation[]
@@ -1375,6 +1391,7 @@ model Employment {
   department      StaffDepartment            @relation(fields: [departmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
   position        StaffPosition              @relation(fields: [positionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
   hrProfile       EmploymentHrProfile?
+  contracts       EmploymentContract[]
   lifecycleEvents EmploymentLifecycleEvent[]
   teacherProfile  TeacherProfile?
 
@@ -1406,6 +1423,28 @@ model EmploymentHrProfile {
   @@unique([employmentId, schoolId])
   @@index([schoolId])
   @@map("employment_hr_profiles")
+}
+
+model EmploymentContract {
+  id             String                   @id @default(uuid()) @db.Uuid
+  schoolId       String                   @map("school_id") @db.Uuid
+  employmentId   String                   @map("employment_id") @db.Uuid
+  contractNumber String                   @map("contract_number") @db.VarChar(80)
+  type           EmploymentContractType
+  status         EmploymentContractStatus @default(ACTIVE)
+  startedOn      DateTime                 @map("started_on") @db.Date
+  endedOn        DateTime?                @map("ended_on") @db.Date
+  note           String?                  @db.VarChar(1000)
+  createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employment Employment @relation(fields: [employmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([schoolId, contractNumber])
+  @@index([schoolId, employmentId, status])
+  @@index([schoolId, status])
+  @@map("employment_contracts")
 }
 
 model EmploymentLifecycleEvent {

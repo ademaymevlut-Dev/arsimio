@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/db";
 import {
   parseCreateEmployment,
   parseEmploymentTransition,
+  parseSaveEmploymentContract,
   parseStaffCatalogItem,
   parseStaffCatalogTransition,
   parseTeacherProfile,
@@ -18,6 +19,7 @@ import { isSameOrigin } from "@/server/auth/identifiers";
 import { requireSchoolPermission } from "@/server/authorization/guards";
 import {
   persistEmployment,
+  persistEmploymentContract,
   persistEmploymentTransition,
   persistStaffPhotoMetadata,
   persistStaffHrProfile,
@@ -123,6 +125,25 @@ export function manageEmploymentTransition(form: FormData) {
     persistEmploymentTransition,
     form,
   );
+}
+
+export async function manageSaveEmploymentContract(
+  form: FormData,
+): Promise<StaffState> {
+  const context = await actorContext("hr.contracts.manage");
+  if (!context) return invalid();
+  const { actor, messages } = context;
+  const parsed = parseSaveEmploymentContract(form, messages);
+  if (!parsed.success) return parsed.state;
+  try {
+    return await getPrisma().$transaction(
+      (tx) => persistEmploymentContract(tx, actor, parsed.data, messages),
+      { isolationLevel: "Serializable", timeout: 15000 },
+    );
+  } catch (errorValue) {
+    console.error("EMPLOYMENT_CONTRACT_SAVE_UNAVAILABLE");
+    return databaseError(errorValue);
+  }
 }
 
 export function manageTeacherProfile(form: FormData) {

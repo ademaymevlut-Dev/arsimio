@@ -297,6 +297,7 @@ export async function getStaffDetail(
   schoolId: string,
   employmentId: string,
   locale: string,
+  includeContracts = false,
 ) {
   const db = getPrisma();
   const employment = await db.employment.findFirst({
@@ -336,6 +337,12 @@ export async function getStaffDetail(
     orderBy: [{ name: "asc" }],
     include: { translations: { where: { locale }, take: 1 } },
   });
+  const contracts = includeContracts
+    ? await db.employmentContract.findMany({
+        where: { schoolId, employmentId: employment.id },
+        orderBy: [{ status: "asc" }, { startedOn: "desc" }, { createdAt: "desc" }],
+      })
+    : [];
   const account = employment.person.accounts[0];
   const membership = account?.user.memberships[0];
   const teacherProfile = employment.teacherProfile?.archivedAt
@@ -376,6 +383,18 @@ export async function getStaffDetail(
           internalNote: employment.hrProfile.internalNote,
         }
       : null,
+    contracts: contracts.map((contract) => ({
+      id: contract.id,
+      contractNumber: contract.contractNumber,
+      type: contract.type,
+      status: contract.status,
+      startedOn: dateValue(contract.startedOn),
+      endedOn: contract.endedOn ? dateValue(contract.endedOn) : null,
+      note: contract.note,
+      createdAt: contract.createdAt.toISOString(),
+      updatedAt: contract.updatedAt.toISOString(),
+      revision: contract.updatedAt.toISOString(),
+    })),
     department: translatedName(employment.department),
     position: translatedName(employment.position),
     teacherProfile: teacherProfile
