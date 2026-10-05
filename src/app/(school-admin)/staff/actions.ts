@@ -9,6 +9,8 @@ import {
   manageSaveStaffCatalogItem,
   manageStaffCatalogTransition,
   manageTeacherProfile,
+  manageUpdateStaffHrProfile,
+  manageUploadStaffPhoto,
 } from "@/server/staff/manage-staff";
 
 export async function createEmploymentAction(
@@ -47,6 +49,35 @@ export async function saveTeacherProfileAction(
     const employmentId = form.get("employmentId");
     revalidatePath("/staff");
     revalidatePath("/teachers");
+    if (typeof employmentId === "string" && employmentId)
+      revalidatePath(`/staff/${employmentId}`);
+  }
+  return result;
+}
+
+export async function uploadStaffPhotoAction(
+  _state: StaffState,
+  form: FormData,
+) {
+  const result = await manageUploadStaffPhoto(form);
+  if (result.status === "success") {
+    const employmentId = form.get("employmentId");
+    revalidatePath("/staff");
+    revalidatePath("/teachers");
+    if (typeof employmentId === "string" && employmentId)
+      revalidatePath(`/staff/${employmentId}`);
+  }
+  return result;
+}
+
+export async function saveStaffHrProfileAction(
+  _state: StaffState,
+  form: FormData,
+) {
+  const result = await manageUpdateStaffHrProfile(form);
+  if (result.status === "success") {
+    const employmentId = form.get("employmentId");
+    revalidatePath("/staff");
     if (typeof employmentId === "string" && employmentId)
       revalidatePath(`/staff/${employmentId}`);
   }

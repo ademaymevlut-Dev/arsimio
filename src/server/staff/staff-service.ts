@@ -5,9 +5,16 @@ import type {
   EmploymentTransitionInput,
   StaffCatalogItemInput,
   StaffCatalogTransitionInput,
+  StaffMessages,
   StaffState,
   TeacherProfileInput,
+  UploadStaffPhotoInput,
+  UpdateStaffHrProfileInput,
 } from "@/lib/staff-validation";
+import {
+  IdentityProtectionUnavailableError,
+  protectIdentity,
+} from "@/server/students/person-identity";
 
 export type StaffActor = {
   schoolId: string;
@@ -785,5 +792,192 @@ export async function persistTeacherProfile(
       ? "Ogretmen profili guncellendi."
       : "Ogretmen profili olusturuldu.",
     entityId: profile.id,
+  };
+}
+
+export async function persistStaffPhotoMetadata(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: {
+    employmentId: UploadStaffPhotoInput["employmentId"];
+    url: string;
+    storageKey: string;
+    mimeType: string;
+  },
+): Promise<StaffState & { previousStorageKey?: string | null }> {
+  const employment = await tx.employment.findFirst({
+    where: {
+      id: input.employmentId,
+      schoolId: actor.schoolId,
+      archivedAt: null,
+    },
+    include: { person: { select: { id: true, photoStorageKey: true } } },
+  });
+  if (!employment) return error("Personel kaydi bulunamadi.");
+  await tx.person.update({
+    where: { id: employment.person.id },
+    data: {
+      photoUrl: input.url,
+      photoStorageKey: input.storageKey,
+      photoMimeType: input.mimeType,
+      photoUpdatedAt: new Date(),
+    },
+  });
+  await audit(tx, actor, {
+    action: "staff.photo-updated",
+    entityType: "Person",
+    entityId: employment.person.id,
+    afterData: {
+      employmentId: employment.id,
+      staffNumber: employment.staffNumber,
+      storageKey: input.storageKey,
+    },
+    changedFields: [
+      "photoUrl",
+      "photoStorageKey",
+      "photoMimeType",
+      "photoUpdatedAt",
+    ],
+  });
+  return {
+    status: "success",
+    message: "Personel fotografi guncellendi.",
+    entityId: employment.id,
+    previousStorageKey: employment.person.photoStorageKey,
+  };
+}
+
+export async function persistStaffHrProfile(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: UpdateStaffHrProfileInput,
+  messages: StaffMessages,
+): Promise<StaffState> {
+  const employment = await tx.employment.findFirst({
+    where: {
+      id: input.employmentId,
+      schoolId: actor.schoolId,
+      archivedAt: null,
+    },
+    select: {
+      id: true,
+      schoolId: true,
+      personId: true,
+      staffNumber: true,
+      updatedAt: true,
+      hrProfile: true,
+    },
+  });
+  if (!employment) return error(messages.unavailable);
+  if (employment.updatedAt.toISOString() !== input.revision)
+    return error(messages.conflict);
+
+  let identityUpdated = false;
+  if (input.identity) {
+    let protectedIdentity: ReturnType<typeof protectIdentity>;
+    try {
+      protectedIdentity = protectIdentity(
+        actor.schoolId,
+        input.identity.type,
+        input.identity.value,
+      );
+    } catch (errorValue) {
+      if (errorValue instanceof IdentityProtectionUnavailableError)
+        return error(messages.identityUnavailable, {
+          identityValue: messages.identityUnavailable,
+        });
+      throw errorValue;
+    }
+
+    const duplicate = await tx.personIdentity.findFirst({
+      where: {
+        schoolId: actor.schoolId,
+        type: input.identity.type,
+        lookupHash: protectedIdentity.lookupHash,
+        personId: { not: employment.personId },
+      },
+      select: { id: true },
+    });
+    if (duplicate)
+      return error(messages.identityDuplicate, {
+        identityValue: messages.identityDuplicate,
+      });
+
+    await tx.personIdentity.upsert({
+      where: {
+        schoolId_personId_type: {
+          schoolId: actor.schoolId,
+          personId: employment.personId,
+          type: input.identity.type,
+        },
+      },
+      update: {
+        countryCode: input.identity.countryCode,
+        encryptedValue: protectedIdentity.encryptedValue,
+        lookupHash: protectedIdentity.lookupHash,
+        lastFour: protectedIdentity.lastFour,
+      },
+      create: {
+        schoolId: actor.schoolId,
+        personId: employment.personId,
+        type: input.identity.type,
+        countryCode: input.identity.countryCode,
+        encryptedValue: protectedIdentity.encryptedValue,
+        lookupHash: protectedIdentity.lookupHash,
+        lastFour: protectedIdentity.lastFour,
+      },
+    });
+    identityUpdated = true;
+  }
+
+  const hrData = {
+    residenceCity: input.residenceCity,
+    neighborhood: input.neighborhood,
+    addressLine: input.addressLine,
+    emergencyContactName: input.emergencyContactName,
+    emergencyContactRelation: input.emergencyContactRelation,
+    emergencyContactPhone: input.emergencyContactPhone,
+    internalNote: input.internalNote,
+  };
+  const profile = await tx.employmentHrProfile.upsert({
+    where: { employmentId: employment.id },
+    update: hrData,
+    create: {
+      employmentId: employment.id,
+      schoolId: actor.schoolId,
+      ...hrData,
+    },
+  });
+
+  await audit(tx, actor, {
+    action: "staff.hr-profile-updated",
+    entityType: "EmploymentHrProfile",
+    entityId: profile.employmentId,
+    beforeData: employment.hrProfile
+      ? {
+          residenceCity: employment.hrProfile.residenceCity,
+          neighborhood: employment.hrProfile.neighborhood,
+          addressLine: employment.hrProfile.addressLine,
+          emergencyContactName: employment.hrProfile.emergencyContactName,
+          emergencyContactRelation: employment.hrProfile.emergencyContactRelation,
+          emergencyContactPhone: employment.hrProfile.emergencyContactPhone,
+          internalNote: employment.hrProfile.internalNote,
+        }
+      : undefined,
+    afterData: {
+      employmentId: employment.id,
+      staffNumber: employment.staffNumber,
+      ...hrData,
+      identityUpdated,
+    },
+    changedFields: [
+      "employmentHrProfile",
+      ...(identityUpdated ? ["personIdentity"] : []),
+    ],
+  });
+  return {
+    status: "success",
+    message: messages.hrProfileUpdated,
+    entityId: employment.id,
   };
 }

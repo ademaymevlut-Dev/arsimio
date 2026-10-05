@@ -1,6 +1,8 @@
 import "server-only";
+import { del } from "@vercel/blob";
 import { headers } from "next/headers";
 import type { Prisma } from "@/generated/prisma/client";
+import { getDictionary, getSchoolLocale } from "@/i18n/server";
 import { getPrisma } from "@/lib/db";
 import {
   parseCreateEmployment,
@@ -8,6 +10,8 @@ import {
   parseStaffCatalogItem,
   parseStaffCatalogTransition,
   parseTeacherProfile,
+  parseUpdateStaffHrProfile,
+  parseUploadStaffPhoto,
   type StaffState,
 } from "@/lib/staff-validation";
 import { isSameOrigin } from "@/server/auth/identifiers";
@@ -15,11 +19,17 @@ import { requireSchoolPermission } from "@/server/authorization/guards";
 import {
   persistEmployment,
   persistEmploymentTransition,
+  persistStaffPhotoMetadata,
+  persistStaffHrProfile,
   persistStaffCatalogItem,
   persistStaffCatalogTransition,
   persistTeacherProfile,
   type StaffActor,
 } from "./staff-service";
+import {
+  StaffPhotoStorageUnavailableError,
+  storeStaffPhoto,
+} from "./staff-photo-storage";
 
 async function actorContext(permission: string) {
   const { user, tenant, membership, permissions } =
@@ -33,6 +43,11 @@ async function actorContext(permission: string) {
     )
   )
     return null;
+  const locale = await getSchoolLocale(
+    membership.preferredLocale,
+    tenant.school.defaultLocale,
+  );
+  const dictionary = await getDictionary(locale);
   return {
     actor: {
       schoolId: tenant.school.id,
@@ -40,6 +55,7 @@ async function actorContext(permission: string) {
       actorMembershipId: membership.id,
     } satisfies StaffActor,
     permissions,
+    messages: dictionary.staff,
   };
 }
 
@@ -117,6 +133,79 @@ export function manageTeacherProfile(form: FormData) {
     form,
     "hr.staff.read",
   );
+}
+
+export async function manageUploadStaffPhoto(form: FormData): Promise<StaffState> {
+  const context = await actorContext("hr.staff.manage");
+  if (!context) return invalid();
+  const { actor, messages } = context;
+  const parsed = parseUploadStaffPhoto(form, messages);
+  if (!parsed.success) return parsed.state;
+  try {
+    const stored = await storeStaffPhoto(
+      actor.schoolId,
+      parsed.data.employmentId,
+      parsed.data.photo,
+    );
+    const result = await getPrisma().$transaction(
+      (tx) =>
+        persistStaffPhotoMetadata(tx, actor, {
+          employmentId: parsed.data.employmentId,
+          url: stored.url,
+          storageKey: stored.pathname,
+          mimeType: stored.contentType,
+        }),
+      { isolationLevel: "Serializable", timeout: 15000 },
+    );
+    if (result.status === "success" && result.previousStorageKey) {
+      try {
+        await del(result.previousStorageKey);
+      } catch {
+        console.error("STAFF_PHOTO_PREVIOUS_DELETE_FAILED");
+      }
+    }
+    return result.status === "success"
+      ? { ...result, message: messages.staffPhotoUpdated }
+      : result;
+  } catch (errorValue) {
+    console.error("STAFF_PHOTO_SAVE_UNAVAILABLE");
+    if (errorValue instanceof StaffPhotoStorageUnavailableError) {
+      return {
+        status: "error",
+        message: messages.photoStorageUnavailable,
+        fieldErrors: { photo: messages.photoStorageUnavailable },
+      };
+    }
+    return databaseError(errorValue);
+  }
+}
+
+export async function manageUpdateStaffHrProfile(
+  form: FormData,
+): Promise<StaffState> {
+  const context = await actorContext("hr.staff.manage");
+  if (!context) return invalid();
+  const { actor, messages, permissions } = context;
+  const parsed = parseUpdateStaffHrProfile(form, messages);
+  if (!parsed.success) return parsed.state;
+  if (
+    parsed.data.identity &&
+    !permissions.includes("persons.identity.manage")
+  )
+    return {
+      status: "error",
+      message: messages.permissionDenied,
+      fieldErrors: { identityValue: messages.permissionDenied },
+    };
+  try {
+    return await getPrisma().$transaction(
+      (tx) => persistStaffHrProfile(tx, actor, parsed.data, messages),
+      { isolationLevel: "Serializable", timeout: 15000 },
+    );
+  } catch (errorValue) {
+    console.error("STAFF_HR_PROFILE_SAVE_UNAVAILABLE");
+    return databaseError(errorValue);
+  }
 }
 
 export function manageSaveStaffCatalogItem(form: FormData) {

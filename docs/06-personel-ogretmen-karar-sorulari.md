@@ -355,6 +355,14 @@ Bu permission'lar migration içinde mevcut `SCHOOL_ADMIN` rollerine bağlanır. 
 - Öğretmenin aktif öğretim yılında hangi sınıf, ders ve saatte görevli olduğu yıllık atama modülü
 - Ders programı, yoklama, ödev, not ve günlük rapor akışları
 
+### 2026-10-05 ilerleme notu
+
+Öğrenci fotoğraf yükleme akışı tamamlandıktan sonra aynı Blob/WebP mantığı personel detay ekranına da taşındı. Bu not ile “personel belge/fotoğraf yükleme” satırındaki fotoğraf kısmı tamamlanmış kabul edilir; kimlik kopyası, sözleşme PDF'i ve diğer personel belgeleri ayrı doküman/evrak fazına bırakılmıştır.
+
+### 2026-10-05 ilerleme notu — personel özlük alanları
+
+Personel detay ekranına maaş/kontrat/izin alanlarına girmeden ilk özlük kartı eklendi. Bu kartta adres, acil durum kişisi, personel iç notu ve resmî kimlik/pasaport bilgisi yönetiliyor. Kimlik/pasaport bilgisi ayrı bir personel tablosuna değil, gerçek kişi temelli `person_identities` yapısına güvenli/şifreli şekilde kaydediliyor. Adres ve acil durum alanları ise personelin okul kapsamındaki iş kaydına bağlı `employment_hr_profiles` tablosunda tutuluyor.
+
 ### Doğrulama
 
 - `pnpm exec prisma validate`

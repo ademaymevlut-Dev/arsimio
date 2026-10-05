@@ -466,6 +466,18 @@ Bu fazda:
 
 planlanabilir.
 
+### 2026-10-05 Faz 3 / Aşama 1 uygulama notu
+
+İlk aşama maaş, kontrat ve izin modüllerine girmeden tamamlandı:
+
+- personel fotoğrafı, öğrenci fotoğrafı ile aynı Blob/WebP akışına taşındı
+- personel adresi için `employment_hr_profiles` kaydı eklendi
+- personel acil durum kişisi için ad, yakınlık ve telefon alanları eklendi
+- personel iç notu eklendi
+- personel kimlik/pasaport bilgisi öğrenciyle aynı şifreli `person_identities` yapısı üzerinden eklendi
+
+Maaş/ücret, kontrat numarası, kontrat tarihleri, izinler ve personel belgeleri Faz 3 / Aşama 2+ kapsamına bırakıldı.
+
 ## 18. Faz 4 önerisi
 
 ### Faz 4 — Finans/kontrat teknik planı

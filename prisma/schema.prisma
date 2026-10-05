@@ -326,6 +326,7 @@ model School {
   staffPositions                  StaffPosition[]
   staffPositionTranslations       StaffPositionTranslation[]
   employments                     Employment[]
+  employmentHrProfiles            EmploymentHrProfile[]
   employmentLifecycleEvents       EmploymentLifecycleEvent[]
   teacherProfiles                 TeacherProfile[]
   teacherProfileTranslations      TeacherProfileTranslation[]
@@ -1373,6 +1374,7 @@ model Employment {
   person          Person                     @relation(fields: [personId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
   department      StaffDepartment            @relation(fields: [departmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
   position        StaffPosition              @relation(fields: [positionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  hrProfile       EmploymentHrProfile?
   lifecycleEvents EmploymentLifecycleEvent[]
   teacherProfile  TeacherProfile?
 
@@ -1383,6 +1385,27 @@ model Employment {
   @@index([schoolId, departmentId])
   @@index([schoolId, positionId])
   @@map("employments")
+}
+
+model EmploymentHrProfile {
+  employmentId             String   @id @map("employment_id") @db.Uuid
+  schoolId                 String   @map("school_id") @db.Uuid
+  residenceCity            String?  @map("residence_city") @db.VarChar(120)
+  neighborhood             String?  @db.VarChar(120)
+  addressLine              String?  @map("address_line") @db.VarChar(300)
+  emergencyContactName     String?  @map("emergency_contact_name") @db.VarChar(200)
+  emergencyContactRelation String?  @map("emergency_contact_relation") @db.VarChar(80)
+  emergencyContactPhone    String?  @map("emergency_contact_phone") @db.VarChar(50)
+  internalNote             String?  @map("internal_note") @db.VarChar(500)
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employment Employment @relation(fields: [employmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([employmentId, schoolId])
+  @@index([schoolId])
+  @@map("employment_hr_profiles")
 }
 
 model EmploymentLifecycleEvent {

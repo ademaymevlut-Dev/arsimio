@@ -6,6 +6,7 @@ import {
   parseStaffCatalogItem,
   parseStaffCatalogTransition,
   parseTeacherProfile,
+  parseUpdateStaffHrProfile,
 } from "../src/lib/staff-validation";
 
 function form(values: Record<string, string | string[]>) {
@@ -113,6 +114,42 @@ test("teacher profile keeps capability subjects separate from annual assignments
     assert.equal(parsed.data.title.sq, "Mësues historie");
     assert.equal(parsed.data.title.en, "History Teacher");
   }
+});
+
+test("staff HR profile accepts address, emergency contact and protected identity metadata", () => {
+  const parsed = parseUpdateStaffHrProfile(
+    form({
+      employmentId,
+      revision,
+      residenceCity: "Prishtina",
+      neighborhood: "Qendra",
+      addressLine: "Rruga kryesore 12",
+      emergencyContactName: "Arben Gashi",
+      emergencyContactRelation: "Brother",
+      emergencyContactPhone: "+38349111222",
+      internalNote: "Keep contract papers in the office file.",
+      identityType: "PASSPORT",
+      identityValue: "AB 123456",
+      identityCountry: "xk",
+    }),
+  );
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.residenceCity, "Prishtina");
+    assert.equal(parsed.data.identity?.type, "PASSPORT");
+    assert.equal(parsed.data.identity?.countryCode, "XK");
+  }
+
+  const invalid = parseUpdateStaffHrProfile(
+    form({
+      employmentId,
+      revision,
+      identityType: "NATIONAL_ID",
+      identityCountry: "XK",
+    }),
+  );
+  assert.equal(invalid.success, false);
+  if (!invalid.success) assert.ok(invalid.state.fieldErrors?.identityCountry);
 });
 
 test("staff catalog item requires a code and three translated names", () => {

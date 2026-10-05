@@ -305,6 +305,7 @@ export async function getStaffDetail(
       person: {
         include: {
           contactPoints: { where: { archivedAt: null } },
+          identities: true,
           accounts: {
             where: { schoolId, portal: "TEACHER", archivedAt: null },
             include: { user: { include: { memberships: { where: { schoolId } } } } },
@@ -313,6 +314,7 @@ export async function getStaffDetail(
       },
       department: { include: { translations: { where: { locale }, take: 1 } } },
       position: { include: { translations: { where: { locale }, take: 1 } } },
+      hrProfile: true,
       lifecycleEvents: { orderBy: [{ effectiveOn: "desc" }, { createdAt: "desc" }] },
       teacherProfile: {
         include: {
@@ -355,6 +357,25 @@ export async function getStaffDetail(
     lastName: employment.person.lastName,
     phone: contact(employment.person.contactPoints, "PHONE"),
     email: contact(employment.person.contactPoints, "EMAIL"),
+    photoUrl: employment.person.photoUrl,
+    photoUpdatedAt: employment.person.photoUpdatedAt?.toISOString() ?? null,
+    identities: employment.person.identities.map((identity) => ({
+      id: identity.id,
+      type: identity.type,
+      countryCode: identity.countryCode,
+      lastFour: identity.lastFour,
+    })),
+    hrProfile: employment.hrProfile
+      ? {
+          residenceCity: employment.hrProfile.residenceCity,
+          neighborhood: employment.hrProfile.neighborhood,
+          addressLine: employment.hrProfile.addressLine,
+          emergencyContactName: employment.hrProfile.emergencyContactName,
+          emergencyContactRelation: employment.hrProfile.emergencyContactRelation,
+          emergencyContactPhone: employment.hrProfile.emergencyContactPhone,
+          internalNote: employment.hrProfile.internalNote,
+        }
+      : null,
     department: translatedName(employment.department),
     position: translatedName(employment.position),
     teacherProfile: teacherProfile

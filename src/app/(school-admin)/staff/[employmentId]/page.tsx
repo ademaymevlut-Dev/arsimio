@@ -9,6 +9,7 @@ import { validSchoolId } from "@/lib/platform-school-validation";
 import { getDictionary, getSchoolLocale } from "@/i18n/server";
 import { requireSchoolPermission } from "@/server/authorization/guards";
 import { getStaffDetail } from "@/server/staff/staff";
+import { identityProtectionIsReady } from "@/server/students/person-identity";
 
 export const dynamic = "force-dynamic";
 
@@ -44,9 +45,12 @@ export default async function StaffDetailPage({
         canManageStaff={permissions.includes("hr.staff.manage")}
         canManageTeachers={permissions.includes("teachers.manage")}
         canManageAccounts={permissions.includes("accounts.manage")}
+        canManageIdentity={permissions.includes("persons.identity.manage")}
+        identityProtectionReady={identityProtectionIsReady()}
         defaultEffectiveOn={dateOnlyValue(
           dateOnlyInTimeZone(new Date(), tenant.school.timezone),
         )}
+        locale={locale}
         messages={dictionary.staff}
       />
     </div>

@@ -1,23 +1,72 @@
 "use client";
 
+import Image from "next/image";
 import { useActionState } from "react";
 import {
+  saveStaffHrProfileAction,
   saveTeacherProfileAction,
   transitionEmploymentAction,
+  uploadStaffPhotoAction,
 } from "@/app/(school-admin)/staff/actions";
-import type { StaffState } from "@/lib/staff-validation";
+import type { StaffField, StaffState } from "@/lib/staff-validation";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { HTML_LOCALES, type Locale } from "@/i18n/config";
 import type { AppDictionary } from "@/i18n/dictionaries/types";
+import { formatMessage } from "@/i18n/format";
 import { PersonAccountPanel } from "./person-account-panel";
 
 type StaffMessages = AppDictionary["staff"];
+const initialState: StaffState = {};
+
+function FieldError({
+  state,
+  field,
+  id,
+}: {
+  state: StaffState;
+  field: StaffField;
+  id: string;
+}) {
+  const message = state.fieldErrors?.[field];
+  return message ? (
+    <p id={id} className="mt-2 text-xs text-danger-foreground">
+      {message}
+    </p>
+  ) : null;
+}
+
+function ActionAlert({ state }: { state: StaffState }) {
+  if (!state.status || !state.message) return null;
+  return (
+    <Alert
+      role={state.status === "error" ? "alert" : "status"}
+      variant={state.status === "error" ? "danger" : "success"}
+    >
+      {state.message}
+    </Alert>
+  );
+}
+
+function formatDate(value: string | null, locale: Locale) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat(HTML_LOCALES[locale], {
+    timeZone: "UTC",
+    dateStyle: "medium",
+  }).format(new Date(`${value}T00:00:00.000Z`));
+}
 
 type StaffDetail = {
   id: string;
@@ -33,6 +82,23 @@ type StaffDetail = {
   fullName: string;
   phone: string | null;
   email: string | null;
+  photoUrl: string | null;
+  photoUpdatedAt: string | null;
+  identities: {
+    id: string;
+    type: "NATIONAL_ID" | "PASSPORT";
+    countryCode: string | null;
+    lastFour: string;
+  }[];
+  hrProfile: {
+    residenceCity: string | null;
+    neighborhood: string | null;
+    addressLine: string | null;
+    emergencyContactName: string | null;
+    emergencyContactRelation: string | null;
+    emergencyContactPhone: string | null;
+    internalNote: string | null;
+  } | null;
   department: string;
   position: string;
   teacherProfile: {
@@ -66,14 +132,20 @@ export function StaffDetailManager({
   canManageStaff,
   canManageTeachers,
   canManageAccounts,
+  canManageIdentity,
+  identityProtectionReady,
   defaultEffectiveOn,
+  locale,
   messages,
 }: {
   staff: StaffDetail;
   canManageStaff: boolean;
   canManageTeachers: boolean;
   canManageAccounts: boolean;
+  canManageIdentity: boolean;
+  identityProtectionReady: boolean;
   defaultEffectiveOn: string;
+  locale: Locale;
   messages: StaffMessages;
 }) {
   const [transitionState, transitionAction, transitionPending] = useActionState<
@@ -84,12 +156,24 @@ export function StaffDetailManager({
     StaffState,
     FormData
   >(saveTeacherProfileAction, {});
+  const [photoState, photoAction, photoPending] = useActionState<
+    StaffState,
+    FormData
+  >(uploadStaffPhotoAction, initialState);
+  const [hrProfileState, hrProfileAction, hrProfilePending] = useActionState<
+    StaffState,
+    FormData
+  >(saveStaffHrProfileAction, initialState);
   function employmentStatusLabel(value: string) {
     if (value === "ACTIVE") return messages.active;
     if (value === "ON_LEAVE") return messages.onLeave;
     if (value === "ENDED") return messages.ended;
     return value;
   }
+  function identityTypeLabel(value: "NATIONAL_ID" | "PASSPORT") {
+    return value === "PASSPORT" ? messages.passport : messages.nationalId;
+  }
+  const hrProfile = staff.hrProfile;
 
   return (
     <div className="space-y-6">
@@ -148,6 +232,329 @@ export function StaffDetailManager({
               <dd className="mt-1 font-medium">{staff.note ?? "—"}</dd>
             </div>
           </dl>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle>{messages.staffPhotoTitle}</CardTitle>
+          <CardDescription>{messages.staffPhotoDescription}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="flex items-center gap-4">
+            {staff.photoUrl ? (
+              <Image
+                src={staff.photoUrl}
+                alt={staff.fullName}
+                width={112}
+                height={112}
+                className="size-28 rounded-xl border object-cover"
+              />
+            ) : (
+              <div className="flex size-28 items-center justify-center rounded-xl border bg-muted text-sm text-muted-foreground">
+                {messages.noStaffPhoto}
+              </div>
+            )}
+            <div className="text-sm text-muted-foreground">
+              <p>{messages.staffPhotoHelp}</p>
+              {staff.photoUpdatedAt ? (
+                <p className="mt-1">
+                  {formatDate(staff.photoUpdatedAt.slice(0, 10), locale)}
+                </p>
+              ) : null}
+            </div>
+          </div>
+          {canManageStaff ? (
+            <form
+              action={photoAction}
+              encType="multipart/form-data"
+              className="space-y-3"
+            >
+              <input type="hidden" name="employmentId" value={staff.id} />
+              <div>
+                <Label htmlFor="staff-photo">{messages.staffPhoto}</Label>
+                <Input
+                  id="staff-photo"
+                  name="photo"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  required
+                  disabled={photoPending}
+                  aria-invalid={Boolean(photoState.fieldErrors?.photo)}
+                  className="mt-2"
+                />
+                <FieldError state={photoState} field="photo" id="staff-photo-error" />
+              </div>
+              <ActionAlert state={photoState} />
+              <Button type="submit" disabled={photoPending}>
+                {photoPending ? messages.uploadingStaffPhoto : messages.uploadStaffPhoto}
+              </Button>
+            </form>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle>{messages.hrProfileTitle}</CardTitle>
+          <CardDescription>{messages.hrProfileDescription}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+            <p className="font-medium">{messages.identityInformation}</p>
+            {staff.identities.length ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {staff.identities.map((identity) => (
+                  <Badge key={identity.id} variant="outline">
+                    {identityTypeLabel(identity.type)} ·{" "}
+                    {formatMessage(messages.identityMasked, {
+                      lastFour: identity.lastFour,
+                    })}
+                    {identity.countryCode ? ` · ${identity.countryCode}` : ""}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1 text-muted-foreground">
+                {messages.noIdentityRecord}
+              </p>
+            )}
+          </div>
+
+          {canManageStaff ? (
+            <form action={hrProfileAction} className="grid gap-4 sm:grid-cols-2">
+              <input type="hidden" name="employmentId" value={staff.id} />
+              <input type="hidden" name="revision" value={staff.revision} />
+              <div className="space-y-2 sm:col-span-2">
+                <h3 className="text-sm font-semibold">
+                  {messages.addressInformation}
+                </h3>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="staffResidenceCity">
+                  {messages.residenceCity}
+                </Label>
+                <Input
+                  id="staffResidenceCity"
+                  name="residenceCity"
+                  defaultValue={hrProfile?.residenceCity ?? ""}
+                  aria-invalid={Boolean(hrProfileState.fieldErrors?.residenceCity)}
+                  disabled={hrProfilePending}
+                />
+                <FieldError
+                  state={hrProfileState}
+                  field="residenceCity"
+                  id="staff-residence-city-error"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="staffNeighborhood">{messages.neighborhood}</Label>
+                <Input
+                  id="staffNeighborhood"
+                  name="neighborhood"
+                  defaultValue={hrProfile?.neighborhood ?? ""}
+                  aria-invalid={Boolean(hrProfileState.fieldErrors?.neighborhood)}
+                  disabled={hrProfilePending}
+                />
+                <FieldError
+                  state={hrProfileState}
+                  field="neighborhood"
+                  id="staff-neighborhood-error"
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="staffAddressLine">{messages.addressLine}</Label>
+                <Textarea
+                  id="staffAddressLine"
+                  name="addressLine"
+                  defaultValue={hrProfile?.addressLine ?? ""}
+                  rows={3}
+                  aria-invalid={Boolean(hrProfileState.fieldErrors?.addressLine)}
+                  disabled={hrProfilePending}
+                />
+                <FieldError
+                  state={hrProfileState}
+                  field="addressLine"
+                  id="staff-address-line-error"
+                />
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <h3 className="text-sm font-semibold">
+                  {messages.emergencyContactTitle}
+                </h3>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emergencyContactName">
+                  {messages.emergencyContactName}
+                </Label>
+                <Input
+                  id="emergencyContactName"
+                  name="emergencyContactName"
+                  defaultValue={hrProfile?.emergencyContactName ?? ""}
+                  aria-invalid={Boolean(
+                    hrProfileState.fieldErrors?.emergencyContactName,
+                  )}
+                  disabled={hrProfilePending}
+                />
+                <FieldError
+                  state={hrProfileState}
+                  field="emergencyContactName"
+                  id="staff-emergency-name-error"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emergencyContactRelation">
+                  {messages.emergencyContactRelation}
+                </Label>
+                <Input
+                  id="emergencyContactRelation"
+                  name="emergencyContactRelation"
+                  defaultValue={hrProfile?.emergencyContactRelation ?? ""}
+                  aria-invalid={Boolean(
+                    hrProfileState.fieldErrors?.emergencyContactRelation,
+                  )}
+                  disabled={hrProfilePending}
+                />
+                <FieldError
+                  state={hrProfileState}
+                  field="emergencyContactRelation"
+                  id="staff-emergency-relation-error"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emergencyContactPhone">
+                  {messages.emergencyContactPhone}
+                </Label>
+                <Input
+                  id="emergencyContactPhone"
+                  name="emergencyContactPhone"
+                  defaultValue={hrProfile?.emergencyContactPhone ?? ""}
+                  aria-invalid={Boolean(
+                    hrProfileState.fieldErrors?.emergencyContactPhone,
+                  )}
+                  disabled={hrProfilePending}
+                />
+                <FieldError
+                  state={hrProfileState}
+                  field="emergencyContactPhone"
+                  id="staff-emergency-phone-error"
+                />
+              </div>
+
+              {canManageIdentity && identityProtectionReady ? (
+                <>
+                  <div className="space-y-2 sm:col-span-2">
+                    <h3 className="text-sm font-semibold">
+                      {messages.identityInformation}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {messages.identityHelp}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="staffIdentityType">
+                      {messages.identityType}
+                    </Label>
+                    <NativeSelect
+                      id="staffIdentityType"
+                      name="identityType"
+                      defaultValue="NATIONAL_ID"
+                      disabled={hrProfilePending}
+                    >
+                      <option value="NATIONAL_ID">{messages.nationalId}</option>
+                      <option value="PASSPORT">{messages.passport}</option>
+                    </NativeSelect>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="staffIdentityCountry">
+                      {messages.identityCountry}
+                    </Label>
+                    <Input
+                      id="staffIdentityCountry"
+                      name="identityCountry"
+                      placeholder="XK"
+                      maxLength={2}
+                      aria-invalid={Boolean(
+                        hrProfileState.fieldErrors?.identityCountry,
+                      )}
+                      disabled={hrProfilePending}
+                    />
+                    <FieldError
+                      state={hrProfileState}
+                      field="identityCountry"
+                      id="staff-identity-country-error"
+                    />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="staffIdentityValue">
+                      {messages.identityValue}
+                    </Label>
+                    <Input
+                      id="staffIdentityValue"
+                      name="identityValue"
+                      autoComplete="off"
+                      aria-invalid={Boolean(
+                        hrProfileState.fieldErrors?.identityValue,
+                      )}
+                      disabled={hrProfilePending}
+                    />
+                    <FieldError
+                      state={hrProfileState}
+                      field="identityValue"
+                      id="staff-identity-value-error"
+                    />
+                  </div>
+                </>
+              ) : canManageIdentity ? (
+                <Alert className="sm:col-span-2" variant="danger">
+                  {messages.identityUnavailable}
+                </Alert>
+              ) : null}
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="staffInternalNote">{messages.internalNote}</Label>
+                <Textarea
+                  id="staffInternalNote"
+                  name="internalNote"
+                  defaultValue={hrProfile?.internalNote ?? ""}
+                  rows={3}
+                  aria-invalid={Boolean(hrProfileState.fieldErrors?.internalNote)}
+                  disabled={hrProfilePending}
+                />
+                <FieldError
+                  state={hrProfileState}
+                  field="internalNote"
+                  id="staff-internal-note-error"
+                />
+              </div>
+              <div className="space-y-3 sm:col-span-2">
+                <ActionAlert state={hrProfileState} />
+                <Button type="submit" disabled={hrProfilePending}>
+                  {messages.saveHrProfile}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <dl className="grid gap-4 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">
+                  {messages.residenceCity}
+                </dt>
+                <dd className="mt-1 font-medium">
+                  {hrProfile?.residenceCity ?? "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {messages.emergencyContactName}
+                </dt>
+                <dd className="mt-1 font-medium">
+                  {hrProfile?.emergencyContactName ?? "—"}
+                </dd>
+              </div>
+            </dl>
+          )}
         </CardContent>
       </Card>
 

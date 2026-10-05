@@ -1,9 +1,12 @@
 import type {
   EmploymentExitReason,
   EmploymentType,
+  IdentityType,
   TeacherCategory,
   TeacherStatus,
 } from "@/generated/prisma/client";
+import { tr } from "@/i18n/dictionaries/tr";
+import type { AppDictionary } from "@/i18n/dictionaries/types";
 import { validRevision, validSchoolId } from "./platform-school-validation";
 
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
@@ -29,6 +32,8 @@ const EXIT_REASONS = new Set<EmploymentExitReason>([
 
 const TEACHER_CATEGORIES = new Set<TeacherCategory>(["CLASSROOM", "BRANCH"]);
 const TEACHER_STATUSES = new Set<TeacherStatus>(["ACTIVE", "INACTIVE"]);
+const IDENTITY_TYPES = new Set<IdentityType>(["NATIONAL_ID", "PASSPORT"]);
+const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const STAFF_CATALOG_KINDS = new Set<StaffCatalogKind>([
   "department",
   "position",
@@ -62,6 +67,17 @@ export type StaffField =
   | "titleEn"
   | "teacherStatus"
   | "subjectIds"
+  | "photo"
+  | "residenceCity"
+  | "neighborhood"
+  | "addressLine"
+  | "emergencyContactName"
+  | "emergencyContactRelation"
+  | "emergencyContactPhone"
+  | "internalNote"
+  | "identityType"
+  | "identityValue"
+  | "identityCountry"
   | "catalogKind"
   | "catalogId"
   | "code"
@@ -75,6 +91,8 @@ export type StaffState = {
   fieldErrors?: Partial<Record<StaffField, string>>;
   entityId?: string;
 };
+
+export type StaffMessages = AppDictionary["staff"];
 
 export type CreateEmploymentInput = {
   mode: "existing" | "new";
@@ -107,6 +125,28 @@ export type TeacherProfileInput = {
   teacherStatus: TeacherStatus;
   note: string | null;
   subjectIds: string[];
+};
+
+export type UploadStaffPhotoInput = {
+  employmentId: string;
+  photo: File;
+};
+
+export type UpdateStaffHrProfileInput = {
+  employmentId: string;
+  revision: string;
+  residenceCity: string | null;
+  neighborhood: string | null;
+  addressLine: string | null;
+  emergencyContactName: string | null;
+  emergencyContactRelation: string | null;
+  emergencyContactPhone: string | null;
+  internalNote: string | null;
+  identity: {
+    type: IdentityType;
+    value: string;
+    countryCode: string | null;
+  } | null;
 };
 
 export type StaffCatalogKind = "department" | "position";
@@ -340,6 +380,134 @@ export function parseTeacherProfile(form: FormData): Parsed<TeacherProfileInput>
       teacherStatus,
       note,
       subjectIds: [...new Set(subjectIds)],
+    },
+  };
+}
+
+export function parseUploadStaffPhoto(
+  form: FormData,
+  messages: StaffMessages = tr.staff,
+): Parsed<UploadStaffPhotoInput> {
+  const employmentId = form.get("employmentId");
+  const photo = form.get("photo");
+  const fieldErrors: StaffState["fieldErrors"] = {};
+  if (!validSchoolId(employmentId)) fieldErrors.record = messages.failed;
+  if (!(photo instanceof File) || photo.size === 0)
+    fieldErrors.photo = messages.invalidPhoto;
+  if (photo instanceof File && photo.size > 5 * 1024 * 1024)
+    fieldErrors.photo = messages.invalidPhoto;
+  if (photo instanceof File && photo.size > 0 && !IMAGE_TYPES.has(photo.type))
+    fieldErrors.photo = messages.invalidPhoto;
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(employmentId) ||
+    !(photo instanceof File)
+  )
+    return {
+      success: false,
+      state: {
+        status: "error",
+        message: messages.failed,
+        fieldErrors,
+      },
+    };
+  return { success: true, data: { employmentId, photo } };
+}
+
+export function parseUpdateStaffHrProfile(
+  form: FormData,
+  messages: StaffMessages = tr.staff,
+): Parsed<UpdateStaffHrProfileInput> {
+  const employmentId = form.get("employmentId");
+  const revision = form.get("revision");
+  const residenceCityRaw = form.get("residenceCity");
+  const residenceCity = optionalText(residenceCityRaw, 120);
+  const neighborhoodRaw = form.get("neighborhood");
+  const neighborhood = optionalText(neighborhoodRaw, 120);
+  const addressLineRaw = form.get("addressLine");
+  const addressLine = optionalText(addressLineRaw, 300);
+  const emergencyContactNameRaw = form.get("emergencyContactName");
+  const emergencyContactName = optionalText(emergencyContactNameRaw, 200);
+  const emergencyContactRelationRaw = form.get("emergencyContactRelation");
+  const emergencyContactRelation = optionalText(emergencyContactRelationRaw, 80);
+  const emergencyContactPhoneRaw = form.get("emergencyContactPhone");
+  const emergencyContactPhone = optionalText(emergencyContactPhoneRaw, 50);
+  const internalNoteRaw = form.get("internalNote");
+  const internalNote = optionalText(internalNoteRaw, 500);
+  const identityTypeRaw = form.get("identityType");
+  const identityType =
+    typeof identityTypeRaw === "string" &&
+    IDENTITY_TYPES.has(identityTypeRaw as IdentityType)
+      ? (identityTypeRaw as IdentityType)
+      : null;
+  const identityValueRaw = form.get("identityValue");
+  const identityValue = optionalText(identityValueRaw, 40);
+  const identityCountryValue = form.get("identityCountry");
+  const identityCountry =
+    optionalText(identityCountryValue, 2)?.toUpperCase() ?? null;
+  const fieldErrors: StaffState["fieldErrors"] = {};
+
+  if (!validSchoolId(employmentId)) fieldErrors.record = messages.failed;
+  if (!validRevision(revision)) fieldErrors.record = messages.failed;
+  if (provided(residenceCityRaw) && !residenceCity)
+    fieldErrors.residenceCity = messages.invalid;
+  if (provided(neighborhoodRaw) && !neighborhood)
+    fieldErrors.neighborhood = messages.invalid;
+  if (provided(addressLineRaw) && !addressLine)
+    fieldErrors.addressLine = messages.invalid;
+  if (provided(emergencyContactNameRaw) && !emergencyContactName)
+    fieldErrors.emergencyContactName = messages.invalid;
+  if (provided(emergencyContactRelationRaw) && !emergencyContactRelation)
+    fieldErrors.emergencyContactRelation = messages.invalid;
+  if (provided(emergencyContactPhoneRaw) && !emergencyContactPhone)
+    fieldErrors.emergencyContactPhone = messages.invalid;
+  if (provided(internalNoteRaw) && !internalNote)
+    fieldErrors.internalNote = messages.invalid;
+  if (provided(identityValueRaw) && !identityType)
+    fieldErrors.identityValue = messages.invalidIdentity;
+  if (
+    provided(identityValueRaw) &&
+    (!identityValue || !/^[\p{L}\p{N} .-]{3,40}$/u.test(identityValue))
+  )
+    fieldErrors.identityValue = messages.invalidIdentity;
+  if (
+    provided(identityCountryValue) &&
+    (!identityCountry || !/^[A-Z]{2}$/.test(identityCountry))
+  )
+    fieldErrors.identityCountry = messages.invalidIdentity;
+  if (provided(identityCountryValue) && !provided(identityValueRaw))
+    fieldErrors.identityCountry = messages.invalidIdentity;
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(employmentId) ||
+    !validRevision(revision)
+  )
+    return {
+      success: false,
+      state: { status: "error", message: messages.invalid, fieldErrors },
+    };
+
+  return {
+    success: true,
+    data: {
+      employmentId,
+      revision,
+      residenceCity,
+      neighborhood,
+      addressLine,
+      emergencyContactName,
+      emergencyContactRelation,
+      emergencyContactPhone,
+      internalNote,
+      identity:
+        identityValue && identityType
+          ? {
+              type: identityType,
+              value: identityValue,
+              countryCode: identityCountry,
+            }
+          : null,
     },
   };
 }
