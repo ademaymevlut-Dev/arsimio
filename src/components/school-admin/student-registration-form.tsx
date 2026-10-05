@@ -13,9 +13,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import type { AppDictionary } from "@/i18n/dictionaries/types";
 import type {
   StudentField,
@@ -184,6 +186,110 @@ export function StudentRegistrationForm({
               <option value="MALE">{text.male}</option>
               <option value="FEMALE">{text.female}</option>
             </NativeSelect>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle>{text.addressInformation}</CardTitle>
+          <CardDescription>{text.addressDescription}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-5 md:grid-cols-2">
+          <div>
+            <Label htmlFor="student-residence-city">{text.residenceCity}</Label>
+            <Input
+              id="student-residence-city"
+              name="residenceCity"
+              maxLength={120}
+              disabled={pending}
+              aria-invalid={Boolean(state.fieldErrors?.residenceCity)}
+              className="mt-2"
+            />
+            <FieldError
+              state={state}
+              field="residenceCity"
+              id="student-residence-city-error"
+            />
+          </div>
+          <div>
+            <Label htmlFor="student-neighborhood">{text.neighborhood}</Label>
+            <Input
+              id="student-neighborhood"
+              name="neighborhood"
+              maxLength={120}
+              disabled={pending}
+              aria-invalid={Boolean(state.fieldErrors?.neighborhood)}
+              className="mt-2"
+            />
+            <FieldError
+              state={state}
+              field="neighborhood"
+              id="student-neighborhood-error"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <Label htmlFor="student-address-line">{text.addressLine}</Label>
+            <Textarea
+              id="student-address-line"
+              name="addressLine"
+              maxLength={500}
+              disabled={pending}
+              aria-invalid={Boolean(state.fieldErrors?.addressLine)}
+              className="mt-2"
+            />
+            <FieldError
+              state={state}
+              field="addressLine"
+              id="student-address-line-error"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle>{text.administrativeInformation}</CardTitle>
+          <CardDescription>{text.specialCondition}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+            <Checkbox name="hasSpecialCondition" disabled={pending} />
+            {text.hasSpecialCondition}
+          </label>
+          <div>
+            <Label htmlFor="student-special-condition-note">
+              {text.specialConditionNote}
+            </Label>
+            <Textarea
+              id="student-special-condition-note"
+              name="specialConditionNote"
+              maxLength={1000}
+              disabled={pending}
+              aria-invalid={Boolean(state.fieldErrors?.specialConditionNote)}
+              className="mt-2"
+            />
+            <FieldError
+              state={state}
+              field="specialConditionNote"
+              id="student-special-condition-note-error"
+            />
+          </div>
+          <div>
+            <Label htmlFor="student-internal-note">{text.internalNote}</Label>
+            <Textarea
+              id="student-internal-note"
+              name="internalNote"
+              maxLength={1000}
+              disabled={pending}
+              aria-invalid={Boolean(state.fieldErrors?.internalNote)}
+              className="mt-2"
+            />
+            <FieldError
+              state={state}
+              field="internalNote"
+              id="student-internal-note-error"
+            />
           </div>
         </CardContent>
       </Card>

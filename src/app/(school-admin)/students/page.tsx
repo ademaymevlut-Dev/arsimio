@@ -27,6 +27,8 @@ const STUDENT_STATUSES = new Set<StudentStatus>([
   "ACTIVE",
   "INACTIVE",
   "GRADUATED",
+  "WITHDRAWN",
+  "TRANSFERRED",
 ]);
 
 function statusValue(value: string | undefined): StudentStatus | undefined {
@@ -62,6 +64,8 @@ export default async function StudentsPage({
     ACTIVE: text.active,
     INACTIVE: text.inactive,
     GRADUATED: text.graduated,
+    WITHDRAWN: text.withdrawn,
+    TRANSFERRED: text.transferred,
   };
 
   return (
@@ -106,6 +110,8 @@ export default async function StudentsPage({
             <option value="ACTIVE">{text.active}</option>
             <option value="INACTIVE">{text.inactive}</option>
             <option value="GRADUATED">{text.graduated}</option>
+            <option value="WITHDRAWN">{text.withdrawn}</option>
+            <option value="TRANSFERRED">{text.transferred}</option>
           </NativeSelect>
         </div>
         <Button type="submit" variant="outline" className="h-10">
@@ -173,7 +179,9 @@ export default async function StudentsPage({
                           ? "success"
                           : student.status === "INACTIVE"
                             ? "warning"
-                            : "info"
+                            : student.status === "GRADUATED"
+                              ? "info"
+                              : "danger"
                       }
                     >
                       {statusLabels[student.status]}

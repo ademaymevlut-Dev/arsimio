@@ -160,6 +160,12 @@ export type StudentDetailRecord = {
   status: StudentStatus;
   admittedOn: string;
   inactiveOn: string | null;
+  residenceCity: string | null;
+  neighborhood: string | null;
+  addressLine: string | null;
+  internalNote: string | null;
+  hasSpecialCondition: boolean;
+  specialConditionNote: string | null;
   revision: string;
   person: {
     id: string;
@@ -170,6 +176,8 @@ export type StudentDetailRecord = {
     birthDate: string | null;
     birthPlace: string | null;
     nationality: string | null;
+    photoUrl: string | null;
+    photoUpdatedAt: string | null;
     sex: "MALE" | "FEMALE" | null;
     identities: Array<{ type: "NATIONAL_ID" | "PASSPORT"; lastFour: string }>;
     account: {
@@ -187,8 +195,11 @@ export type StudentDetailRecord = {
     relationshipType: "MOTHER" | "FATHER";
     isLegalGuardian: boolean;
     isPrimaryContact: boolean;
+    isFinancialResponsible: boolean;
     phone: string | null;
     email: string | null;
+    occupation: string | null;
+    note: string | null;
     account: {
       id: string;
       username: string | null;
@@ -210,6 +221,16 @@ export type StudentDetailRecord = {
       validFrom: string;
       validTo: string | null;
     }>;
+  }>;
+  previousEducationRecords: Array<{
+    id: string;
+    gradeLevelText: string | null;
+    academicYearText: string | null;
+    schoolName: string | null;
+    successText: string | null;
+    transportText: string | null;
+    discountText: string | null;
+    note: string | null;
   }>;
   lifecycleEvents: Array<{
     id: string;
@@ -264,6 +285,10 @@ export async function getStudentDetail(
           },
         },
       },
+      previousEducationRecords: {
+        where: { archivedAt: null },
+        orderBy: [{ createdAt: "desc" }],
+      },
       enrollments: {
         orderBy: { academicYear: { startDate: "desc" } },
         include: {
@@ -290,6 +315,12 @@ export async function getStudentDetail(
     status: student.status,
     admittedOn: dateOnly(student.admittedOn)!,
     inactiveOn: dateOnly(student.inactiveOn),
+    residenceCity: student.residenceCity,
+    neighborhood: student.neighborhood,
+    addressLine: student.addressLine,
+    internalNote: student.internalNote,
+    hasSpecialCondition: student.hasSpecialCondition,
+    specialConditionNote: student.specialConditionNote,
     revision: student.updatedAt.toISOString(),
     person: {
       id: student.person.id,
@@ -300,6 +331,8 @@ export async function getStudentDetail(
       birthDate: dateOnly(student.person.birthDate),
       birthPlace: student.person.birthPlace,
       nationality: student.person.nationalityText,
+      photoUrl: student.person.photoUrl,
+      photoUpdatedAt: student.person.photoUpdatedAt?.toISOString() ?? null,
       sex: student.person.sex,
       identities: student.person.identities.map((identity) => ({
         type: identity.type,
@@ -330,8 +363,11 @@ export async function getStudentDetail(
         relationshipType: relationship.relationshipType,
         isLegalGuardian: relationship.isLegalGuardian,
         isPrimaryContact: relationship.isPrimaryContact,
+        isFinancialResponsible: relationship.isFinancialResponsible,
         phone: phone?.value ?? null,
         email: email?.value ?? null,
+        occupation: relationship.guardianPerson.occupationText,
+        note: relationship.note,
         account: account
           ? {
               id: account.id,
@@ -357,6 +393,16 @@ export async function getStudentDetail(
         validFrom: dateOnly(placement.validFrom)!,
         validTo: dateOnly(placement.validTo),
       })),
+    })),
+    previousEducationRecords: student.previousEducationRecords.map((record) => ({
+      id: record.id,
+      gradeLevelText: record.gradeLevelText,
+      academicYearText: record.academicYearText,
+      schoolName: record.schoolName,
+      successText: record.successText,
+      transportText: record.transportText,
+      discountText: record.discountText,
+      note: record.note,
     })),
     lifecycleEvents: student.lifecycleEvents.map((event) => ({
       id: event.id,

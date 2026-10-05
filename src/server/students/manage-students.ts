@@ -4,22 +4,34 @@ import type { Prisma } from "@/generated/prisma/client";
 import { getDictionary, getSchoolLocale } from "@/i18n/server";
 import { getPrisma } from "@/lib/db";
 import {
+  parseAddPreviousEducation,
+  parseArchivePreviousEducation,
   parseAddGuardian,
   parseCreateStudent,
+  parseSetFinancialGuardian,
   parseSetPrimaryGuardian,
   parseStudentTransition,
+  parseUpdateStudentDetails,
+  parseUploadStudentPhoto,
   type StudentServerMessages,
   type StudentState,
 } from "@/lib/student-validation";
 import { requireSchoolPermission } from "@/server/authorization/guards";
 import { isSameOrigin } from "@/server/auth/identifiers";
 import {
+  persistFinancialGuardian,
   persistGuardianRelationship,
   persistPrimaryGuardian,
+  persistPreviousEducation,
+  persistPreviousEducationArchive,
   persistStudent,
+  persistStudentDetails,
+  persistStudentPhotoMetadata,
   persistStudentTransition,
   type StudentActor,
 } from "./student-service";
+import { storeStudentPhoto } from "./student-photo-storage";
+import { del } from "@vercel/blob";
 
 async function actorContext(permission: string) {
   const { user, tenant, membership, permissions } =
@@ -129,6 +141,58 @@ export function manageAddGuardian(form: FormData) {
 
 export function manageSetPrimaryGuardian(form: FormData) {
   return run("guardians.manage", parseSetPrimaryGuardian, persistPrimaryGuardian, form);
+}
+
+export function manageSetFinancialGuardian(form: FormData) {
+  return run("guardians.manage", parseSetFinancialGuardian, persistFinancialGuardian, form);
+}
+
+export function manageUpdateStudentDetails(form: FormData) {
+  return run("students.manage", parseUpdateStudentDetails, persistStudentDetails, form);
+}
+
+export function manageAddPreviousEducation(form: FormData) {
+  return run("students.manage", parseAddPreviousEducation, persistPreviousEducation, form);
+}
+
+export function manageArchivePreviousEducation(form: FormData) {
+  return run("students.manage", parseArchivePreviousEducation, persistPreviousEducationArchive, form);
+}
+
+export async function manageUploadStudentPhoto(form: FormData): Promise<StudentState> {
+  const context = await actorContext("students.manage");
+  if (!context) return invalid();
+  const { actor } = context;
+  const parsed = parseUploadStudentPhoto(form, actor.messages);
+  if (!parsed.success) return parsed.state;
+  try {
+    const stored = await storeStudentPhoto(
+      actor.schoolId,
+      parsed.data.studentProfileId,
+      parsed.data.photo,
+    );
+    const result = await getPrisma().$transaction(
+      (tx) =>
+        persistStudentPhotoMetadata(tx, actor, {
+          studentProfileId: parsed.data.studentProfileId,
+          url: stored.url,
+          storageKey: stored.pathname,
+          mimeType: stored.contentType,
+        }),
+      { isolationLevel: "Serializable", timeout: 15000 },
+    );
+    if (result.status === "success" && result.previousStorageKey) {
+      try {
+        await del(result.previousStorageKey);
+      } catch {
+        console.error("STUDENT_PHOTO_PREVIOUS_DELETE_FAILED");
+      }
+    }
+    return result;
+  } catch (errorValue) {
+    console.error("STUDENT_PHOTO_SAVE_UNAVAILABLE");
+    return databaseError(errorValue, actor.messages);
+  }
 }
 
 export function manageStudentTransition(form: FormData) {

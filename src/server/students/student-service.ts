@@ -2,11 +2,15 @@ import "server-only";
 import type { Prisma, StudentLifecycleEventType } from "@/generated/prisma/client";
 import type {
   AddGuardianInput,
+  AddPreviousEducationInput,
+  ArchivePreviousEducationInput,
   CreateStudentInput,
+  SetFinancialGuardianInput,
   SetPrimaryGuardianInput,
   StudentServerMessages,
   StudentState,
   StudentTransitionInput,
+  UpdateStudentDetailsInput,
 } from "@/lib/student-validation";
 import {
   IdentityProtectionUnavailableError,
@@ -191,6 +195,12 @@ export async function persistStudent(
       personId: person.id,
       studentNumber,
       admittedOn: input.admittedOn,
+      residenceCity: input.residenceCity,
+      neighborhood: input.neighborhood,
+      addressLine: input.addressLine,
+      internalNote: input.internalNote,
+      hasSpecialCondition: input.hasSpecialCondition,
+      specialConditionNote: input.specialConditionNote,
     },
   });
   const enrollment = await tx.enrollment.create({
@@ -269,6 +279,7 @@ export async function persistGuardianRelationship(
         firstName: input.firstName,
         middleName: input.middleName,
         lastName: input.lastName,
+        occupationText: input.occupationText,
       },
     });
     guardianPersonId = guardian.id;
@@ -276,6 +287,13 @@ export async function persistGuardianRelationship(
     await createContactPoints(tx, actor.schoolId, guardian.id, input);
   }
   if (!guardianPersonId) return error(actor.messages.invalidRelation);
+
+  if (input.mode === "existing" && input.occupationText) {
+    await tx.person.update({
+      where: { id: guardianPersonId },
+      data: { occupationText: input.occupationText },
+    });
+  }
 
   const existing = await tx.guardianRelationship.findFirst({
     where: {
@@ -297,6 +315,17 @@ export async function persistGuardianRelationship(
       data: { isPrimaryContact: false },
     });
   }
+  if (input.isFinancialResponsible) {
+    await tx.guardianRelationship.updateMany({
+      where: {
+        schoolId: actor.schoolId,
+        studentProfileId: student.id,
+        archivedAt: null,
+        isFinancialResponsible: true,
+      },
+      data: { isFinancialResponsible: false },
+    });
+  }
 
   const relationship = existing
     ? await tx.guardianRelationship.update({
@@ -305,6 +334,8 @@ export async function persistGuardianRelationship(
           relationshipType: input.relationshipType,
           isLegalGuardian: input.isLegalGuardian,
           isPrimaryContact: input.isPrimaryContact,
+          isFinancialResponsible: input.isFinancialResponsible,
+          note: input.note,
           archivedAt: null,
         },
       })
@@ -316,6 +347,8 @@ export async function persistGuardianRelationship(
           relationshipType: input.relationshipType,
           isLegalGuardian: input.isLegalGuardian,
           isPrimaryContact: input.isPrimaryContact,
+          isFinancialResponsible: input.isFinancialResponsible,
+          note: input.note,
         },
       });
 
@@ -328,10 +361,19 @@ export async function persistGuardianRelationship(
       relationshipType: input.relationshipType,
       isLegalGuardian: input.isLegalGuardian,
       isPrimaryContact: input.isPrimaryContact,
+      isFinancialResponsible: input.isFinancialResponsible,
       createdGuardian,
       contactKinds: [input.phone ? "PHONE" : null, input.email ? "EMAIL" : null].filter(Boolean),
     },
-    changedFields: ["guardianPerson", "relationshipType", "isLegalGuardian", "isPrimaryContact"],
+    changedFields: [
+      "guardianPerson",
+      "relationshipType",
+      "isLegalGuardian",
+      "isPrimaryContact",
+      "isFinancialResponsible",
+      "note",
+      "occupationText",
+    ],
   });
   return { status: "success", message: actor.messages.guardianCreated, entityId: relationship.id };
 }
@@ -377,6 +419,191 @@ export async function persistPrimaryGuardian(
   return { status: "success", message: actor.messages.primaryUpdated, entityId: target.id };
 }
 
+export async function persistFinancialGuardian(
+  tx: Prisma.TransactionClient,
+  actor: StudentActor,
+  input: SetFinancialGuardianInput,
+): Promise<StudentState> {
+  const target = await tx.guardianRelationship.findFirst({
+    where: {
+      id: input.relationshipId,
+      studentProfileId: input.studentProfileId,
+      schoolId: actor.schoolId,
+      archivedAt: null,
+    },
+  });
+  if (!target) return error(actor.messages.unavailable);
+  if (target.isFinancialResponsible)
+    return { status: "success", message: actor.messages.guardianUpdated, entityId: target.id };
+
+  await tx.guardianRelationship.updateMany({
+    where: {
+      schoolId: actor.schoolId,
+      studentProfileId: input.studentProfileId,
+      archivedAt: null,
+      isFinancialResponsible: true,
+    },
+    data: { isFinancialResponsible: false },
+  });
+  await tx.guardianRelationship.update({
+    where: { id: target.id },
+    data: { isFinancialResponsible: true },
+  });
+  await audit(tx, actor, {
+    action: "student.financial-guardian-changed",
+    entityType: "GuardianRelationship",
+    entityId: target.id,
+    beforeData: { studentProfileId: input.studentProfileId },
+    afterData: { isFinancialResponsible: true },
+    changedFields: ["isFinancialResponsible"],
+  });
+  return { status: "success", message: actor.messages.guardianUpdated, entityId: target.id };
+}
+
+export async function persistStudentDetails(
+  tx: Prisma.TransactionClient,
+  actor: StudentActor,
+  input: UpdateStudentDetailsInput,
+): Promise<StudentState> {
+  const student = await tx.studentProfile.findFirst({
+    where: { id: input.studentProfileId, schoolId: actor.schoolId },
+    select: { id: true, updatedAt: true },
+  });
+  if (!student) return error(actor.messages.unavailable);
+  if (student.updatedAt.toISOString() !== input.revision)
+    return error(actor.messages.conflict);
+  const updated = await tx.studentProfile.updateMany({
+    where: { id: student.id, schoolId: actor.schoolId, updatedAt: student.updatedAt },
+    data: {
+      residenceCity: input.residenceCity,
+      neighborhood: input.neighborhood,
+      addressLine: input.addressLine,
+      internalNote: input.internalNote,
+      hasSpecialCondition: input.hasSpecialCondition,
+      specialConditionNote: input.specialConditionNote,
+    },
+  });
+  if (updated.count !== 1) return error(actor.messages.conflict);
+  await audit(tx, actor, {
+    action: "student.details-updated",
+    entityType: "StudentProfile",
+    entityId: student.id,
+    afterData: {
+      residenceCity: input.residenceCity,
+      hasSpecialCondition: input.hasSpecialCondition,
+    },
+    changedFields: [
+      "residenceCity",
+      "neighborhood",
+      "addressLine",
+      "internalNote",
+      "hasSpecialCondition",
+      "specialConditionNote",
+    ],
+  });
+  return { status: "success", message: actor.messages.studentUpdated, entityId: student.id };
+}
+
+export async function persistPreviousEducation(
+  tx: Prisma.TransactionClient,
+  actor: StudentActor,
+  input: AddPreviousEducationInput,
+): Promise<StudentState> {
+  const student = await tx.studentProfile.findFirst({
+    where: { id: input.studentProfileId, schoolId: actor.schoolId },
+    select: { id: true },
+  });
+  if (!student) return error(actor.messages.unavailable);
+  const record = await tx.studentPreviousEducationRecord.create({
+    data: {
+      schoolId: actor.schoolId,
+      studentProfileId: student.id,
+      gradeLevelText: input.gradeLevelText,
+      academicYearText: input.academicYearText,
+      schoolName: input.schoolName,
+      successText: input.successText,
+      transportText: input.transportText,
+      discountText: input.discountText,
+      note: input.note,
+    },
+  });
+  await audit(tx, actor, {
+    action: "student.previous-education-created",
+    entityType: "StudentPreviousEducationRecord",
+    entityId: record.id,
+    afterData: { studentProfileId: student.id },
+    changedFields: ["previousEducation"],
+  });
+  return { status: "success", message: actor.messages.previousEducationSaved, entityId: record.id };
+}
+
+export async function persistPreviousEducationArchive(
+  tx: Prisma.TransactionClient,
+  actor: StudentActor,
+  input: ArchivePreviousEducationInput,
+): Promise<StudentState> {
+  const record = await tx.studentPreviousEducationRecord.findFirst({
+    where: {
+      id: input.previousEducationId,
+      studentProfileId: input.studentProfileId,
+      schoolId: actor.schoolId,
+      archivedAt: null,
+    },
+  });
+  if (!record) return error(actor.messages.unavailable);
+  await tx.studentPreviousEducationRecord.update({
+    where: { id: record.id },
+    data: { archivedAt: new Date() },
+  });
+  await audit(tx, actor, {
+    action: "student.previous-education-archived",
+    entityType: "StudentPreviousEducationRecord",
+    entityId: record.id,
+    beforeData: { studentProfileId: input.studentProfileId },
+    changedFields: ["archivedAt"],
+  });
+  return { status: "success", message: actor.messages.previousEducationArchived, entityId: record.id };
+}
+
+export async function persistStudentPhotoMetadata(
+  tx: Prisma.TransactionClient,
+  actor: StudentActor,
+  input: {
+    studentProfileId: string;
+    url: string;
+    storageKey: string;
+    mimeType: string;
+  },
+): Promise<StudentState & { previousStorageKey?: string | null }> {
+  const student = await tx.studentProfile.findFirst({
+    where: { id: input.studentProfileId, schoolId: actor.schoolId },
+    include: { person: { select: { id: true, photoStorageKey: true } } },
+  });
+  if (!student) return error(actor.messages.unavailable);
+  await tx.person.update({
+    where: { id: student.person.id },
+    data: {
+      photoUrl: input.url,
+      photoStorageKey: input.storageKey,
+      photoMimeType: input.mimeType,
+      photoUpdatedAt: new Date(),
+    },
+  });
+  await audit(tx, actor, {
+    action: "student.photo-updated",
+    entityType: "Person",
+    entityId: student.person.id,
+    afterData: { studentProfileId: student.id, storageKey: input.storageKey },
+    changedFields: ["photoUrl", "photoStorageKey", "photoMimeType", "photoUpdatedAt"],
+  });
+  return {
+    status: "success",
+    message: actor.messages.studentPhotoUpdated,
+    entityId: student.id,
+    previousStorageKey: student.person.photoStorageKey,
+  };
+}
+
 export async function persistStudentTransition(
   tx: Prisma.TransactionClient,
   actor: StudentActor,
@@ -398,6 +625,8 @@ export async function persistStudentTransition(
   if (input.transition === "inactive") {
     if (student.status !== "ACTIVE") return error(actor.messages.conflict);
     if (!input.exitReason) return error(actor.messages.invalid);
+    const nextStatus =
+      input.exitReason === "OTHER_SCHOOL" ? "TRANSFERRED" : "WITHDRAWN";
     if (input.effectiveOn < student.admittedOn)
       return error(actor.messages.invalidDate, { effectiveOn: actor.messages.invalidDate });
     for (const enrollment of student.enrollments) {
@@ -414,7 +643,7 @@ export async function persistStudentTransition(
         schoolId: actor.schoolId,
         updatedAt: student.updatedAt,
       },
-      data: { status: "INACTIVE", inactiveOn: input.effectiveOn },
+      data: { status: nextStatus, inactiveOn: input.effectiveOn },
     });
     if (updated.count !== 1) return error(actor.messages.conflict);
     for (const enrollment of student.enrollments) {
@@ -435,7 +664,7 @@ export async function persistStudentTransition(
       });
     }
     const eventType: StudentLifecycleEventType =
-      input.exitReason === "OTHER_SCHOOL" ? "TRANSFERRED_OUT" : "INACTIVATED";
+      input.exitReason === "OTHER_SCHOOL" ? "TRANSFERRED_OUT" : "WITHDRAWN";
     await tx.studentLifecycleEvent.create({
       data: {
         schoolId: actor.schoolId,
@@ -452,7 +681,7 @@ export async function persistStudentTransition(
       entityId: student.id,
       beforeData: { status: student.status },
       afterData: {
-        status: "INACTIVE",
+        status: nextStatus,
         effectiveOn: input.effectiveOn.toISOString().slice(0, 10),
         exitReason: input.exitReason,
       },
@@ -462,7 +691,8 @@ export async function persistStudentTransition(
     return { status: "success", message: actor.messages.studentInactive, entityId: student.id };
   }
 
-  if (student.status !== "INACTIVE") return error(actor.messages.conflict);
+  if (!["INACTIVE", "WITHDRAWN", "TRANSFERRED"].includes(student.status))
+    return error(actor.messages.conflict);
   if (
     input.effectiveOn < student.admittedOn ||
     (student.inactiveOn && input.effectiveOn < student.inactiveOn)

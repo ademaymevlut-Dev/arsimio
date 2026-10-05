@@ -141,6 +141,8 @@ enum StudentStatus {
   ACTIVE
   INACTIVE
   GRADUATED
+  WITHDRAWN
+  TRANSFERRED
 }
 
 enum StudentCommentCategory {
@@ -284,65 +286,66 @@ model School {
   createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  createdBy                    User?                                 @relation("SchoolCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  archivedBy                   User?                                 @relation("SchoolArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
-  domains                      SchoolDomain[]
-  branding                     SchoolBranding?
-  memberships                  SchoolMembership[]
-  roles                        Role[]
-  invitations                  SchoolInvitation[]
-  auditEvents                  AuditEvent[]
-  academicYears                AcademicYear[]
-  academicTerms                AcademicTerm[]
-  academicTermTranslations     AcademicTermTranslation[]
-  educationStageDefinitions    EducationStageDefinition[]
-  stageDefinitionTranslations  EducationStageDefinitionTranslation[]
-  gradeLevelDefinitions        GradeLevelDefinition[]
-  classSectionDefinitions      ClassSectionDefinition[]
-  academicStructureVersions    AcademicStructureVersion[]
-  academicStructureLevels      AcademicStructureLevel[]
-  curriculumVersions           CurriculumVersion[]
-  curriculumItems              CurriculumItem[]
-  academicYearCurricula        AcademicYearCurriculum[]
-  scheduleProfiles             ScheduleProfile[]
-  scheduleProfileVersions      ScheduleProfileVersion[]
-  schedulePeriods              SchedulePeriod[]
-  schedulePeriodTranslations   SchedulePeriodTranslation[]
-  academicWeeks                AcademicWeek[]
-  academicCalendarDays         AcademicCalendarDay[]
-  academicYearClassSections    AcademicYearClassSection[]
-  academicYearSetupRuns        AcademicYearSetupRun[]
-  subjects                     Subject[]
-  subjectTranslations          SubjectTranslation[]
-  courseOfferings              CourseOffering[]
-  persons                      Person[]
-  personIdentities             PersonIdentity[]
-  personContactPoints          PersonContactPoint[]
-  personAccounts               PersonAccount[]
-  staffDepartments             StaffDepartment[]
-  staffDepartmentTranslations  StaffDepartmentTranslation[]
-  staffPositions               StaffPosition[]
-  staffPositionTranslations    StaffPositionTranslation[]
-  employments                  Employment[]
-  employmentLifecycleEvents    EmploymentLifecycleEvent[]
-  teacherProfiles              TeacherProfile[]
-  teacherProfileTranslations   TeacherProfileTranslation[]
-  teacherSubjectCapabilities   TeacherSubjectCapability[]
-  homeroomTeacherAssignments   HomeroomTeacherAssignment[]
-  courseTeacherAssignments     CourseTeacherAssignment[]
-  timetableSessions            TimetableSession[]
-  timetableSessionParticipants TimetableSessionParticipant[]
-  lessonTopicEntries           LessonTopicEntry[]
-  homeworkEntries              HomeworkEntry[]
-  examNotificationEntries      ExamNotificationEntry[]
-  studentCommentEntries        StudentCommentEntry[]
-  studentAttendanceRecords     StudentAttendanceRecord[]
-  numberSequences              SchoolNumberSequence[]
-  studentProfiles              StudentProfile[]
-  guardianRelationships        GuardianRelationship[]
-  enrollments                  Enrollment[]
-  studentGroupPlacements       StudentGroupPlacement[]
-  studentLifecycleEvents       StudentLifecycleEvent[]
+  createdBy                       User?                                 @relation("SchoolCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  archivedBy                      User?                                 @relation("SchoolArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+  domains                         SchoolDomain[]
+  branding                        SchoolBranding?
+  memberships                     SchoolMembership[]
+  roles                           Role[]
+  invitations                     SchoolInvitation[]
+  auditEvents                     AuditEvent[]
+  academicYears                   AcademicYear[]
+  academicTerms                   AcademicTerm[]
+  academicTermTranslations        AcademicTermTranslation[]
+  educationStageDefinitions       EducationStageDefinition[]
+  stageDefinitionTranslations     EducationStageDefinitionTranslation[]
+  gradeLevelDefinitions           GradeLevelDefinition[]
+  classSectionDefinitions         ClassSectionDefinition[]
+  academicStructureVersions       AcademicStructureVersion[]
+  academicStructureLevels         AcademicStructureLevel[]
+  curriculumVersions              CurriculumVersion[]
+  curriculumItems                 CurriculumItem[]
+  academicYearCurricula           AcademicYearCurriculum[]
+  scheduleProfiles                ScheduleProfile[]
+  scheduleProfileVersions         ScheduleProfileVersion[]
+  schedulePeriods                 SchedulePeriod[]
+  schedulePeriodTranslations      SchedulePeriodTranslation[]
+  academicWeeks                   AcademicWeek[]
+  academicCalendarDays            AcademicCalendarDay[]
+  academicYearClassSections       AcademicYearClassSection[]
+  academicYearSetupRuns           AcademicYearSetupRun[]
+  subjects                        Subject[]
+  subjectTranslations             SubjectTranslation[]
+  courseOfferings                 CourseOffering[]
+  persons                         Person[]
+  personIdentities                PersonIdentity[]
+  personContactPoints             PersonContactPoint[]
+  personAccounts                  PersonAccount[]
+  staffDepartments                StaffDepartment[]
+  staffDepartmentTranslations     StaffDepartmentTranslation[]
+  staffPositions                  StaffPosition[]
+  staffPositionTranslations       StaffPositionTranslation[]
+  employments                     Employment[]
+  employmentLifecycleEvents       EmploymentLifecycleEvent[]
+  teacherProfiles                 TeacherProfile[]
+  teacherProfileTranslations      TeacherProfileTranslation[]
+  teacherSubjectCapabilities      TeacherSubjectCapability[]
+  homeroomTeacherAssignments      HomeroomTeacherAssignment[]
+  courseTeacherAssignments        CourseTeacherAssignment[]
+  timetableSessions               TimetableSession[]
+  timetableSessionParticipants    TimetableSessionParticipant[]
+  lessonTopicEntries              LessonTopicEntry[]
+  homeworkEntries                 HomeworkEntry[]
+  examNotificationEntries         ExamNotificationEntry[]
+  studentCommentEntries           StudentCommentEntry[]
+  studentAttendanceRecords        StudentAttendanceRecord[]
+  numberSequences                 SchoolNumberSequence[]
+  studentProfiles                 StudentProfile[]
+  studentPreviousEducationRecords StudentPreviousEducationRecord[]
+  guardianRelationships           GuardianRelationship[]
+  enrollments                     Enrollment[]
+  studentGroupPlacements          StudentGroupPlacement[]
+  studentLifecycleEvents          StudentLifecycleEvent[]
 
   @@index([status])
   @@map("schools")
@@ -1186,6 +1189,11 @@ model Person {
   birthDate       DateTime?    @map("birth_date") @db.Date
   birthPlace      String?      @map("birth_place") @db.VarChar(150)
   nationalityText String?      @map("nationality_text") @db.VarChar(100)
+  occupationText  String?      @map("occupation_text") @db.VarChar(150)
+  photoUrl        String?      @map("photo_url") @db.VarChar(500)
+  photoStorageKey String?      @map("photo_storage_key") @db.VarChar(300)
+  photoMimeType   String?      @map("photo_mime_type") @db.VarChar(80)
+  photoUpdatedAt  DateTime?    @map("photo_updated_at") @db.Timestamptz(6)
   sex             PersonSex?
   status          PersonStatus @default(ACTIVE)
   archivedAt      DateTime?    @map("archived_at") @db.Timestamptz(6)
@@ -1740,23 +1748,30 @@ model SchoolNumberSequence {
 }
 
 model StudentProfile {
-  id            String        @id @default(uuid()) @db.Uuid
-  schoolId      String        @map("school_id") @db.Uuid
-  personId      String        @map("person_id") @db.Uuid
-  studentNumber String        @map("student_number") @db.VarChar(40)
-  status        StudentStatus @default(ACTIVE)
-  admittedOn    DateTime      @map("admitted_on") @db.Date
-  inactiveOn    DateTime?     @map("inactive_on") @db.Date
-  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                   String        @id @default(uuid()) @db.Uuid
+  schoolId             String        @map("school_id") @db.Uuid
+  personId             String        @map("person_id") @db.Uuid
+  studentNumber        String        @map("student_number") @db.VarChar(40)
+  status               StudentStatus @default(ACTIVE)
+  admittedOn           DateTime      @map("admitted_on") @db.Date
+  inactiveOn           DateTime?     @map("inactive_on") @db.Date
+  residenceCity        String?       @map("residence_city") @db.VarChar(120)
+  neighborhood         String?       @db.VarChar(120)
+  addressLine          String?       @map("address_line") @db.VarChar(500)
+  internalNote         String?       @map("internal_note") @db.VarChar(1000)
+  hasSpecialCondition  Boolean       @default(false) @map("has_special_condition")
+  specialConditionNote String?       @map("special_condition_note") @db.VarChar(1000)
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school                School                    @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  person                Person                    @relation(fields: [personId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  guardianRelationships GuardianRelationship[]
-  enrollments           Enrollment[]
-  lifecycleEvents       StudentLifecycleEvent[]
-  commentEntries        StudentCommentEntry[]
-  attendanceRecords     StudentAttendanceRecord[]
+  school                   School                           @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  person                   Person                           @relation(fields: [personId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  guardianRelationships    GuardianRelationship[]
+  enrollments              Enrollment[]
+  lifecycleEvents          StudentLifecycleEvent[]
+  commentEntries           StudentCommentEntry[]
+  attendanceRecords        StudentAttendanceRecord[]
+  previousEducationRecords StudentPreviousEducationRecord[]
 
   @@unique([personId, schoolId])
   @@unique([schoolId, studentNumber])
@@ -1765,17 +1780,42 @@ model StudentProfile {
   @@map("student_profiles")
 }
 
+model StudentPreviousEducationRecord {
+  id               String    @id @default(uuid()) @db.Uuid
+  schoolId         String    @map("school_id") @db.Uuid
+  studentProfileId String    @map("student_profile_id") @db.Uuid
+  gradeLevelText   String?   @map("grade_level_text") @db.VarChar(50)
+  academicYearText String?   @map("academic_year_text") @db.VarChar(50)
+  schoolName       String?   @map("school_name") @db.VarChar(200)
+  successText      String?   @map("success_text") @db.VarChar(100)
+  transportText    String?   @map("transport_text") @db.VarChar(100)
+  discountText     String?   @map("discount_text") @db.VarChar(100)
+  note             String?   @db.VarChar(500)
+  archivedAt       DateTime? @map("archived_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school  School         @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  student StudentProfile @relation(fields: [studentProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([id, schoolId])
+  @@index([schoolId, studentProfileId, archivedAt])
+  @@map("student_previous_education_records")
+}
+
 model GuardianRelationship {
-  id               String                   @id @default(uuid()) @db.Uuid
-  schoolId         String                   @map("school_id") @db.Uuid
-  studentProfileId String                   @map("student_profile_id") @db.Uuid
-  guardianPersonId String                   @map("guardian_person_id") @db.Uuid
-  relationshipType GuardianRelationshipType @map("relationship_type")
-  isLegalGuardian  Boolean                  @default(false) @map("is_legal_guardian")
-  isPrimaryContact Boolean                  @default(false) @map("is_primary_contact")
-  archivedAt       DateTime?                @map("archived_at") @db.Timestamptz(6)
-  createdAt        DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                     String                   @id @default(uuid()) @db.Uuid
+  schoolId               String                   @map("school_id") @db.Uuid
+  studentProfileId       String                   @map("student_profile_id") @db.Uuid
+  guardianPersonId       String                   @map("guardian_person_id") @db.Uuid
+  relationshipType       GuardianRelationshipType @map("relationship_type")
+  isLegalGuardian        Boolean                  @default(false) @map("is_legal_guardian")
+  isPrimaryContact       Boolean                  @default(false) @map("is_primary_contact")
+  isFinancialResponsible Boolean                  @default(false) @map("is_financial_responsible")
+  note                   String?                  @db.VarChar(500)
+  archivedAt             DateTime?                @map("archived_at") @db.Timestamptz(6)
+  createdAt              DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   school         School         @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   student        StudentProfile @relation(fields: [studentProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
@@ -1785,6 +1825,7 @@ model GuardianRelationship {
   @@unique([id, schoolId])
   @@index([schoolId, guardianPersonId, archivedAt])
   @@index([schoolId, studentProfileId, archivedAt])
+  @@index([schoolId, studentProfileId, isFinancialResponsible])
   @@map("guardian_relationships")
 }
 

@@ -1,12 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useActionState, useState, type ReactNode } from "react";
 import { ArrowLeft, Plus, UserCheck } from "lucide-react";
 import {
+  addPreviousEducation,
   addGuardian,
+  archivePreviousEducation,
   changeStudentStatus,
+  setFinancialGuardian,
   setPrimaryGuardian,
+  updateStudentDetails,
+  uploadStudentPhoto,
 } from "@/app/(school-admin)/students/actions";
 import { PageHeader } from "@/components/admin/page-header";
 import { PersonAccountPanel } from "@/components/school-admin/person-account-panel";
@@ -114,6 +120,37 @@ function PrimaryGuardianButton({
       <Button type="submit" size="sm" variant="outline" disabled={pending}>
         <UserCheck aria-hidden />
         {pending ? messages.common.processing : messages.students.makePrimary}
+      </Button>
+      {state.status === "error" && state.message && (
+        <p role="alert" className="max-w-48 text-xs text-danger-foreground">
+          {state.message}
+        </p>
+      )}
+    </form>
+  );
+}
+
+function FinancialGuardianButton({
+  studentId,
+  relationshipId,
+  messages,
+}: {
+  studentId: string;
+  relationshipId: string;
+  messages: Pick<AppDictionary, "common" | "students">;
+}) {
+  const [state, formAction, pending] = useActionState(
+    setFinancialGuardian,
+    initialState,
+  );
+  return (
+    <form action={formAction} className="space-y-2">
+      <input type="hidden" name="studentProfileId" value={studentId} />
+      <input type="hidden" name="relationshipId" value={relationshipId} />
+      <Button type="submit" size="sm" variant="outline" disabled={pending}>
+        {pending
+          ? messages.common.processing
+          : messages.students.makeFinancialResponsible}
       </Button>
       {state.status === "error" && state.message && (
         <p role="alert" className="max-w-48 text-xs text-danger-foreground">
@@ -357,6 +394,41 @@ function AddGuardianForm({
             </div>
           )}
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="guardian-occupation">{text.occupation}</Label>
+              <Input
+                id="guardian-occupation"
+                name="occupation"
+                maxLength={150}
+                disabled={pending}
+                aria-invalid={Boolean(state.fieldErrors?.occupation)}
+                className="mt-2"
+              />
+              <FieldError
+                state={state}
+                field="occupation"
+                id="guardian-occupation-error"
+              />
+            </div>
+            <div>
+              <Label htmlFor="guardian-note">{text.guardianNote}</Label>
+              <Input
+                id="guardian-note"
+                name="guardianNote"
+                maxLength={500}
+                disabled={pending}
+                aria-invalid={Boolean(state.fieldErrors?.guardianNote)}
+                className="mt-2"
+              />
+              <FieldError
+                state={state}
+                field="guardianNote"
+                id="guardian-note-error"
+              />
+            </div>
+          </div>
+
           <div>
             <Label htmlFor="guardian-relationship">{text.relationship}</Label>
             <NativeSelect
@@ -380,6 +452,10 @@ function AddGuardianForm({
             <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
               <Checkbox name="isPrimaryContact" disabled={pending} />
               {text.makePrimaryOnCreate}
+            </label>
+            <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+              <Checkbox name="isFinancialResponsible" disabled={pending} />
+              {text.makeFinancialResponsibleOnCreate}
             </label>
           </div>
 
@@ -409,6 +485,419 @@ function AddGuardianForm({
           </DialogFooter>
         </form>
     </DialogContent>
+  );
+}
+
+function StudentPhotoCard({
+  student,
+  canManageStudent,
+  locale,
+  messages,
+}: {
+  student: StudentDetailRecord;
+  canManageStudent: boolean;
+  locale: Locale;
+  messages: Pick<AppDictionary, "common" | "students">;
+}) {
+  const [state, formAction, pending] = useActionState(
+    uploadStudentPhoto,
+    initialState,
+  );
+  const text = messages.students;
+
+  return (
+    <Card>
+      <CardHeader className="border-b">
+        <CardTitle>{text.photoTitle}</CardTitle>
+        <CardDescription>{text.photoDescription}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="flex items-center gap-4">
+          {student.person.photoUrl ? (
+            <Image
+              src={student.person.photoUrl}
+              alt={student.person.fullName}
+              width={112}
+              height={112}
+              className="size-28 rounded-xl border object-cover"
+            />
+          ) : (
+            <div className="flex size-28 items-center justify-center rounded-xl border bg-muted text-sm text-muted-foreground">
+              {text.noPhoto}
+            </div>
+          )}
+          <div className="text-sm text-muted-foreground">
+            <p>{text.photoHelp}</p>
+            {student.person.photoUpdatedAt && (
+              <p className="mt-1">
+                {formatDate(student.person.photoUpdatedAt.slice(0, 10), locale)}
+              </p>
+            )}
+          </div>
+        </div>
+        {canManageStudent && (
+          <form
+            action={formAction}
+            encType="multipart/form-data"
+            className="space-y-3"
+          >
+            <input type="hidden" name="studentProfileId" value={student.id} />
+            <div>
+              <Label htmlFor="student-photo">{text.photo}</Label>
+              <Input
+                id="student-photo"
+                name="photo"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                required
+                disabled={pending}
+                aria-invalid={Boolean(state.fieldErrors?.photo)}
+                className="mt-2"
+              />
+              <FieldError state={state} field="photo" id="student-photo-error" />
+            </div>
+            <ActionAlert state={state} />
+            <Button type="submit" disabled={pending}>
+              {pending ? messages.common.saving : text.uploadPhoto}
+            </Button>
+          </form>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function StudentDetailsCard({
+  student,
+  canManageStudent,
+  messages,
+}: {
+  student: StudentDetailRecord;
+  canManageStudent: boolean;
+  messages: Pick<AppDictionary, "common" | "students">;
+}) {
+  const [state, formAction, pending] = useActionState(
+    updateStudentDetails,
+    initialState,
+  );
+  const text = messages.students;
+
+  return (
+    <Card>
+      <CardHeader className="border-b">
+        <CardTitle>{text.addressInformation}</CardTitle>
+        <CardDescription>{text.addressDescription}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form action={formAction} className="space-y-5">
+          <input type="hidden" name="studentProfileId" value={student.id} />
+          <input type="hidden" name="revision" value={student.revision} />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <Label htmlFor="detail-residence-city">{text.residenceCity}</Label>
+              <Input
+                id="detail-residence-city"
+                name="residenceCity"
+                defaultValue={student.residenceCity ?? ""}
+                maxLength={120}
+                disabled={pending || !canManageStudent}
+                aria-invalid={Boolean(state.fieldErrors?.residenceCity)}
+                className="mt-2"
+              />
+              <FieldError
+                state={state}
+                field="residenceCity"
+                id="detail-residence-city-error"
+              />
+            </div>
+            <div>
+              <Label htmlFor="detail-neighborhood">{text.neighborhood}</Label>
+              <Input
+                id="detail-neighborhood"
+                name="neighborhood"
+                defaultValue={student.neighborhood ?? ""}
+                maxLength={120}
+                disabled={pending || !canManageStudent}
+                aria-invalid={Boolean(state.fieldErrors?.neighborhood)}
+                className="mt-2"
+              />
+              <FieldError
+                state={state}
+                field="neighborhood"
+                id="detail-neighborhood-error"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label htmlFor="detail-address-line">{text.addressLine}</Label>
+              <Textarea
+                id="detail-address-line"
+                name="addressLine"
+                defaultValue={student.addressLine ?? ""}
+                maxLength={500}
+                disabled={pending || !canManageStudent}
+                aria-invalid={Boolean(state.fieldErrors?.addressLine)}
+                className="mt-2"
+              />
+              <FieldError
+                state={state}
+                field="addressLine"
+                id="detail-address-line-error"
+              />
+            </div>
+          </div>
+          <div className="space-y-4 rounded-lg border p-4">
+            <label className="flex items-center gap-3 text-sm">
+              <Checkbox
+                name="hasSpecialCondition"
+                defaultChecked={student.hasSpecialCondition}
+                disabled={pending || !canManageStudent}
+              />
+              {text.hasSpecialCondition}
+            </label>
+            <div>
+              <Label htmlFor="detail-special-condition-note">
+                {text.specialConditionNote}
+              </Label>
+              <Textarea
+                id="detail-special-condition-note"
+                name="specialConditionNote"
+                defaultValue={student.specialConditionNote ?? ""}
+                maxLength={1000}
+                disabled={pending || !canManageStudent}
+                aria-invalid={Boolean(state.fieldErrors?.specialConditionNote)}
+                className="mt-2"
+              />
+              <FieldError
+                state={state}
+                field="specialConditionNote"
+                id="detail-special-condition-note-error"
+              />
+            </div>
+            <div>
+              <Label htmlFor="detail-internal-note">{text.internalNote}</Label>
+              <Textarea
+                id="detail-internal-note"
+                name="internalNote"
+                defaultValue={student.internalNote ?? ""}
+                maxLength={1000}
+                disabled={pending || !canManageStudent}
+                aria-invalid={Boolean(state.fieldErrors?.internalNote)}
+                className="mt-2"
+              />
+              <FieldError
+                state={state}
+                field="internalNote"
+                id="detail-internal-note-error"
+              />
+            </div>
+          </div>
+          <ActionAlert state={state} />
+          {canManageStudent && (
+            <Button type="submit" disabled={pending}>
+              {pending ? messages.common.saving : text.saveStudentDetails}
+            </Button>
+          )}
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PreviousEducationArchiveButton({
+  studentId,
+  previousEducationId,
+  messages,
+}: {
+  studentId: string;
+  previousEducationId: string;
+  messages: Pick<AppDictionary, "common" | "students">;
+}) {
+  const [state, formAction, pending] = useActionState(
+    archivePreviousEducation,
+    initialState,
+  );
+  return (
+    <form action={formAction} className="space-y-2">
+      <input type="hidden" name="studentProfileId" value={studentId} />
+      <input
+        type="hidden"
+        name="previousEducationId"
+        value={previousEducationId}
+      />
+      <Button type="submit" size="sm" variant="outline" disabled={pending}>
+        {pending
+          ? messages.common.processing
+          : messages.students.archivePreviousEducation}
+      </Button>
+      {state.status === "error" && state.message && (
+        <p role="alert" className="text-xs text-danger-foreground">
+          {state.message}
+        </p>
+      )}
+    </form>
+  );
+}
+
+function PreviousEducationCard({
+  student,
+  canManageStudent,
+  messages,
+}: {
+  student: StudentDetailRecord;
+  canManageStudent: boolean;
+  messages: Pick<AppDictionary, "common" | "students">;
+}) {
+  const [state, formAction, pending] = useActionState(
+    addPreviousEducation,
+    initialState,
+  );
+  const text = messages.students;
+
+  return (
+    <Card>
+      <CardHeader className="border-b">
+        <CardTitle>{text.previousEducationTitle}</CardTitle>
+        <CardDescription>{text.previousEducationDescription}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {student.previousEducationRecords.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {text.previousEducationEmpty}
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {student.previousEducationRecords.map((record) => (
+              <article key={record.id} className="rounded-lg border p-4">
+                <div className="grid gap-3 text-sm md:grid-cols-3">
+                  <Definition label={text.gradeLevelText}>
+                    {record.gradeLevelText ?? "—"}
+                  </Definition>
+                  <Definition label={text.academicYearText}>
+                    {record.academicYearText ?? "—"}
+                  </Definition>
+                  <Definition label={text.schoolName}>
+                    {record.schoolName ?? "—"}
+                  </Definition>
+                  <Definition label={text.successText}>
+                    {record.successText ?? "—"}
+                  </Definition>
+                  <Definition label={text.transportText}>
+                    {record.transportText ?? "—"}
+                  </Definition>
+                  <Definition label={text.discountText}>
+                    {record.discountText ?? "—"}
+                  </Definition>
+                </div>
+                {record.note && (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    {record.note}
+                  </p>
+                )}
+                {canManageStudent && (
+                  <div className="mt-4 border-t pt-4">
+                    <PreviousEducationArchiveButton
+                      studentId={student.id}
+                      previousEducationId={record.id}
+                      messages={messages}
+                    />
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+
+        {canManageStudent && (
+          <form action={formAction} className="space-y-4 rounded-lg border p-4">
+            <input type="hidden" name="studentProfileId" value={student.id} />
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <Label htmlFor="previous-grade-level">{text.gradeLevelText}</Label>
+                <Input
+                  id="previous-grade-level"
+                  name="gradeLevelText"
+                  maxLength={50}
+                  disabled={pending}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="previous-academic-year">
+                  {text.academicYearText}
+                </Label>
+                <Input
+                  id="previous-academic-year"
+                  name="academicYearText"
+                  maxLength={50}
+                  disabled={pending}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="previous-school-name">{text.schoolName}</Label>
+                <Input
+                  id="previous-school-name"
+                  name="schoolName"
+                  maxLength={200}
+                  disabled={pending}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="previous-success">{text.successText}</Label>
+                <Input
+                  id="previous-success"
+                  name="successText"
+                  maxLength={100}
+                  disabled={pending}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="previous-transport">{text.transportText}</Label>
+                <Input
+                  id="previous-transport"
+                  name="transportText"
+                  maxLength={100}
+                  disabled={pending}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="previous-discount">{text.discountText}</Label>
+                <Input
+                  id="previous-discount"
+                  name="discountText"
+                  maxLength={100}
+                  disabled={pending}
+                  className="mt-2"
+                />
+              </div>
+              <div className="md:col-span-3">
+                <Label htmlFor="previous-note">{text.previousEducationNote}</Label>
+                <Textarea
+                  id="previous-note"
+                  name="note"
+                  maxLength={500}
+                  disabled={pending}
+                  aria-invalid={Boolean(state.fieldErrors?.previousEducation)}
+                  className="mt-2"
+                />
+                <FieldError
+                  state={state}
+                  field="previousEducation"
+                  id="previous-education-error"
+                />
+              </div>
+            </div>
+            <ActionAlert state={state} />
+            <Button type="submit" disabled={pending}>
+              {pending ? messages.common.saving : text.addPreviousEducation}
+            </Button>
+          </form>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -564,12 +1053,21 @@ export function StudentDetailManager({
   messages: Pick<AppDictionary, "common" | "students">;
 }) {
   const text = messages.students;
-  const statusLabel =
+  const statusLabels: Record<StudentDetailRecord["status"], string> = {
+    ACTIVE: text.active,
+    INACTIVE: text.inactive,
+    GRADUATED: text.graduated,
+    WITHDRAWN: text.withdrawn,
+    TRANSFERRED: text.transferred,
+  };
+  const statusVariant =
     student.status === "ACTIVE"
-      ? text.active
+      ? "success"
       : student.status === "INACTIVE"
-        ? text.inactive
-        : text.graduated;
+        ? "warning"
+        : student.status === "GRADUATED"
+          ? "info"
+          : "danger";
   const eventLabels: Record<string, string> = {
     ACTIVATED: text.eventActivated,
     INACTIVATED: text.eventInactivated,
@@ -619,15 +1117,9 @@ export function StudentDetailManager({
               </Definition>
               <Definition label={messages.common.status}>
                 <Badge
-                  variant={
-                    student.status === "ACTIVE"
-                      ? "success"
-                      : student.status === "INACTIVE"
-                        ? "warning"
-                        : "info"
-                  }
+                  variant={statusVariant}
                 >
-                  {statusLabel}
+                  {statusLabels[student.status]}
                 </Badge>
               </Definition>
               <Definition label={text.admittedOn}>
@@ -696,6 +1188,26 @@ export function StudentDetailManager({
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <StudentPhotoCard
+          student={student}
+          canManageStudent={canManageStudent}
+          locale={locale}
+          messages={messages}
+        />
+        <StudentDetailsCard
+          student={student}
+          canManageStudent={canManageStudent}
+          messages={messages}
+        />
+      </div>
+
+      <PreviousEducationCard
+        student={student}
+        canManageStudent={canManageStudent}
+        messages={messages}
+      />
 
       {canReadGuardians && <Card>
         <CardHeader className="border-b">
@@ -798,6 +1310,9 @@ export function StudentDetailManager({
                       {guardian.isPrimaryContact && (
                         <Badge variant="success">{text.primary}</Badge>
                       )}
+                      {guardian.isFinancialResponsible && (
+                        <Badge variant="info">{text.financialResponsible}</Badge>
+                      )}
                       {guardian.isLegalGuardian && (
                         <Badge variant="outline">{text.legalGuardian}</Badge>
                       )}
@@ -806,14 +1321,31 @@ export function StudentDetailManager({
                   <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                     <Definition label={text.phone}>{guardian.phone ?? "—"}</Definition>
                     <Definition label={text.email}>{guardian.email ?? "—"}</Definition>
+                    <Definition label={text.occupation}>
+                      {guardian.occupation ?? "—"}
+                    </Definition>
+                    <Definition label={text.guardianNote}>
+                      {guardian.note ?? "—"}
+                    </Definition>
                   </dl>
-                  {canManageGuardians && !guardian.isPrimaryContact && (
-                    <div className="mt-4 border-t pt-4">
-                      <PrimaryGuardianButton
-                        studentId={student.id}
-                        relationshipId={guardian.id}
-                        messages={messages}
-                      />
+                  {canManageGuardians &&
+                    (!guardian.isPrimaryContact ||
+                      !guardian.isFinancialResponsible) && (
+                    <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
+                      {!guardian.isPrimaryContact && (
+                        <PrimaryGuardianButton
+                          studentId={student.id}
+                          relationshipId={guardian.id}
+                          messages={messages}
+                        />
+                      )}
+                      {!guardian.isFinancialResponsible && (
+                        <FinancialGuardianButton
+                          studentId={student.id}
+                          relationshipId={guardian.id}
+                          messages={messages}
+                        />
+                      )}
                     </div>
                   )}
                   <div className="mt-4 border-t pt-4">
