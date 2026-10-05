@@ -687,6 +687,7 @@ export const tr = {
     previousEducationSaved: "Önceki eğitim kaydı eklendi.",
     previousEducationArchived: "Önceki eğitim kaydı arşivlendi.",
     studentPhotoUpdated: "Öğrenci fotoğrafı güncellendi.",
+    photoStorageUnavailable: "Fotoğraf depolama yapılandırması eksik. BLOB_READ_WRITE_TOKEN değerini kontrol edin.",
     studentInactive: "Öğrenci pasif yapıldı; geçmiş kayıtları korundu.",
     studentReactivated: "Öğrenci profili yeniden aktif yapıldı.",
   },

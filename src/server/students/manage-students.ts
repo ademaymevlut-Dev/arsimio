@@ -1,4 +1,5 @@
 import "server-only";
+import { del } from "@vercel/blob";
 import { headers } from "next/headers";
 import type { Prisma } from "@/generated/prisma/client";
 import { getDictionary, getSchoolLocale } from "@/i18n/server";
@@ -30,8 +31,10 @@ import {
   persistStudentTransition,
   type StudentActor,
 } from "./student-service";
-import { storeStudentPhoto } from "./student-photo-storage";
-import { del } from "@vercel/blob";
+import {
+  StudentPhotoStorageUnavailableError,
+  storeStudentPhoto,
+} from "./student-photo-storage";
 
 async function actorContext(permission: string) {
   const { user, tenant, membership, permissions } =
@@ -191,6 +194,13 @@ export async function manageUploadStudentPhoto(form: FormData): Promise<StudentS
     return result;
   } catch (errorValue) {
     console.error("STUDENT_PHOTO_SAVE_UNAVAILABLE");
+    if (errorValue instanceof StudentPhotoStorageUnavailableError) {
+      return {
+        status: "error",
+        message: actor.messages.photoStorageUnavailable,
+        fieldErrors: { photo: actor.messages.photoStorageUnavailable },
+      };
+    }
     return databaseError(errorValue, actor.messages);
   }
 }
