@@ -56,22 +56,26 @@ CREATE INDEX "employment_compensations_school_id_employment_id_status_idx"
 CREATE INDEX "employment_compensations_school_id_status_idx"
   ON "employment_compensations"("school_id", "status");
 
-INSERT INTO "permissions" ("code")
-SELECT code
-FROM (
+WITH wanted(code) AS (
   VALUES
     ('hr.compensation.read'),
     ('hr.compensation.manage')
-) AS next_permissions(code)
+)
+INSERT INTO "permissions" ("id", "code", "scope", "created_at", "updated_at")
+SELECT gen_random_uuid(), code, 'SCHOOL'::"RoleScope", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM wanted
 ON CONFLICT ("code") DO NOTHING;
 
-INSERT INTO "role_permissions" ("role_id", "permission_id")
-SELECT roles.id, permissions.id
-FROM "roles"
-JOIN "permissions"
-  ON "permissions"."code" IN (
-    'hr.compensation.read',
-    'hr.compensation.manage'
-  )
-WHERE "roles"."code" = 'SCHOOL_ADMIN'
+WITH wanted(code) AS (
+  VALUES
+    ('hr.compensation.read'),
+    ('hr.compensation.manage')
+)
+INSERT INTO "role_permissions" ("role_id", "permission_id", "scope", "created_at")
+SELECT r."id", p."id", 'SCHOOL'::"RoleScope", CURRENT_TIMESTAMP
+FROM "roles" r
+JOIN "permissions" p ON p."scope" = 'SCHOOL'::"RoleScope"
+JOIN wanted w ON w.code = p."code"
+WHERE r."scope" = 'SCHOOL'::"RoleScope"
+  AND r."code" = 'SCHOOL_ADMIN'
 ON CONFLICT ("role_id", "permission_id") DO NOTHING;
