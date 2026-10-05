@@ -1,4 +1,7 @@
 import type {
+  EmploymentCompensationAmountKind,
+  EmploymentCompensationPayType,
+  EmploymentCompensationStatus,
   EmploymentContractStatus,
   EmploymentContractType,
   EmploymentExitReason,
@@ -29,6 +32,22 @@ const CONTRACT_TYPES = new Set<EmploymentContractType>([
   "OTHER",
 ]);
 const CONTRACT_STATUSES = new Set<EmploymentContractStatus>([
+  "ACTIVE",
+  "ENDED",
+  "CANCELLED",
+]);
+const COMPENSATION_PAY_TYPES = new Set<EmploymentCompensationPayType>([
+  "MONTHLY",
+  "HOURLY",
+  "DAILY",
+  "LESSON",
+  "OTHER",
+]);
+const COMPENSATION_AMOUNT_KINDS = new Set<EmploymentCompensationAmountKind>([
+  "GROSS",
+  "NET",
+]);
+const COMPENSATION_STATUSES = new Set<EmploymentCompensationStatus>([
   "ACTIVE",
   "ENDED",
   "CANCELLED",
@@ -100,6 +119,15 @@ export type StaffField =
   | "contractStartedOn"
   | "contractEndedOn"
   | "contractNote"
+  | "compensationId"
+  | "compensationAmount"
+  | "compensationCurrency"
+  | "compensationAmountKind"
+  | "compensationPayType"
+  | "compensationStatus"
+  | "compensationStartedOn"
+  | "compensationEndedOn"
+  | "compensationNote"
   | "catalogKind"
   | "catalogId"
   | "code"
@@ -183,6 +211,20 @@ export type SaveEmploymentContractInput = {
   note: string | null;
 };
 
+export type SaveEmploymentCompensationInput = {
+  employmentId: string;
+  compensationId: string | null;
+  revision: string | null;
+  amount: string;
+  currencyCode: string;
+  amountKind: EmploymentCompensationAmountKind;
+  payType: EmploymentCompensationPayType;
+  status: EmploymentCompensationStatus;
+  startedOn: Date;
+  endedOn: Date | null;
+  note: string | null;
+};
+
 export type StaffCatalogKind = "department" | "position";
 export type StaffCatalogTransition = "archive" | "restore";
 
@@ -231,6 +273,22 @@ function parseDateOnly(value: unknown) {
   return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value
     ? null
     : parsed;
+}
+
+function decimalAmount(value: FormDataEntryValue | null) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().replace(/\s+/g, "").replace(",", ".");
+  if (!/^\d{1,10}(\.\d{1,2})?$/.test(normalized)) return null;
+  const amount = Number(normalized);
+  return Number.isFinite(amount) && amount > 0 ? normalized : null;
+}
+
+function currencyCode(value: FormDataEntryValue | null) {
+  const normalized =
+    typeof value === "string" && value.trim()
+      ? value.trim().toUpperCase()
+      : "EUR";
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
 }
 
 function invalid(fieldErrors: StaffState["fieldErrors"]): Parsed<never> {
@@ -614,6 +672,101 @@ export function parseSaveEmploymentContract(
       revision,
       contractNumber,
       type,
+      status,
+      startedOn,
+      endedOn,
+      note,
+    },
+  };
+}
+
+export function parseSaveEmploymentCompensation(
+  form: FormData,
+  messages: StaffMessages = tr.staff,
+): Parsed<SaveEmploymentCompensationInput> {
+  const employmentId = form.get("employmentId");
+  const compensationIdRaw = form.get("compensationId");
+  const compensationId =
+    typeof compensationIdRaw === "string" && compensationIdRaw
+      ? compensationIdRaw
+      : null;
+  const revisionRaw = form.get("revision");
+  const revision =
+    typeof revisionRaw === "string" && revisionRaw ? revisionRaw : null;
+  const amount = decimalAmount(form.get("compensationAmount"));
+  const compensationCurrency = currencyCode(form.get("compensationCurrency"));
+  const amountKindRaw = form.get("compensationAmountKind");
+  const amountKind =
+    typeof amountKindRaw === "string" &&
+    COMPENSATION_AMOUNT_KINDS.has(
+      amountKindRaw as EmploymentCompensationAmountKind,
+    )
+      ? (amountKindRaw as EmploymentCompensationAmountKind)
+      : null;
+  const payTypeRaw = form.get("compensationPayType");
+  const payType =
+    typeof payTypeRaw === "string" &&
+    COMPENSATION_PAY_TYPES.has(payTypeRaw as EmploymentCompensationPayType)
+      ? (payTypeRaw as EmploymentCompensationPayType)
+      : null;
+  const statusRaw = form.get("compensationStatus");
+  const status =
+    typeof statusRaw === "string" &&
+    COMPENSATION_STATUSES.has(statusRaw as EmploymentCompensationStatus)
+      ? (statusRaw as EmploymentCompensationStatus)
+      : null;
+  const startedOn = parseDateOnly(form.get("compensationStartedOn"));
+  const endedOnRaw = form.get("compensationEndedOn");
+  const endedOn = endedOnRaw === "" ? null : parseDateOnly(endedOnRaw);
+  const noteRaw = form.get("compensationNote");
+  const note = optionalText(noteRaw, 1000);
+  const fieldErrors: StaffState["fieldErrors"] = {};
+
+  if (!validSchoolId(employmentId)) fieldErrors.record = messages.failed;
+  if (compensationId && !validSchoolId(compensationId))
+    fieldErrors.compensationId = messages.invalid;
+  if (compensationId && !validRevision(revision))
+    fieldErrors.record = messages.conflict;
+  if (!amount) fieldErrors.compensationAmount = messages.invalidCompensationAmount;
+  if (!compensationCurrency)
+    fieldErrors.compensationCurrency = messages.invalidCurrency;
+  if (!amountKind) fieldErrors.compensationAmountKind = messages.invalid;
+  if (!payType) fieldErrors.compensationPayType = messages.invalid;
+  if (!status) fieldErrors.compensationStatus = messages.invalid;
+  if (!startedOn) fieldErrors.compensationStartedOn = messages.invalidDate;
+  if (provided(endedOnRaw) && !endedOn)
+    fieldErrors.compensationEndedOn = messages.invalidDate;
+  if (startedOn && endedOn && endedOn < startedOn)
+    fieldErrors.compensationEndedOn = messages.invalidCompensationDates;
+  if (provided(noteRaw) && !note) fieldErrors.compensationNote = messages.invalid;
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(employmentId) ||
+    (compensationId &&
+      (!validSchoolId(compensationId) || !validRevision(revision))) ||
+    !amount ||
+    !compensationCurrency ||
+    !amountKind ||
+    !payType ||
+    !status ||
+    !startedOn
+  )
+    return {
+      success: false,
+      state: { status: "error", message: messages.invalid, fieldErrors },
+    };
+
+  return {
+    success: true,
+    data: {
+      employmentId,
+      compensationId,
+      revision,
+      amount,
+      currencyCode: compensationCurrency,
+      amountKind,
+      payType,
       status,
       startedOn,
       endedOn,

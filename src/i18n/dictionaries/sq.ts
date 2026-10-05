@@ -422,6 +422,35 @@ const sq = {
     contractStatusActive: "Aktive",
     contractStatusEnded: "E përfunduar",
     contractStatusCancelled: "E anuluar",
+    compensationTitle: "Paga / kompensimi",
+    compensationDescription:
+      "Menaxhoni pagën si historik të ndarë dhe të ndjeshëm nga kontratat. Një personel mund të ketë vetëm një regjistrim aktiv kompensimi në të njëjtën kohë.",
+    activeCompensation: "Kompensimi aktiv",
+    noActiveCompensation: "Nuk ka regjistrim aktiv kompensimi.",
+    noCompensations: "Nuk ka ende regjistrim kompensimi.",
+    compensationHistory: "Historiku i kompensimit",
+    compensationAmount: "Shuma",
+    compensationCurrency: "Valuta",
+    compensationAmountKind: "Lloji i shumës",
+    compensationPayType: "Lloji i pagesës",
+    compensationStatus: "Statusi",
+    compensationStartedOn: "Data e fillimit",
+    compensationEndedOn: "Data e përfundimit",
+    compensationNote: "Shënim i kompensimit",
+    saveCompensation: "Ruaj kompensimin",
+    updateCompensation: "Përditëso kompensimin",
+    compensationCreated: "Regjistrimi i kompensimit u krijua.",
+    compensationUpdated: "Regjistrimi i kompensimit u përditësua.",
+    amountKindGross: "Bruto",
+    amountKindNet: "Neto",
+    payTypeMonthly: "Mujore",
+    payTypeHourly: "Me orë",
+    payTypeDaily: "Ditore",
+    payTypeLesson: "Për orë mësimi",
+    payTypeOther: "Tjetër",
+    compensationStatusActive: "Aktive",
+    compensationStatusEnded: "E përfunduar",
+    compensationStatusCancelled: "E anuluar",
     updatedAt: "Përditësimi i fundit",
     invalidDate: "Jepni një datë të vlefshme.",
     invalidContractNumber:
@@ -433,6 +462,16 @@ const sq = {
     contractUnavailable: "Regjistrimi i kontratës nuk u gjet.",
     contractRequiresOpenEmployment:
       "Nuk mund të krijohet kontratë aktive për punësim të përfunduar.",
+    invalidCompensationAmount:
+      "Shuma e kompensimit duhet të jetë pozitive dhe me maksimumi dy dhjetore.",
+    invalidCurrency: "Valuta duhet të jetë kod me 3 shkronja. P.sh.: EUR.",
+    invalidCompensationDates:
+      "Data e përfundimit nuk mund të jetë para datës së fillimit.",
+    activeCompensationExists:
+      "Ky personel ka tashmë një regjistrim aktiv kompensimi.",
+    compensationUnavailable: "Regjistrimi i kompensimit nuk u gjet.",
+    compensationRequiresOpenEmployment:
+      "Nuk mund të krijohet kompensim aktiv për punësim të përfunduar.",
     permissionDenied: "Nuk keni autorizim për këtë veprim.",
     invalid: "Regjistrimi nuk u ruajt. Kontrolloni fushat e shënuara.",
     conflict:

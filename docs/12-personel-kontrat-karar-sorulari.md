@@ -204,5 +204,23 @@ Kontrat çekirdeği ilk paket olarak kodlandı:
 - Okul Admin rollerine kontrat yetkileri migration içinde bağlandı
 - personel işten ayrılınca aktif kontrat otomatik `bitmiş` durumuna alınacak şekilde servis davranışı eklendi
 
-Maaş/ücret ayrı tablo olarak bir sonraki küçük faza bırakıldı. Kontrat maddeleri ve yazdırılabilir template motoru da kontrat çekirdeği deploy/test sonrası ayrı fazda ele alınacak.
+Kontrat maddeleri ve yazdırılabilir template motoru kontrat çekirdeği deploy/test sonrası ayrı fazda ele alınacak.
 
+## 6. 2026-10-05 ücret çekirdeği uygulama notu
+
+Kontrattan ayrı maaş/ücret çekirdeği ikinci küçük paket olarak kodlandı:
+
+- `employment_compensations` tablosu eklendi
+- maaş/ücret personelin `Employment` kaydına bağlandı; gerçek kişi veya kontrat metni içine gömülmedi
+- aynı personelde aynı anda tek aktif ücret kaydı DB seviyesinde korundu
+- tutar `decimal(12,2)` olarak saklanır; virgüllü girişler uygulamada noktaya normalize edilir
+- para birimi 3 harfli kod olarak tutulur; varsayılan kullanım `EUR`
+- tutar türü eklendi: brüt / net
+- ödeme tipi eklendi: aylık, saatlik, günlük, ders başı, diğer
+- durum eklendi: aktif, bitmiş, iptal
+- personel detay ekranında aktif ücret özeti, yeni ücret formu ve ücret geçmişi eklendi
+- `hr.compensation.read` ve `hr.compensation.manage` yetkileri eklendi
+- Okul Admin rollerine ücret yetkileri migration içinde bağlandı
+- personel işten ayrılınca aktif ücret kaydı otomatik `bitmiş` durumuna alınacak şekilde servis davranışı eklendi
+
+Bu faz hâlâ payroll/bordro, banka bilgisi, ödeme emri, muhasebe veya kontrat template motoru değildir. Bunlar ayrı fazlarda ele alınacak.

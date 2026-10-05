@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   parseCreateEmployment,
   parseEmploymentTransition,
+  parseSaveEmploymentCompensation,
   parseSaveEmploymentContract,
   parseStaffCatalogItem,
   parseStaffCatalogTransition,
@@ -26,6 +27,7 @@ const departmentId = "25a01724-71bb-48bc-879c-1298c951d3c0";
 const positionId = "8bc89aad-a709-451c-aa20-e2505b5be0fd";
 const catalogId = "4e7a0b1a-0b18-4af9-86ac-3e57adfd7767";
 const contractId = "5b2985f2-a8c4-4fa2-bf7c-43ce4f2620d7";
+const compensationId = "46f9279e-0951-4805-86f3-77f478d7800a";
 const subjectOne = "0b9a5fbf-d073-42c6-a314-a6de017409a1";
 const subjectTwo = "32bbbf77-cb2a-4b2e-83ac-6b138c0e0d4a";
 const revision = "2026-10-01T12:00:00.000Z";
@@ -188,6 +190,52 @@ test("employment contract parser accepts manual contract numbers and optional en
   );
   assert.equal(update.success, false);
   if (!update.success) assert.ok(update.state.fieldErrors?.contractEndedOn);
+});
+
+test("employment compensation parser normalizes amount, currency and dates", () => {
+  const parsed = parseSaveEmploymentCompensation(
+    form({
+      employmentId,
+      compensationAmount: "320,37",
+      compensationCurrency: "eur",
+      compensationAmountKind: "GROSS",
+      compensationPayType: "MONTHLY",
+      compensationStatus: "ACTIVE",
+      compensationStartedOn: "2026-10-01",
+      compensationEndedOn: "",
+      compensationNote: "Contract salary line.",
+    }),
+  );
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.compensationId, null);
+    assert.equal(parsed.data.amount, "320.37");
+    assert.equal(parsed.data.currencyCode, "EUR");
+    assert.equal(parsed.data.amountKind, "GROSS");
+    assert.equal(parsed.data.payType, "MONTHLY");
+    assert.equal(parsed.data.endedOn, null);
+  }
+
+  const update = parseSaveEmploymentCompensation(
+    form({
+      employmentId,
+      compensationId,
+      revision,
+      compensationAmount: "0",
+      compensationCurrency: "EURO",
+      compensationAmountKind: "NET",
+      compensationPayType: "LESSON",
+      compensationStatus: "ENDED",
+      compensationStartedOn: "2026-10-01",
+      compensationEndedOn: "2026-09-30",
+    }),
+  );
+  assert.equal(update.success, false);
+  if (!update.success) {
+    assert.ok(update.state.fieldErrors?.compensationAmount);
+    assert.ok(update.state.fieldErrors?.compensationCurrency);
+    assert.ok(update.state.fieldErrors?.compensationEndedOn);
+  }
 });
 
 test("staff catalog item requires a code and three translated names", () => {

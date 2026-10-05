@@ -7,6 +7,7 @@ import { getPrisma } from "@/lib/db";
 import {
   parseCreateEmployment,
   parseEmploymentTransition,
+  parseSaveEmploymentCompensation,
   parseSaveEmploymentContract,
   parseStaffCatalogItem,
   parseStaffCatalogTransition,
@@ -19,6 +20,7 @@ import { isSameOrigin } from "@/server/auth/identifiers";
 import { requireSchoolPermission } from "@/server/authorization/guards";
 import {
   persistEmployment,
+  persistEmploymentCompensation,
   persistEmploymentContract,
   persistEmploymentTransition,
   persistStaffPhotoMetadata,
@@ -142,6 +144,25 @@ export async function manageSaveEmploymentContract(
     );
   } catch (errorValue) {
     console.error("EMPLOYMENT_CONTRACT_SAVE_UNAVAILABLE");
+    return databaseError(errorValue);
+  }
+}
+
+export async function manageSaveEmploymentCompensation(
+  form: FormData,
+): Promise<StaffState> {
+  const context = await actorContext("hr.compensation.manage");
+  if (!context) return invalid();
+  const { actor, messages } = context;
+  const parsed = parseSaveEmploymentCompensation(form, messages);
+  if (!parsed.success) return parsed.state;
+  try {
+    return await getPrisma().$transaction(
+      (tx) => persistEmploymentCompensation(tx, actor, parsed.data, messages),
+      { isolationLevel: "Serializable", timeout: 15000 },
+    );
+  } catch (errorValue) {
+    console.error("EMPLOYMENT_COMPENSATION_SAVE_UNAVAILABLE");
     return databaseError(errorValue);
   }
 }

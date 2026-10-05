@@ -232,6 +232,25 @@ enum EmploymentContractStatus {
   CANCELLED
 }
 
+enum EmploymentCompensationPayType {
+  MONTHLY
+  HOURLY
+  DAILY
+  LESSON
+  OTHER
+}
+
+enum EmploymentCompensationAmountKind {
+  GROSS
+  NET
+}
+
+enum EmploymentCompensationStatus {
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
 enum EmploymentExitReason {
   RESIGNED
   TERMINATED
@@ -343,6 +362,7 @@ model School {
   employments                     Employment[]
   employmentHrProfiles            EmploymentHrProfile[]
   employmentContracts             EmploymentContract[]
+  employmentCompensations         EmploymentCompensation[]
   employmentLifecycleEvents       EmploymentLifecycleEvent[]
   teacherProfiles                 TeacherProfile[]
   teacherProfileTranslations      TeacherProfileTranslation[]
@@ -1392,6 +1412,7 @@ model Employment {
   position        StaffPosition              @relation(fields: [positionId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
   hrProfile       EmploymentHrProfile?
   contracts       EmploymentContract[]
+  compensations   EmploymentCompensation[]
   lifecycleEvents EmploymentLifecycleEvent[]
   teacherProfile  TeacherProfile?
 
@@ -1445,6 +1466,29 @@ model EmploymentContract {
   @@index([schoolId, employmentId, status])
   @@index([schoolId, status])
   @@map("employment_contracts")
+}
+
+model EmploymentCompensation {
+  id           String                           @id @default(uuid()) @db.Uuid
+  schoolId     String                           @map("school_id") @db.Uuid
+  employmentId String                           @map("employment_id") @db.Uuid
+  amount       Decimal                          @db.Decimal(12, 2)
+  currencyCode String                           @default("EUR") @map("currency_code") @db.Char(3)
+  amountKind   EmploymentCompensationAmountKind @default(GROSS) @map("amount_kind")
+  payType      EmploymentCompensationPayType    @map("pay_type")
+  status       EmploymentCompensationStatus     @default(ACTIVE)
+  startedOn    DateTime                         @map("started_on") @db.Date
+  endedOn      DateTime?                        @map("ended_on") @db.Date
+  note         String?                          @db.VarChar(1000)
+  createdAt    DateTime                         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime                         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employment Employment @relation(fields: [employmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([schoolId, employmentId, status])
+  @@index([schoolId, status])
+  @@map("employment_compensations")
 }
 
 model EmploymentLifecycleEvent {

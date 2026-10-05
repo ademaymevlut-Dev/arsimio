@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useActionState } from "react";
 import {
+  saveEmploymentCompensationAction,
   saveEmploymentContractAction,
   saveStaffHrProfileAction,
   saveTeacherProfileAction,
@@ -69,6 +70,19 @@ function formatDate(value: string | null, locale: Locale) {
   }).format(new Date(`${value}T00:00:00.000Z`));
 }
 
+function formatMoney(value: string, currencyCode: string, locale: Locale) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return `${value} ${currencyCode}`;
+  try {
+    return new Intl.NumberFormat(HTML_LOCALES[locale], {
+      style: "currency",
+      currency: currencyCode,
+    }).format(amount);
+  } catch {
+    return `${value} ${currencyCode}`;
+  }
+}
+
 type StaffDetail = {
   id: string;
   revision: string;
@@ -95,6 +109,20 @@ type StaffDetail = {
       | "SERVICE"
       | "INTERN"
       | "OTHER";
+    status: "ACTIVE" | "ENDED" | "CANCELLED";
+    startedOn: string;
+    endedOn: string | null;
+    note: string | null;
+    createdAt: string;
+    updatedAt: string;
+    revision: string;
+  }[];
+  compensations: {
+    id: string;
+    amount: string;
+    currencyCode: string;
+    amountKind: "GROSS" | "NET";
+    payType: "MONTHLY" | "HOURLY" | "DAILY" | "LESSON" | "OTHER";
     status: "ACTIVE" | "ENDED" | "CANCELLED";
     startedOn: string;
     endedOn: string | null;
@@ -153,6 +181,8 @@ export function StaffDetailManager({
   canManageAccounts,
   canReadContracts,
   canManageContracts,
+  canReadCompensations,
+  canManageCompensations,
   canManageIdentity,
   identityProtectionReady,
   defaultEffectiveOn,
@@ -165,6 +195,8 @@ export function StaffDetailManager({
   canManageAccounts: boolean;
   canReadContracts: boolean;
   canManageContracts: boolean;
+  canReadCompensations: boolean;
+  canManageCompensations: boolean;
   canManageIdentity: boolean;
   identityProtectionReady: boolean;
   defaultEffectiveOn: string;
@@ -191,6 +223,11 @@ export function StaffDetailManager({
     StaffState,
     FormData
   >(saveEmploymentContractAction, initialState);
+  const [compensationState, compensationAction, compensationPending] =
+    useActionState<StaffState, FormData>(
+      saveEmploymentCompensationAction,
+      initialState,
+    );
   function employmentStatusLabel(value: string) {
     if (value === "ACTIVE") return messages.active;
     if (value === "ON_LEAVE") return messages.onLeave;
@@ -221,9 +258,43 @@ export function StaffDetailManager({
     };
     return labels[value] ?? value;
   }
+  function compensationAmountKindLabel(
+    value: StaffDetail["compensations"][number]["amountKind"],
+  ) {
+    const labels = {
+      GROSS: messages.amountKindGross,
+      NET: messages.amountKindNet,
+    };
+    return labels[value] ?? value;
+  }
+  function compensationPayTypeLabel(
+    value: StaffDetail["compensations"][number]["payType"],
+  ) {
+    const labels = {
+      MONTHLY: messages.payTypeMonthly,
+      HOURLY: messages.payTypeHourly,
+      DAILY: messages.payTypeDaily,
+      LESSON: messages.payTypeLesson,
+      OTHER: messages.payTypeOther,
+    };
+    return labels[value] ?? value;
+  }
+  function compensationStatusLabel(
+    value: StaffDetail["compensations"][number]["status"],
+  ) {
+    const labels = {
+      ACTIVE: messages.compensationStatusActive,
+      ENDED: messages.compensationStatusEnded,
+      CANCELLED: messages.compensationStatusCancelled,
+    };
+    return labels[value] ?? value;
+  }
   const hrProfile = staff.hrProfile;
   const activeContract =
     staff.contracts.find((contract) => contract.status === "ACTIVE") ?? null;
+  const activeCompensation =
+    staff.compensations.find((compensation) => compensation.status === "ACTIVE") ??
+    null;
 
   return (
     <div className="space-y-6">
@@ -604,6 +675,429 @@ export function StaffDetailManager({
               ) : (
                 <p className="text-sm text-muted-foreground">
                   {messages.noContracts}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {canReadCompensations ? (
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle>{messages.compensationTitle}</CardTitle>
+            <CardDescription>{messages.compensationDescription}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+              <p className="font-medium">{messages.activeCompensation}</p>
+              {activeCompensation ? (
+                <div className="mt-2 grid gap-2 sm:grid-cols-5">
+                  <div>
+                    <span className="text-muted-foreground">
+                      {messages.compensationAmount}
+                    </span>
+                    <p className="font-medium">
+                      {formatMoney(
+                        activeCompensation.amount,
+                        activeCompensation.currencyCode,
+                        locale,
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">
+                      {messages.compensationAmountKind}
+                    </span>
+                    <p className="font-medium">
+                      {compensationAmountKindLabel(activeCompensation.amountKind)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">
+                      {messages.compensationPayType}
+                    </span>
+                    <p className="font-medium">
+                      {compensationPayTypeLabel(activeCompensation.payType)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">
+                      {messages.compensationStartedOn}
+                    </span>
+                    <p className="font-medium">
+                      {formatDate(activeCompensation.startedOn, locale)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">
+                      {messages.compensationEndedOn}
+                    </span>
+                    <p className="font-medium">
+                      {formatDate(activeCompensation.endedOn, locale)}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-1 text-muted-foreground">
+                  {messages.noActiveCompensation}
+                </p>
+              )}
+            </div>
+
+            {canManageCompensations ? (
+              <form
+                action={compensationAction}
+                className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2"
+              >
+                <input type="hidden" name="employmentId" value={staff.id} />
+                <div className="space-y-2">
+                  <Label htmlFor="newCompensationAmount">
+                    {messages.compensationAmount}
+                  </Label>
+                  <Input
+                    id="newCompensationAmount"
+                    name="compensationAmount"
+                    inputMode="decimal"
+                    placeholder="320.37"
+                    disabled={compensationPending}
+                    aria-invalid={Boolean(
+                      compensationState.fieldErrors?.compensationAmount,
+                    )}
+                    required
+                  />
+                  <FieldError
+                    state={compensationState}
+                    field="compensationAmount"
+                    id="new-compensation-amount-error"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newCompensationCurrency">
+                    {messages.compensationCurrency}
+                  </Label>
+                  <Input
+                    id="newCompensationCurrency"
+                    name="compensationCurrency"
+                    defaultValue="EUR"
+                    maxLength={3}
+                    disabled={compensationPending}
+                    aria-invalid={Boolean(
+                      compensationState.fieldErrors?.compensationCurrency,
+                    )}
+                    required
+                  />
+                  <FieldError
+                    state={compensationState}
+                    field="compensationCurrency"
+                    id="new-compensation-currency-error"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newCompensationAmountKind">
+                    {messages.compensationAmountKind}
+                  </Label>
+                  <NativeSelect
+                    id="newCompensationAmountKind"
+                    name="compensationAmountKind"
+                    defaultValue="GROSS"
+                    disabled={compensationPending}
+                  >
+                    <option value="GROSS">{messages.amountKindGross}</option>
+                    <option value="NET">{messages.amountKindNet}</option>
+                  </NativeSelect>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newCompensationPayType">
+                    {messages.compensationPayType}
+                  </Label>
+                  <NativeSelect
+                    id="newCompensationPayType"
+                    name="compensationPayType"
+                    defaultValue="MONTHLY"
+                    disabled={compensationPending}
+                  >
+                    <option value="MONTHLY">{messages.payTypeMonthly}</option>
+                    <option value="HOURLY">{messages.payTypeHourly}</option>
+                    <option value="DAILY">{messages.payTypeDaily}</option>
+                    <option value="LESSON">{messages.payTypeLesson}</option>
+                    <option value="OTHER">{messages.payTypeOther}</option>
+                  </NativeSelect>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newCompensationStatus">
+                    {messages.compensationStatus}
+                  </Label>
+                  <NativeSelect
+                    id="newCompensationStatus"
+                    name="compensationStatus"
+                    defaultValue="ACTIVE"
+                    disabled={compensationPending}
+                  >
+                    <option value="ACTIVE">
+                      {messages.compensationStatusActive}
+                    </option>
+                    <option value="ENDED">{messages.compensationStatusEnded}</option>
+                    <option value="CANCELLED">
+                      {messages.compensationStatusCancelled}
+                    </option>
+                  </NativeSelect>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newCompensationStartedOn">
+                    {messages.compensationStartedOn}
+                  </Label>
+                  <Input
+                    id="newCompensationStartedOn"
+                    name="compensationStartedOn"
+                    type="date"
+                    defaultValue={defaultEffectiveOn}
+                    disabled={compensationPending}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newCompensationEndedOn">
+                    {messages.compensationEndedOn}
+                  </Label>
+                  <Input
+                    id="newCompensationEndedOn"
+                    name="compensationEndedOn"
+                    type="date"
+                    disabled={compensationPending}
+                  />
+                  <FieldError
+                    state={compensationState}
+                    field="compensationEndedOn"
+                    id="new-compensation-ended-on-error"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="newCompensationNote">
+                    {messages.compensationNote}
+                  </Label>
+                  <Textarea
+                    id="newCompensationNote"
+                    name="compensationNote"
+                    rows={3}
+                    disabled={compensationPending}
+                  />
+                </div>
+                <div className="space-y-3 sm:col-span-2">
+                  <ActionAlert state={compensationState} />
+                  <Button type="submit" disabled={compensationPending}>
+                    {messages.saveCompensation}
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">
+                {messages.compensationHistory}
+              </h3>
+              {staff.compensations.length ? (
+                staff.compensations.map((compensation) => (
+                  <details key={compensation.id} className="rounded-lg border p-3">
+                    <summary className="cursor-pointer text-sm font-medium">
+                      {formatMoney(
+                        compensation.amount,
+                        compensation.currencyCode,
+                        locale,
+                      )}{" "}
+                      · {compensationPayTypeLabel(compensation.payType)} ·{" "}
+                      {compensationStatusLabel(compensation.status)}
+                    </summary>
+                    <div className="mt-3 grid gap-3 text-sm sm:grid-cols-4">
+                      <div>
+                        <span className="text-muted-foreground">
+                          {messages.compensationAmountKind}
+                        </span>
+                        <p>{compensationAmountKindLabel(compensation.amountKind)}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          {messages.compensationStartedOn}
+                        </span>
+                        <p>{formatDate(compensation.startedOn, locale)}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          {messages.compensationEndedOn}
+                        </span>
+                        <p>{formatDate(compensation.endedOn, locale)}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          {messages.updatedAt}
+                        </span>
+                        <p>
+                          {formatDate(
+                            compensation.updatedAt.slice(0, 10),
+                            locale,
+                          )}
+                        </p>
+                      </div>
+                      <div className="sm:col-span-4">
+                        <span className="text-muted-foreground">
+                          {messages.compensationNote}
+                        </span>
+                        <p>{compensation.note ?? "—"}</p>
+                      </div>
+                    </div>
+                    {canManageCompensations ? (
+                      <form
+                        action={compensationAction}
+                        className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-2"
+                      >
+                        <input type="hidden" name="employmentId" value={staff.id} />
+                        <input
+                          type="hidden"
+                          name="compensationId"
+                          value={compensation.id}
+                        />
+                        <input
+                          type="hidden"
+                          name="revision"
+                          value={compensation.revision}
+                        />
+                        <div className="space-y-2">
+                          <Label htmlFor={`compensationAmount-${compensation.id}`}>
+                            {messages.compensationAmount}
+                          </Label>
+                          <Input
+                            id={`compensationAmount-${compensation.id}`}
+                            name="compensationAmount"
+                            inputMode="decimal"
+                            defaultValue={compensation.amount}
+                            disabled={compensationPending}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor={`compensationCurrency-${compensation.id}`}
+                          >
+                            {messages.compensationCurrency}
+                          </Label>
+                          <Input
+                            id={`compensationCurrency-${compensation.id}`}
+                            name="compensationCurrency"
+                            defaultValue={compensation.currencyCode}
+                            maxLength={3}
+                            disabled={compensationPending}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor={`compensationAmountKind-${compensation.id}`}
+                          >
+                            {messages.compensationAmountKind}
+                          </Label>
+                          <NativeSelect
+                            id={`compensationAmountKind-${compensation.id}`}
+                            name="compensationAmountKind"
+                            defaultValue={compensation.amountKind}
+                            disabled={compensationPending}
+                          >
+                            <option value="GROSS">{messages.amountKindGross}</option>
+                            <option value="NET">{messages.amountKindNet}</option>
+                          </NativeSelect>
+                        </div>
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor={`compensationPayType-${compensation.id}`}
+                          >
+                            {messages.compensationPayType}
+                          </Label>
+                          <NativeSelect
+                            id={`compensationPayType-${compensation.id}`}
+                            name="compensationPayType"
+                            defaultValue={compensation.payType}
+                            disabled={compensationPending}
+                          >
+                            <option value="MONTHLY">
+                              {messages.payTypeMonthly}
+                            </option>
+                            <option value="HOURLY">{messages.payTypeHourly}</option>
+                            <option value="DAILY">{messages.payTypeDaily}</option>
+                            <option value="LESSON">{messages.payTypeLesson}</option>
+                            <option value="OTHER">{messages.payTypeOther}</option>
+                          </NativeSelect>
+                        </div>
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor={`compensationStatus-${compensation.id}`}
+                          >
+                            {messages.compensationStatus}
+                          </Label>
+                          <NativeSelect
+                            id={`compensationStatus-${compensation.id}`}
+                            name="compensationStatus"
+                            defaultValue={compensation.status}
+                            disabled={compensationPending}
+                          >
+                            <option value="ACTIVE">
+                              {messages.compensationStatusActive}
+                            </option>
+                            <option value="ENDED">
+                              {messages.compensationStatusEnded}
+                            </option>
+                            <option value="CANCELLED">
+                              {messages.compensationStatusCancelled}
+                            </option>
+                          </NativeSelect>
+                        </div>
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor={`compensationStartedOn-${compensation.id}`}
+                          >
+                            {messages.compensationStartedOn}
+                          </Label>
+                          <Input
+                            id={`compensationStartedOn-${compensation.id}`}
+                            name="compensationStartedOn"
+                            type="date"
+                            defaultValue={compensation.startedOn}
+                            disabled={compensationPending}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`compensationEndedOn-${compensation.id}`}>
+                            {messages.compensationEndedOn}
+                          </Label>
+                          <Input
+                            id={`compensationEndedOn-${compensation.id}`}
+                            name="compensationEndedOn"
+                            type="date"
+                            defaultValue={compensation.endedOn ?? ""}
+                            disabled={compensationPending}
+                          />
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label htmlFor={`compensationNote-${compensation.id}`}>
+                            {messages.compensationNote}
+                          </Label>
+                          <Textarea
+                            id={`compensationNote-${compensation.id}`}
+                            name="compensationNote"
+                            defaultValue={compensation.note ?? ""}
+                            rows={3}
+                            disabled={compensationPending}
+                          />
+                        </div>
+                        <Button type="submit" disabled={compensationPending}>
+                          {messages.updateCompensation}
+                        </Button>
+                      </form>
+                    ) : null}
+                  </details>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {messages.noCompensations}
                 </p>
               )}
             </div>

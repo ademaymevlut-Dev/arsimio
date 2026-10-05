@@ -6,6 +6,7 @@ import type { StaffState } from "@/lib/staff-validation";
 import {
   manageCreateEmployment,
   manageEmploymentTransition,
+  manageSaveEmploymentCompensation,
   manageSaveEmploymentContract,
   manageSaveStaffCatalogItem,
   manageStaffCatalogTransition,
@@ -46,6 +47,20 @@ export async function saveEmploymentContractAction(
   form: FormData,
 ) {
   const result = await manageSaveEmploymentContract(form);
+  if (result.status === "success") {
+    const employmentId = form.get("employmentId");
+    revalidatePath("/staff");
+    if (typeof employmentId === "string" && employmentId)
+      revalidatePath(`/staff/${employmentId}`);
+  }
+  return result;
+}
+
+export async function saveEmploymentCompensationAction(
+  _state: StaffState,
+  form: FormData,
+) {
+  const result = await manageSaveEmploymentCompensation(form);
   if (result.status === "success") {
     const employmentId = form.get("employmentId");
     revalidatePath("/staff");

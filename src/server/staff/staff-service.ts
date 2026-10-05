@@ -7,6 +7,7 @@ import type {
   StaffCatalogTransitionInput,
   StaffMessages,
   StaffState,
+  SaveEmploymentCompensationInput,
   SaveEmploymentContractInput,
   TeacherProfileInput,
   UploadStaffPhotoInput,
@@ -642,6 +643,18 @@ export async function persistEmploymentTransition(
         note: input.note,
       },
     });
+    await tx.employmentCompensation.updateMany({
+      where: {
+        schoolId: actor.schoolId,
+        employmentId: employment.id,
+        status: "ACTIVE",
+      },
+      data: {
+        status: "ENDED",
+        endedOn: input.effectiveOn,
+        note: input.note,
+      },
+    });
   }
   await tx.employmentLifecycleEvent.create({
     data: {
@@ -669,12 +682,14 @@ export async function persistEmploymentTransition(
       exitReason: input.exitReason,
       teacherProfileInactivated: input.transition === "end",
       activeContractEnded: input.transition === "end",
+      activeCompensationEnded: input.transition === "end",
     },
     changedFields: [
       "employment.status",
       "employment.note",
       "lifecycle",
       ...(input.transition === "end" ? ["employmentContract.status"] : []),
+      ...(input.transition === "end" ? ["employmentCompensation.status"] : []),
     ],
   });
   return { status: "success", message: "Personel durumu guncellendi." };
@@ -797,6 +812,122 @@ export async function persistEmploymentContract(
     status: "success",
     message: existing ? messages.contractUpdated : messages.contractCreated,
     entityId: contract.id,
+  };
+}
+
+export async function persistEmploymentCompensation(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: SaveEmploymentCompensationInput,
+  messages: StaffMessages,
+): Promise<StaffState> {
+  const employment = await tx.employment.findFirst({
+    where: {
+      id: input.employmentId,
+      schoolId: actor.schoolId,
+      archivedAt: null,
+    },
+    select: { id: true, staffNumber: true, status: true },
+  });
+  if (!employment) return error(messages.unavailable);
+
+  const existing = input.compensationId
+    ? await tx.employmentCompensation.findFirst({
+        where: {
+          id: input.compensationId,
+          schoolId: actor.schoolId,
+          employmentId: employment.id,
+        },
+      })
+    : null;
+  if (input.compensationId && !existing)
+    return error(messages.compensationUnavailable);
+  if (
+    existing &&
+    input.revision &&
+    existing.updatedAt.toISOString() !== input.revision
+  )
+    return error(messages.conflict);
+
+  if (input.status === "ACTIVE") {
+    if (employment.status === "ENDED")
+      return error(messages.compensationRequiresOpenEmployment, {
+        compensationStatus: messages.compensationRequiresOpenEmployment,
+      });
+    const activeCompensation = await tx.employmentCompensation.findFirst({
+      where: {
+        schoolId: actor.schoolId,
+        employmentId: employment.id,
+        status: "ACTIVE",
+        ...(input.compensationId ? { id: { not: input.compensationId } } : {}),
+      },
+      select: { id: true },
+    });
+    if (activeCompensation)
+      return error(messages.activeCompensationExists, {
+        compensationStatus: messages.activeCompensationExists,
+      });
+  }
+
+  const data = {
+    amount: input.amount,
+    currencyCode: input.currencyCode,
+    amountKind: input.amountKind,
+    payType: input.payType,
+    status: input.status,
+    startedOn: input.startedOn,
+    endedOn: input.endedOn,
+    note: input.note,
+  };
+  const compensation = existing
+    ? await tx.employmentCompensation.update({
+        where: { id: existing.id },
+        data,
+      })
+    : await tx.employmentCompensation.create({
+        data: {
+          schoolId: actor.schoolId,
+          employmentId: employment.id,
+          ...data,
+        },
+      });
+
+  await audit(tx, actor, {
+    action: existing
+      ? "employment_compensation.updated"
+      : "employment_compensation.created",
+    entityType: "EmploymentCompensation",
+    entityId: compensation.id,
+    beforeData: existing
+      ? {
+          amount: existing.amount.toString(),
+          currencyCode: existing.currencyCode,
+          amountKind: existing.amountKind,
+          payType: existing.payType,
+          status: existing.status,
+          startedOn: dateValue(existing.startedOn),
+          endedOn: existing.endedOn ? dateValue(existing.endedOn) : null,
+          note: existing.note,
+        }
+      : undefined,
+    afterData: {
+      employmentId: employment.id,
+      staffNumber: employment.staffNumber,
+      amount: compensation.amount.toString(),
+      currencyCode: compensation.currencyCode,
+      amountKind: compensation.amountKind,
+      payType: compensation.payType,
+      status: compensation.status,
+      startedOn: dateValue(compensation.startedOn),
+      endedOn: compensation.endedOn ? dateValue(compensation.endedOn) : null,
+      note: compensation.note,
+    },
+    changedFields: ["employmentCompensation"],
+  });
+  return {
+    status: "success",
+    message: existing ? messages.compensationUpdated : messages.compensationCreated,
+    entityId: compensation.id,
   };
 }
 

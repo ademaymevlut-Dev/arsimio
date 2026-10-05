@@ -298,6 +298,7 @@ export async function getStaffDetail(
   employmentId: string,
   locale: string,
   includeContracts = false,
+  includeCompensations = false,
 ) {
   const db = getPrisma();
   const employment = await db.employment.findFirst({
@@ -339,6 +340,12 @@ export async function getStaffDetail(
   });
   const contracts = includeContracts
     ? await db.employmentContract.findMany({
+        where: { schoolId, employmentId: employment.id },
+        orderBy: [{ status: "asc" }, { startedOn: "desc" }, { createdAt: "desc" }],
+      })
+    : [];
+  const compensations = includeCompensations
+    ? await db.employmentCompensation.findMany({
         where: { schoolId, employmentId: employment.id },
         orderBy: [{ status: "asc" }, { startedOn: "desc" }, { createdAt: "desc" }],
       })
@@ -394,6 +401,20 @@ export async function getStaffDetail(
       createdAt: contract.createdAt.toISOString(),
       updatedAt: contract.updatedAt.toISOString(),
       revision: contract.updatedAt.toISOString(),
+    })),
+    compensations: compensations.map((compensation) => ({
+      id: compensation.id,
+      amount: compensation.amount.toString(),
+      currencyCode: compensation.currencyCode,
+      amountKind: compensation.amountKind,
+      payType: compensation.payType,
+      status: compensation.status,
+      startedOn: dateValue(compensation.startedOn),
+      endedOn: compensation.endedOn ? dateValue(compensation.endedOn) : null,
+      note: compensation.note,
+      createdAt: compensation.createdAt.toISOString(),
+      updatedAt: compensation.updatedAt.toISOString(),
+      revision: compensation.updatedAt.toISOString(),
     })),
     department: translatedName(employment.department),
     position: translatedName(employment.position),
