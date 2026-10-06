@@ -180,6 +180,16 @@ enum StudentFinanceContractItemStatus {
   ARCHIVED
 }
 
+enum StudentFinanceInstallmentKind {
+  DOWN_PAYMENT
+  INSTALLMENT
+}
+
+enum StudentFinanceInstallmentStatus {
+  ACTIVE
+  ARCHIVED
+}
+
 enum GuardianRelationshipType {
   MOTHER
   FATHER
@@ -418,6 +428,7 @@ model School {
   studentAttendanceRecords          StudentAttendanceRecord[]
   studentFinanceContracts           StudentFinanceContract[]
   studentFinanceContractItems       StudentFinanceContractItem[]
+  studentFinanceInstallments        StudentFinanceInstallment[]
   numberSequences                   SchoolNumberSequence[]
   studentProfiles                   StudentProfile[]
   studentPreviousEducationRecords   StudentPreviousEducationRecord[]
@@ -2069,6 +2080,7 @@ model StudentFinanceContract {
   academicYear                    AcademicYear                 @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
   responsibleGuardianRelationship GuardianRelationship         @relation(fields: [responsibleGuardianRelationshipId, schoolId, studentProfileId], references: [id, schoolId, studentProfileId], onDelete: Restrict, onUpdate: Restrict)
   items                           StudentFinanceContractItem[]
+  installments                    StudentFinanceInstallment[]
 
   @@unique([schoolId, academicYearId, protocolNumber], map: "sfc_school_year_protocol_key")
   @@unique([id, schoolId])
@@ -2103,6 +2115,32 @@ model StudentFinanceContractItem {
   @@index([schoolId, contractId, status, sortOrder], map: "sfci_contract_status_order_idx")
   @@index([schoolId, kind, status], map: "sfci_kind_status_idx")
   @@map("student_finance_contract_items")
+}
+
+model StudentFinanceInstallment {
+  id              String                          @id @default(uuid()) @db.Uuid
+  schoolId        String                          @map("school_id") @db.Uuid
+  contractId      String                          @map("contract_id") @db.Uuid
+  kind            StudentFinanceInstallmentKind
+  sequence        Int
+  label           String                          @db.VarChar(80)
+  dueDate         DateTime                        @map("due_date") @db.Date
+  amount          Decimal                         @db.Decimal(12, 2)
+  status          StudentFinanceInstallmentStatus @default(ACTIVE)
+  note            String?                         @db.VarChar(1000)
+  createdByUserId String?                         @map("created_by_user_id") @db.Uuid
+  updatedByUserId String?                         @map("updated_by_user_id") @db.Uuid
+  createdAt       DateTime                        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school   School                 @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  contract StudentFinanceContract @relation(fields: [contractId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([contractId, sequence], map: "sfi_contract_sequence_key")
+  @@unique([id, schoolId])
+  @@index([schoolId, contractId, status, sequence], map: "sfi_contract_status_sequence_idx")
+  @@index([schoolId, dueDate, status], map: "sfi_due_status_idx")
+  @@map("student_finance_installments")
 }
 
 model Enrollment {

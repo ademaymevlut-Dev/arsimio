@@ -1,6 +1,7 @@
 import type {
   StudentFinanceContractItemKind,
   StudentFinanceContractItemStatus,
+  StudentFinanceInstallmentKind,
   StudentFinanceContractStatus,
 } from "@/generated/prisma/client";
 import { validRevision, validSchoolId } from "./platform-school-validation";
@@ -48,7 +49,12 @@ export type FinanceField =
   | "discountRate"
   | "itemStatus"
   | "sortOrder"
-  | "itemNote";
+  | "itemNote"
+  | "planTotalAmount"
+  | "downPaymentAmount"
+  | "downPaymentDueDate"
+  | "installmentCount"
+  | "firstDueDate";
 
 export type FinanceState = {
   status?: "success" | "error";
@@ -87,6 +93,33 @@ export type SaveStudentFinanceContractItemInput =
     status: StudentFinanceContractItemStatus;
     sortOrder: number;
     note: string | null;
+  };
+
+export type StudentFinanceInstallmentPreviewLine = {
+  kind: StudentFinanceInstallmentKind;
+  sequence: number;
+  label: string;
+  dueDate: string;
+  amount: string;
+  note: string | null;
+};
+
+export type BuildStudentFinanceInstallmentPreviewInput = {
+  totalAmount: string;
+  downPaymentAmount: string;
+  downPaymentDueDate: string;
+  installmentCount: number;
+  firstDueDate: string;
+};
+
+export type StudentFinanceInstallmentPreview =
+  BuildStudentFinanceInstallmentPreviewInput & {
+    lines: StudentFinanceInstallmentPreviewLine[];
+  };
+
+export type SaveStudentFinanceInstallmentPlanInput =
+  StudentFinanceInstallmentPreview & {
+    contractId: string;
   };
 
 type Parsed<T> =
@@ -161,6 +194,42 @@ function parseDateOnly(value: unknown) {
     : parsed;
 }
 
+function formatDateOnly(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function daysInMonthUtc(year: number, monthIndex: number) {
+  return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+}
+
+function addMonthsClamped(date: Date, months: number) {
+  const originalDay = date.getUTCDate();
+  const monthIndex = date.getUTCMonth() + months;
+  const targetYear = date.getUTCFullYear() + Math.floor(monthIndex / 12);
+  const targetMonth = ((monthIndex % 12) + 12) % 12;
+  const targetDay = Math.min(
+    originalDay,
+    daysInMonthUtc(targetYear, targetMonth),
+  );
+  return new Date(Date.UTC(targetYear, targetMonth, targetDay));
+}
+
+function parseInstallmentCount(value: FormDataEntryValue | null) {
+  if (typeof value !== "string" || !/^\d{1,2}$/.test(value)) return null;
+  const count = Number.parseInt(value, 10);
+  return count >= 1 && count <= 60 ? count : null;
+}
+
+function distributeCents(amount: bigint, count: number) {
+  if (count < 1 || amount < ZERO) return null;
+  const divisor = BigInt(count);
+  const base = amount / divisor;
+  const remainder = amount % divisor;
+  const values = Array.from({ length: count }, () => base);
+  values[count - 1] += remainder;
+  return values;
+}
+
 export function formatStudentFinanceContractDisplayNumber(
   academicYearName: string,
   protocolNumber: string,
@@ -187,6 +256,116 @@ export function calculateStudentFinanceContractItemAmounts(
     discountAmount: formatCents(discountCents),
     netAmount: formatCents(netCents),
   };
+}
+
+export function buildStudentFinanceInstallmentPreview({
+  totalAmount,
+  downPaymentAmount,
+  downPaymentDueDate,
+  installmentCount,
+  firstDueDate,
+}: BuildStudentFinanceInstallmentPreviewInput): StudentFinanceInstallmentPreview | null {
+  const totalCents = parseMoneyCents(totalAmount);
+  const downPaymentCents = parseMoneyCents(downPaymentAmount);
+  const parsedDownPaymentDueDate = parseDateOnly(downPaymentDueDate);
+  const parsedFirstDueDate = parseDateOnly(firstDueDate);
+
+  if (
+    totalCents === null ||
+    totalCents <= ZERO ||
+    downPaymentCents === null ||
+    downPaymentCents < ZERO ||
+    downPaymentCents > totalCents ||
+    installmentCount < 1 ||
+    installmentCount > 60 ||
+    !parsedDownPaymentDueDate ||
+    !parsedFirstDueDate
+  )
+    return null;
+
+  const remainingCents = totalCents - downPaymentCents;
+  const installmentAmounts = distributeCents(remainingCents, installmentCount);
+  if (!installmentAmounts) return null;
+
+  return {
+    totalAmount: formatCents(totalCents),
+    downPaymentAmount: formatCents(downPaymentCents),
+    downPaymentDueDate: formatDateOnly(parsedDownPaymentDueDate),
+    installmentCount,
+    firstDueDate: formatDateOnly(parsedFirstDueDate),
+    lines: [
+      {
+        kind: "DOWN_PAYMENT",
+        sequence: 0,
+        label: "Peşinat / Parapagim",
+        dueDate: formatDateOnly(parsedDownPaymentDueDate),
+        amount: formatCents(downPaymentCents),
+        note: null,
+      },
+      ...installmentAmounts.map((amount, index) => ({
+        kind: "INSTALLMENT" as const,
+        sequence: index + 1,
+        label: `Kësti ${index + 1}`,
+        dueDate: formatDateOnly(addMonthsClamped(parsedFirstDueDate, index)),
+        amount: formatCents(amount),
+        note: null,
+      })),
+    ],
+  };
+}
+
+export function redistributeStudentFinanceInstallmentAmounts(
+  totalAmount: string,
+  downPaymentAmount: string,
+  currentInstallmentAmounts: string[],
+  changedSequence: number,
+  changedAmount: string,
+) {
+  const totalCents = parseMoneyCents(totalAmount);
+  const downPaymentCents = parseMoneyCents(downPaymentAmount);
+  const changedCents = parseMoneyCents(changedAmount);
+  const currentCents = currentInstallmentAmounts.map((amount) =>
+    parseMoneyCents(amount),
+  );
+
+  if (
+    totalCents === null ||
+    downPaymentCents === null ||
+    changedCents === null ||
+    totalCents <= ZERO ||
+    downPaymentCents < ZERO ||
+    downPaymentCents > totalCents ||
+    changedCents < ZERO ||
+    currentCents.length < 1 ||
+    currentCents.some((amount) => amount === null) ||
+    changedSequence < 1 ||
+    changedSequence > currentCents.length
+  )
+    return null;
+
+  const normalizedCurrent = currentCents as bigint[];
+  const changedIndex = changedSequence - 1;
+  const beforeChanged = normalizedCurrent
+    .slice(0, changedIndex)
+    .reduce((sum, amount) => sum + amount, ZERO);
+  const remainingAfterChanged =
+    totalCents - downPaymentCents - beforeChanged - changedCents;
+  const remainingSlots = normalizedCurrent.length - changedSequence;
+
+  if (remainingAfterChanged < ZERO) return null;
+  if (remainingSlots === 0 && remainingAfterChanged !== ZERO) return null;
+
+  const redistributed =
+    remainingSlots > 0
+      ? distributeCents(remainingAfterChanged, remainingSlots)
+      : [];
+  if (!redistributed) return null;
+
+  return [
+    ...normalizedCurrent.slice(0, changedIndex).map(formatCents),
+    formatCents(changedCents),
+    ...redistributed.map(formatCents),
+  ];
 }
 
 export function parseSaveStudentFinanceContract(
@@ -367,6 +546,77 @@ export function parseSaveStudentFinanceContractItem(
       status,
       sortOrder,
       note,
+    },
+  };
+}
+
+export function parseSaveStudentFinanceInstallmentPlan(
+  form: FormData,
+): Parsed<SaveStudentFinanceInstallmentPlanInput> {
+  const contractId = form.get("contractId");
+  const totalAmountRaw = form.get("planTotalAmount");
+  const downPaymentAmountRaw = form.get("downPaymentAmount");
+  const downPaymentDueDateRaw = form.get("downPaymentDueDate");
+  const installmentCount = parseInstallmentCount(form.get("installmentCount"));
+  const firstDueDateRaw = form.get("firstDueDate");
+  const totalCents = parseMoneyCents(totalAmountRaw);
+  const downPaymentCents = parseMoneyCents(downPaymentAmountRaw);
+  const downPaymentDueDate =
+    typeof downPaymentDueDateRaw === "string" ? downPaymentDueDateRaw : "";
+  const firstDueDate = typeof firstDueDateRaw === "string" ? firstDueDateRaw : "";
+  const fieldErrors: FinanceState["fieldErrors"] = {};
+
+  if (!validSchoolId(contractId)) fieldErrors.contractId = "Kontrat gecersiz.";
+  if (totalCents === null || totalCents <= ZERO)
+    fieldErrors.planTotalAmount = "Toplam tutar gecersiz.";
+  if (downPaymentCents === null || downPaymentCents < ZERO)
+    fieldErrors.downPaymentAmount = "Pesinat tutari gecersiz.";
+  if (
+    totalCents !== null &&
+    downPaymentCents !== null &&
+    downPaymentCents > totalCents
+  )
+    fieldErrors.downPaymentAmount = "Pesinat toplam tutardan buyuk olamaz.";
+  if (!parseDateOnly(downPaymentDueDateRaw))
+    fieldErrors.downPaymentDueDate = "Pesinat tarihi gecersiz.";
+  if (!installmentCount)
+    fieldErrors.installmentCount = "Taksit sayisi gecersiz.";
+  if (!parseDateOnly(firstDueDateRaw))
+    fieldErrors.firstDueDate = "Ilk vade tarihi gecersiz.";
+
+  const preview =
+    totalCents !== null &&
+    downPaymentCents !== null &&
+    installmentCount !== null
+      ? buildStudentFinanceInstallmentPreview({
+          totalAmount: formatCents(totalCents),
+          downPaymentAmount: formatCents(downPaymentCents),
+          downPaymentDueDate,
+          installmentCount,
+          firstDueDate,
+        })
+      : null;
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(contractId) ||
+    !preview
+  ) {
+    return {
+      success: false,
+      state: {
+        status: "error",
+        message: "Taksit plani bilgileri gecersiz.",
+        fieldErrors,
+      },
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      contractId,
+      ...preview,
     },
   };
 }

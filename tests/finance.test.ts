@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  buildStudentFinanceInstallmentPreview,
   calculateStudentFinanceContractItemAmounts,
   formatStudentFinanceContractDisplayNumber,
   parseSaveStudentFinanceContract,
   parseSaveStudentFinanceContractItem,
+  parseSaveStudentFinanceInstallmentPlan,
+  redistributeStudentFinanceInstallmentAmounts,
 } from "../src/lib/finance-validation";
 
 function form(values: Record<string, string>) {
@@ -167,4 +170,116 @@ test("student finance item amount calculation rounds discount cents", () => {
       netAmount: "87.51",
     },
   );
+});
+
+test("student finance installment preview creates down payment and monthly installments", () => {
+  const preview = buildStudentFinanceInstallmentPreview({
+    totalAmount: "2740",
+    downPaymentAmount: "500",
+    downPaymentDueDate: "2026-10-01",
+    installmentCount: 4,
+    firstDueDate: "2026-10-15",
+  });
+
+  assert.ok(preview);
+  assert.equal(preview.totalAmount, "2740.00");
+  assert.equal(preview.downPaymentAmount, "500.00");
+  assert.equal(preview.lines.length, 5);
+  assert.deepEqual(preview.lines.map((line) => line.amount), [
+    "500.00",
+    "560.00",
+    "560.00",
+    "560.00",
+    "560.00",
+  ]);
+  assert.deepEqual(preview.lines.map((line) => line.dueDate), [
+    "2026-10-01",
+    "2026-10-15",
+    "2026-11-15",
+    "2026-12-15",
+    "2027-01-15",
+  ]);
+  assert.equal(preview.lines[0].kind, "DOWN_PAYMENT");
+  assert.equal(preview.lines[1].label, "Kësti 1");
+});
+
+test("student finance installment preview clamps month-end due dates and assigns cents to last installment", () => {
+  const preview = buildStudentFinanceInstallmentPreview({
+    totalAmount: "1000.00",
+    downPaymentAmount: "0",
+    downPaymentDueDate: "2026-01-10",
+    installmentCount: 3,
+    firstDueDate: "2026-01-31",
+  });
+
+  assert.ok(preview);
+  assert.deepEqual(preview.lines.slice(1).map((line) => line.amount), [
+    "333.33",
+    "333.33",
+    "333.34",
+  ]);
+  assert.deepEqual(preview.lines.slice(1).map((line) => line.dueDate), [
+    "2026-01-31",
+    "2026-02-28",
+    "2026-03-31",
+  ]);
+});
+
+test("student finance installment redistribution preserves previous rows and spreads remainder", () => {
+  assert.deepEqual(
+    redistributeStudentFinanceInstallmentAmounts(
+      "1000",
+      "100",
+      ["300", "300", "300"],
+      2,
+      "200",
+    ),
+    ["300.00", "200.00", "400.00"],
+  );
+});
+
+test("student finance installment plan parser validates contract, dates and amounts", () => {
+  const parsed = parseSaveStudentFinanceInstallmentPlan(
+    form({
+      contractId,
+      planTotalAmount: "2240",
+      downPaymentAmount: "240",
+      downPaymentDueDate: "2026-10-01",
+      installmentCount: "5",
+      firstDueDate: "2026-10-10",
+    }),
+  );
+
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.contractId, contractId);
+    assert.equal(parsed.data.lines[0].amount, "240.00");
+    assert.deepEqual(parsed.data.lines.slice(1).map((line) => line.amount), [
+      "400.00",
+      "400.00",
+      "400.00",
+      "400.00",
+      "400.00",
+    ]);
+  }
+
+  const invalid = parseSaveStudentFinanceInstallmentPlan(
+    form({
+      contractId: "foreign",
+      planTotalAmount: "0",
+      downPaymentAmount: "2000",
+      downPaymentDueDate: "2026-02-30",
+      installmentCount: "0",
+      firstDueDate: "bad",
+    }),
+  );
+
+  assert.equal(invalid.success, false);
+  if (!invalid.success) {
+    assert.ok(invalid.state.fieldErrors?.contractId);
+    assert.ok(invalid.state.fieldErrors?.planTotalAmount);
+    assert.ok(invalid.state.fieldErrors?.downPaymentDueDate);
+    assert.ok(invalid.state.fieldErrors?.installmentCount);
+    assert.ok(invalid.state.fieldErrors?.firstDueDate);
+  }
 });
