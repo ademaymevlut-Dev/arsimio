@@ -9,6 +9,7 @@ import {
   CalendarRange,
   Check,
   Circle,
+  FileText,
   LibraryBig,
   LayoutDashboard,
   LogOut,
@@ -95,6 +96,13 @@ function createNavigation(messages: AppDictionary["shell"]) {
     label: messages.staffCatalog,
     icon: Settings2,
     permission: "hr.catalog.read",
+  },
+  {
+    group: messages.contracts,
+    href: "/contracts/templates",
+    label: messages.contractTemplates,
+    icon: FileText,
+    permission: "hr.contracts.read",
   },
   {
     group: messages.people,

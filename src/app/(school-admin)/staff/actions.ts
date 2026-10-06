@@ -91,7 +91,7 @@ export async function saveEmploymentLeaveAction(
 
 function revalidateContractTemplateScreens() {
   revalidatePath("/staff");
-  revalidatePath("/staff/settings");
+  revalidatePath("/contracts/templates");
 }
 
 export async function saveContractTemplateAction(

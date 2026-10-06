@@ -232,7 +232,7 @@ Kontrat şablonu için ilk küçük paket kodlandı:
 - okul bazlı `employment_contract_templates` tablosu eklendi
 - şablona bağlı sıralı `employment_contract_template_clauses` tablosu eklendi
 - personel kontrat kaydına opsiyonel şablon bağlantısı eklendi
-- personel tanımları ekranında şablon ve madde oluşturma/güncelleme/arşivleme eklendi
+- ayrı `Kontrat şablonları` menüsünde şablon ve madde oluşturma/güncelleme/arşivleme eklendi
 - personel kontrat formunda aktif şablon seçimi eklendi
 
 Bu paket henüz PDF, çıktı, header/footer görseli veya placeholder motoru değildir. Bunlar bir sonraki küçük fazda ele alınacak.

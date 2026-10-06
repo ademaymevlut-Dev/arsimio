@@ -21,7 +21,7 @@ Bu fazda amaç, personel kontrat kaydının üzerine serbest Word editörü koym
   - madde metni
   - arşiv bilgisi
 - Personel kontrat kaydına isteğe bağlı şablon bağlantısı.
-- Personel tanımları ekranında şablon ve madde yönetimi.
+- Ayrı `Kontrat şablonları` menüsünde şablon ve madde yönetimi.
 - Personel kontrat formunda aktif şablon seçimi.
 
 ## Bilerek kapsam dışında bırakılanlar
@@ -40,6 +40,7 @@ Bu fazda amaç, personel kontrat kaydının üzerine serbest Word editörü koym
 Önerilen sonraki faz:
 
 1. Şablon metninde kullanılacak otomatik alanları belirlemek.
-2. Kontrat detayından “önizleme / yazdır” ekranı açmak.
-3. Kontrat çıktısı üretildiğinde metni snapshot olarak saklamak.
-4. PDF veya yazıcı çıktısı akışını eklemek.
+2. Personel kontratı ve ileride öğrenci kontratı için aynı menü altında ayrı şablon bölümleri oluşturmak.
+3. Kontrat detayından “önizleme / yazdır” ekranı açmak.
+4. Kontrat çıktısı üretildiğinde metni snapshot olarak saklamak.
+5. PDF veya yazıcı çıktısı akışını eklemek.
