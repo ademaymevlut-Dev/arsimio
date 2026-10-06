@@ -34,6 +34,7 @@ export default async function StaffDetailPage({
       locale,
       permissions.includes("hr.contracts.read"),
       permissions.includes("hr.compensation.read"),
+      permissions.includes("hr.leave.read"),
     ),
     getDictionary(locale),
   ]);
@@ -55,6 +56,8 @@ export default async function StaffDetailPage({
         canManageContracts={permissions.includes("hr.contracts.manage")}
         canReadCompensations={permissions.includes("hr.compensation.read")}
         canManageCompensations={permissions.includes("hr.compensation.manage")}
+        canReadLeaves={permissions.includes("hr.leave.read")}
+        canManageLeaves={permissions.includes("hr.leave.manage")}
         canManageIdentity={permissions.includes("persons.identity.manage")}
         identityProtectionReady={identityProtectionIsReady()}
         defaultEffectiveOn={dateOnlyValue(

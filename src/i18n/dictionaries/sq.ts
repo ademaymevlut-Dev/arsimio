@@ -451,6 +451,30 @@ const sq = {
     compensationStatusActive: "Aktive",
     compensationStatusEnded: "E përfunduar",
     compensationStatusCancelled: "E anuluar",
+    leaveTitle: "Leje / mungesë",
+    leaveDescription:
+      "Ruani lejen vjetore, lejen mjekësore, lejen pa pagesë dhe regjistrime të ngjashme të personelit si historik. Bilancet e lejeve dhe ndikimi në paga do të shtohen në fazat e ardhshme.",
+    noLeaves: "Nuk ka ende regjistrim lejeje/mungese.",
+    leaveHistory: "Historiku i lejeve",
+    leaveKind: "Lloji i lejes",
+    leaveStatus: "Statusi",
+    leaveStartedOn: "Data e fillimit",
+    leaveEndedOn: "Data e përfundimit",
+    leaveDayCount: "Numri i ditëve",
+    leaveNote: "Shënim i lejes",
+    saveLeave: "Ruaj lejen",
+    updateLeave: "Përditëso lejen",
+    leaveCreated: "Regjistrimi i lejes u krijua.",
+    leaveUpdated: "Regjistrimi i lejes u përditësua.",
+    leaveKindAnnual: "Leje vjetore",
+    leaveKindSick: "Leje mjekësore",
+    leaveKindUnpaid: "Leje pa pagesë",
+    leaveKindMaternity: "Leje lindjeje / e gjatë",
+    leaveKindAdministrative: "Administrative / me arsye",
+    leaveKindOther: "Tjetër",
+    leaveStatusPlanned: "E planifikuar",
+    leaveStatusApproved: "E aprovuar / regjistruar",
+    leaveStatusCancelled: "E anuluar",
     updatedAt: "Përditësimi i fundit",
     invalidDate: "Jepni një datë të vlefshme.",
     invalidContractNumber:
@@ -472,6 +496,13 @@ const sq = {
     compensationUnavailable: "Regjistrimi i kompensimit nuk u gjet.",
     compensationRequiresOpenEmployment:
       "Nuk mund të krijohet kompensim aktiv për punësim të përfunduar.",
+    invalidLeaveDates:
+      "Data e përfundimit nuk mund të jetë para datës së fillimit.",
+    invalidLeaveDayCount:
+      "Numri i ditëve duhet të jetë pozitiv dhe me maksimumi dy dhjetore.",
+    leaveUnavailable: "Regjistrimi i lejes nuk u gjet.",
+    leaveOutsideEmploymentDates:
+      "Datat e lejes nuk mund të jenë jashtë datave të punësimit.",
     permissionDenied: "Nuk keni autorizim për këtë veprim.",
     invalid: "Regjistrimi nuk u ruajt. Kontrolloni fushat e shënuara.",
     conflict:

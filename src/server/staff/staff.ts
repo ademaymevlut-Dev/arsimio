@@ -299,6 +299,7 @@ export async function getStaffDetail(
   locale: string,
   includeContracts = false,
   includeCompensations = false,
+  includeLeaves = false,
 ) {
   const db = getPrisma();
   const employment = await db.employment.findFirst({
@@ -348,6 +349,12 @@ export async function getStaffDetail(
     ? await db.employmentCompensation.findMany({
         where: { schoolId, employmentId: employment.id },
         orderBy: [{ status: "asc" }, { startedOn: "desc" }, { createdAt: "desc" }],
+      })
+    : [];
+  const leaves = includeLeaves
+    ? await db.employmentLeave.findMany({
+        where: { schoolId, employmentId: employment.id },
+        orderBy: [{ startedOn: "desc" }, { createdAt: "desc" }],
       })
     : [];
   const account = employment.person.accounts[0];
@@ -415,6 +422,18 @@ export async function getStaffDetail(
       createdAt: compensation.createdAt.toISOString(),
       updatedAt: compensation.updatedAt.toISOString(),
       revision: compensation.updatedAt.toISOString(),
+    })),
+    leaves: leaves.map((leave) => ({
+      id: leave.id,
+      kind: leave.kind,
+      status: leave.status,
+      startedOn: dateValue(leave.startedOn),
+      endedOn: dateValue(leave.endedOn),
+      dayCount: leave.dayCount.toString(),
+      note: leave.note,
+      createdAt: leave.createdAt.toISOString(),
+      updatedAt: leave.updatedAt.toISOString(),
+      revision: leave.updatedAt.toISOString(),
     })),
     department: translatedName(employment.department),
     position: translatedName(employment.position),

@@ -92,6 +92,8 @@ const schoolPermissions = [
   "hr.contracts.manage",
   "hr.compensation.read",
   "hr.compensation.manage",
+  "hr.leave.read",
+  "hr.leave.manage",
   "teachers.read",
   "teachers.manage",
   "teaching.assignments.read",

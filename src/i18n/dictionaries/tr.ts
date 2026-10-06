@@ -586,6 +586,30 @@ export const tr = {
     compensationStatusActive: "Aktif",
     compensationStatusEnded: "Bitmiş",
     compensationStatusCancelled: "İptal",
+    leaveTitle: "İzin / devamsızlık",
+    leaveDescription:
+      "Personelin yıllık izin, hastalık, ücretsiz izin ve benzeri kayıtlarını tarihçe olarak saklayın. İzin hakkı bakiyesi ve bordro etkisi sonraki fazlarda eklenecek.",
+    noLeaves: "Henüz izin/devamsızlık kaydı yok.",
+    leaveHistory: "İzin geçmişi",
+    leaveKind: "İzin türü",
+    leaveStatus: "Durum",
+    leaveStartedOn: "Başlangıç tarihi",
+    leaveEndedOn: "Bitiş tarihi",
+    leaveDayCount: "Gün sayısı",
+    leaveNote: "İzin notu",
+    saveLeave: "İzin kaydet",
+    updateLeave: "İzin güncelle",
+    leaveCreated: "İzin kaydı oluşturuldu.",
+    leaveUpdated: "İzin kaydı güncellendi.",
+    leaveKindAnnual: "Yıllık izin",
+    leaveKindSick: "Hastalık izni",
+    leaveKindUnpaid: "Ücretsiz izin",
+    leaveKindMaternity: "Doğum / uzun izin",
+    leaveKindAdministrative: "İdari / mazeret",
+    leaveKindOther: "Diğer",
+    leaveStatusPlanned: "Planlandı",
+    leaveStatusApproved: "Onaylandı / işlendi",
+    leaveStatusCancelled: "İptal",
     updatedAt: "Son güncelleme",
     invalidDate: "Geçerli bir tarih girin.",
     invalidContractNumber:
@@ -605,6 +629,12 @@ export const tr = {
     compensationUnavailable: "Ücret kaydı bulunamadı.",
     compensationRequiresOpenEmployment:
       "Ayrılmış personel için aktif ücret oluşturulamaz.",
+    invalidLeaveDates: "Bitiş tarihi başlangıç tarihinden önce olamaz.",
+    invalidLeaveDayCount:
+      "Gün sayısı pozitif olmalı ve en fazla iki ondalık içermeli.",
+    leaveUnavailable: "İzin kaydı bulunamadı.",
+    leaveOutsideEmploymentDates:
+      "İzin tarihleri personelin çalışma tarihleri dışında olamaz.",
     permissionDenied: "Bu işlem için yetkiniz yok.",
     invalid: "Kayıt kaydedilemedi. İşaretli alanları kontrol edin.",
     conflict:

@@ -9,6 +9,7 @@ import type {
   StaffState,
   SaveEmploymentCompensationInput,
   SaveEmploymentContractInput,
+  SaveEmploymentLeaveInput,
   TeacherProfileInput,
   UploadStaffPhotoInput,
   UpdateStaffHrProfileInput,
@@ -928,6 +929,107 @@ export async function persistEmploymentCompensation(
     status: "success",
     message: existing ? messages.compensationUpdated : messages.compensationCreated,
     entityId: compensation.id,
+  };
+}
+
+export async function persistEmploymentLeave(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: SaveEmploymentLeaveInput,
+  messages: StaffMessages,
+): Promise<StaffState> {
+  const employment = await tx.employment.findFirst({
+    where: {
+      id: input.employmentId,
+      schoolId: actor.schoolId,
+      archivedAt: null,
+    },
+    select: {
+      id: true,
+      staffNumber: true,
+      hiredOn: true,
+      endedOn: true,
+    },
+  });
+  if (!employment) return error(messages.unavailable);
+
+  const existing = input.leaveId
+    ? await tx.employmentLeave.findFirst({
+        where: {
+          id: input.leaveId,
+          schoolId: actor.schoolId,
+          employmentId: employment.id,
+        },
+      })
+    : null;
+  if (input.leaveId && !existing) return error(messages.leaveUnavailable);
+  if (
+    existing &&
+    input.revision &&
+    existing.updatedAt.toISOString() !== input.revision
+  )
+    return error(messages.conflict);
+
+  if (
+    input.startedOn < employment.hiredOn ||
+    (employment.endedOn && input.endedOn > employment.endedOn)
+  )
+    return error(messages.leaveOutsideEmploymentDates, {
+      leaveStartedOn: messages.leaveOutsideEmploymentDates,
+      leaveEndedOn: messages.leaveOutsideEmploymentDates,
+    });
+
+  const data = {
+    kind: input.kind,
+    status: input.status,
+    startedOn: input.startedOn,
+    endedOn: input.endedOn,
+    dayCount: input.dayCount,
+    note: input.note,
+  };
+  const leave = existing
+    ? await tx.employmentLeave.update({
+        where: { id: existing.id },
+        data,
+      })
+    : await tx.employmentLeave.create({
+        data: {
+          schoolId: actor.schoolId,
+          employmentId: employment.id,
+          ...data,
+        },
+      });
+
+  await audit(tx, actor, {
+    action: existing ? "employment_leave.updated" : "employment_leave.created",
+    entityType: "EmploymentLeave",
+    entityId: leave.id,
+    beforeData: existing
+      ? {
+          kind: existing.kind,
+          status: existing.status,
+          startedOn: dateValue(existing.startedOn),
+          endedOn: dateValue(existing.endedOn),
+          dayCount: existing.dayCount.toString(),
+          note: existing.note,
+        }
+      : undefined,
+    afterData: {
+      employmentId: employment.id,
+      staffNumber: employment.staffNumber,
+      kind: leave.kind,
+      status: leave.status,
+      startedOn: dateValue(leave.startedOn),
+      endedOn: dateValue(leave.endedOn),
+      dayCount: leave.dayCount.toString(),
+      note: leave.note,
+    },
+    changedFields: ["employmentLeave"],
+  });
+  return {
+    status: "success",
+    message: existing ? messages.leaveUpdated : messages.leaveCreated,
+    entityId: leave.id,
   };
 }
 

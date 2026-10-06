@@ -8,6 +8,7 @@ import {
   manageEmploymentTransition,
   manageSaveEmploymentCompensation,
   manageSaveEmploymentContract,
+  manageSaveEmploymentLeave,
   manageSaveStaffCatalogItem,
   manageStaffCatalogTransition,
   manageTeacherProfile,
@@ -61,6 +62,20 @@ export async function saveEmploymentCompensationAction(
   form: FormData,
 ) {
   const result = await manageSaveEmploymentCompensation(form);
+  if (result.status === "success") {
+    const employmentId = form.get("employmentId");
+    revalidatePath("/staff");
+    if (typeof employmentId === "string" && employmentId)
+      revalidatePath(`/staff/${employmentId}`);
+  }
+  return result;
+}
+
+export async function saveEmploymentLeaveAction(
+  _state: StaffState,
+  form: FormData,
+) {
+  const result = await manageSaveEmploymentLeave(form);
   if (result.status === "success") {
     const employmentId = form.get("employmentId");
     revalidatePath("/staff");

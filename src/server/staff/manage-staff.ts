@@ -9,6 +9,7 @@ import {
   parseEmploymentTransition,
   parseSaveEmploymentCompensation,
   parseSaveEmploymentContract,
+  parseSaveEmploymentLeave,
   parseStaffCatalogItem,
   parseStaffCatalogTransition,
   parseTeacherProfile,
@@ -22,6 +23,7 @@ import {
   persistEmployment,
   persistEmploymentCompensation,
   persistEmploymentContract,
+  persistEmploymentLeave,
   persistEmploymentTransition,
   persistStaffPhotoMetadata,
   persistStaffHrProfile,
@@ -163,6 +165,25 @@ export async function manageSaveEmploymentCompensation(
     );
   } catch (errorValue) {
     console.error("EMPLOYMENT_COMPENSATION_SAVE_UNAVAILABLE");
+    return databaseError(errorValue);
+  }
+}
+
+export async function manageSaveEmploymentLeave(
+  form: FormData,
+): Promise<StaffState> {
+  const context = await actorContext("hr.leave.manage");
+  if (!context) return invalid();
+  const { actor, messages } = context;
+  const parsed = parseSaveEmploymentLeave(form, messages);
+  if (!parsed.success) return parsed.state;
+  try {
+    return await getPrisma().$transaction(
+      (tx) => persistEmploymentLeave(tx, actor, parsed.data, messages),
+      { isolationLevel: "Serializable", timeout: 15000 },
+    );
+  } catch (errorValue) {
+    console.error("EMPLOYMENT_LEAVE_SAVE_UNAVAILABLE");
     return databaseError(errorValue);
   }
 }

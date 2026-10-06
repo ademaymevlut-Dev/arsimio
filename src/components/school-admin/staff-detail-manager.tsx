@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import {
   saveEmploymentCompensationAction,
   saveEmploymentContractAction,
+  saveEmploymentLeaveAction,
   saveStaffHrProfileAction,
   saveTeacherProfileAction,
   transitionEmploymentAction,
@@ -131,6 +132,24 @@ type StaffDetail = {
     updatedAt: string;
     revision: string;
   }[];
+  leaves: {
+    id: string;
+    kind:
+      | "ANNUAL"
+      | "SICK"
+      | "UNPAID"
+      | "MATERNITY"
+      | "ADMINISTRATIVE"
+      | "OTHER";
+    status: "PLANNED" | "APPROVED" | "CANCELLED";
+    startedOn: string;
+    endedOn: string;
+    dayCount: string;
+    note: string | null;
+    createdAt: string;
+    updatedAt: string;
+    revision: string;
+  }[];
   identities: {
     id: string;
     type: "NATIONAL_ID" | "PASSPORT";
@@ -183,6 +202,8 @@ export function StaffDetailManager({
   canManageContracts,
   canReadCompensations,
   canManageCompensations,
+  canReadLeaves,
+  canManageLeaves,
   canManageIdentity,
   identityProtectionReady,
   defaultEffectiveOn,
@@ -197,6 +218,8 @@ export function StaffDetailManager({
   canManageContracts: boolean;
   canReadCompensations: boolean;
   canManageCompensations: boolean;
+  canReadLeaves: boolean;
+  canManageLeaves: boolean;
   canManageIdentity: boolean;
   identityProtectionReady: boolean;
   defaultEffectiveOn: string;
@@ -228,6 +251,10 @@ export function StaffDetailManager({
       saveEmploymentCompensationAction,
       initialState,
     );
+  const [leaveState, leaveAction, leavePending] = useActionState<
+    StaffState,
+    FormData
+  >(saveEmploymentLeaveAction, initialState);
   function employmentStatusLabel(value: string) {
     if (value === "ACTIVE") return messages.active;
     if (value === "ON_LEAVE") return messages.onLeave;
@@ -286,6 +313,25 @@ export function StaffDetailManager({
       ACTIVE: messages.compensationStatusActive,
       ENDED: messages.compensationStatusEnded,
       CANCELLED: messages.compensationStatusCancelled,
+    };
+    return labels[value] ?? value;
+  }
+  function leaveKindLabel(value: StaffDetail["leaves"][number]["kind"]) {
+    const labels = {
+      ANNUAL: messages.leaveKindAnnual,
+      SICK: messages.leaveKindSick,
+      UNPAID: messages.leaveKindUnpaid,
+      MATERNITY: messages.leaveKindMaternity,
+      ADMINISTRATIVE: messages.leaveKindAdministrative,
+      OTHER: messages.leaveKindOther,
+    };
+    return labels[value] ?? value;
+  }
+  function leaveStatusLabel(value: StaffDetail["leaves"][number]["status"]) {
+    const labels = {
+      PLANNED: messages.leaveStatusPlanned,
+      APPROVED: messages.leaveStatusApproved,
+      CANCELLED: messages.leaveStatusCancelled,
     };
     return labels[value] ?? value;
   }
@@ -1098,6 +1144,273 @@ export function StaffDetailManager({
               ) : (
                 <p className="text-sm text-muted-foreground">
                   {messages.noCompensations}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {canReadLeaves ? (
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle>{messages.leaveTitle}</CardTitle>
+            <CardDescription>{messages.leaveDescription}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {canManageLeaves ? (
+              <form
+                action={leaveAction}
+                className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2"
+              >
+                <input type="hidden" name="employmentId" value={staff.id} />
+                <div className="space-y-2">
+                  <Label htmlFor="newLeaveKind">{messages.leaveKind}</Label>
+                  <NativeSelect
+                    id="newLeaveKind"
+                    name="leaveKind"
+                    defaultValue="ANNUAL"
+                    disabled={leavePending}
+                  >
+                    <option value="ANNUAL">{messages.leaveKindAnnual}</option>
+                    <option value="SICK">{messages.leaveKindSick}</option>
+                    <option value="UNPAID">{messages.leaveKindUnpaid}</option>
+                    <option value="MATERNITY">{messages.leaveKindMaternity}</option>
+                    <option value="ADMINISTRATIVE">
+                      {messages.leaveKindAdministrative}
+                    </option>
+                    <option value="OTHER">{messages.leaveKindOther}</option>
+                  </NativeSelect>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newLeaveStatus">{messages.leaveStatus}</Label>
+                  <NativeSelect
+                    id="newLeaveStatus"
+                    name="leaveStatus"
+                    defaultValue="APPROVED"
+                    disabled={leavePending}
+                  >
+                    <option value="PLANNED">{messages.leaveStatusPlanned}</option>
+                    <option value="APPROVED">
+                      {messages.leaveStatusApproved}
+                    </option>
+                    <option value="CANCELLED">
+                      {messages.leaveStatusCancelled}
+                    </option>
+                  </NativeSelect>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newLeaveStartedOn">
+                    {messages.leaveStartedOn}
+                  </Label>
+                  <Input
+                    id="newLeaveStartedOn"
+                    name="leaveStartedOn"
+                    type="date"
+                    defaultValue={defaultEffectiveOn}
+                    disabled={leavePending}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newLeaveEndedOn">{messages.leaveEndedOn}</Label>
+                  <Input
+                    id="newLeaveEndedOn"
+                    name="leaveEndedOn"
+                    type="date"
+                    defaultValue={defaultEffectiveOn}
+                    disabled={leavePending}
+                    required
+                  />
+                  <FieldError
+                    state={leaveState}
+                    field="leaveEndedOn"
+                    id="new-leave-ended-on-error"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newLeaveDayCount">{messages.leaveDayCount}</Label>
+                  <Input
+                    id="newLeaveDayCount"
+                    name="leaveDayCount"
+                    inputMode="decimal"
+                    placeholder="1"
+                    disabled={leavePending}
+                    aria-invalid={Boolean(leaveState.fieldErrors?.leaveDayCount)}
+                  />
+                  <FieldError
+                    state={leaveState}
+                    field="leaveDayCount"
+                    id="new-leave-day-count-error"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="newLeaveNote">{messages.leaveNote}</Label>
+                  <Textarea
+                    id="newLeaveNote"
+                    name="leaveNote"
+                    rows={3}
+                    disabled={leavePending}
+                  />
+                </div>
+                <div className="space-y-3 sm:col-span-2">
+                  <ActionAlert state={leaveState} />
+                  <Button type="submit" disabled={leavePending}>
+                    {messages.saveLeave}
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">{messages.leaveHistory}</h3>
+              {staff.leaves.length ? (
+                staff.leaves.map((leave) => (
+                  <details key={leave.id} className="rounded-lg border p-3">
+                    <summary className="cursor-pointer text-sm font-medium">
+                      {leaveKindLabel(leave.kind)} · {leaveStatusLabel(leave.status)} ·{" "}
+                      {formatDate(leave.startedOn, locale)} –{" "}
+                      {formatDate(leave.endedOn, locale)}
+                    </summary>
+                    <div className="mt-3 grid gap-3 text-sm sm:grid-cols-4">
+                      <div>
+                        <span className="text-muted-foreground">
+                          {messages.leaveDayCount}
+                        </span>
+                        <p>{leave.dayCount}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          {messages.updatedAt}
+                        </span>
+                        <p>{formatDate(leave.updatedAt.slice(0, 10), locale)}</p>
+                      </div>
+                      <div className="sm:col-span-4">
+                        <span className="text-muted-foreground">
+                          {messages.leaveNote}
+                        </span>
+                        <p>{leave.note ?? "—"}</p>
+                      </div>
+                    </div>
+                    {canManageLeaves ? (
+                      <form
+                        action={leaveAction}
+                        className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-2"
+                      >
+                        <input type="hidden" name="employmentId" value={staff.id} />
+                        <input type="hidden" name="leaveId" value={leave.id} />
+                        <input
+                          type="hidden"
+                          name="revision"
+                          value={leave.revision}
+                        />
+                        <div className="space-y-2">
+                          <Label htmlFor={`leaveKind-${leave.id}`}>
+                            {messages.leaveKind}
+                          </Label>
+                          <NativeSelect
+                            id={`leaveKind-${leave.id}`}
+                            name="leaveKind"
+                            defaultValue={leave.kind}
+                            disabled={leavePending}
+                          >
+                            <option value="ANNUAL">
+                              {messages.leaveKindAnnual}
+                            </option>
+                            <option value="SICK">{messages.leaveKindSick}</option>
+                            <option value="UNPAID">
+                              {messages.leaveKindUnpaid}
+                            </option>
+                            <option value="MATERNITY">
+                              {messages.leaveKindMaternity}
+                            </option>
+                            <option value="ADMINISTRATIVE">
+                              {messages.leaveKindAdministrative}
+                            </option>
+                            <option value="OTHER">{messages.leaveKindOther}</option>
+                          </NativeSelect>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`leaveStatus-${leave.id}`}>
+                            {messages.leaveStatus}
+                          </Label>
+                          <NativeSelect
+                            id={`leaveStatus-${leave.id}`}
+                            name="leaveStatus"
+                            defaultValue={leave.status}
+                            disabled={leavePending}
+                          >
+                            <option value="PLANNED">
+                              {messages.leaveStatusPlanned}
+                            </option>
+                            <option value="APPROVED">
+                              {messages.leaveStatusApproved}
+                            </option>
+                            <option value="CANCELLED">
+                              {messages.leaveStatusCancelled}
+                            </option>
+                          </NativeSelect>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`leaveStartedOn-${leave.id}`}>
+                            {messages.leaveStartedOn}
+                          </Label>
+                          <Input
+                            id={`leaveStartedOn-${leave.id}`}
+                            name="leaveStartedOn"
+                            type="date"
+                            defaultValue={leave.startedOn}
+                            disabled={leavePending}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`leaveEndedOn-${leave.id}`}>
+                            {messages.leaveEndedOn}
+                          </Label>
+                          <Input
+                            id={`leaveEndedOn-${leave.id}`}
+                            name="leaveEndedOn"
+                            type="date"
+                            defaultValue={leave.endedOn}
+                            disabled={leavePending}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`leaveDayCount-${leave.id}`}>
+                            {messages.leaveDayCount}
+                          </Label>
+                          <Input
+                            id={`leaveDayCount-${leave.id}`}
+                            name="leaveDayCount"
+                            inputMode="decimal"
+                            defaultValue={leave.dayCount}
+                            disabled={leavePending}
+                          />
+                        </div>
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label htmlFor={`leaveNote-${leave.id}`}>
+                            {messages.leaveNote}
+                          </Label>
+                          <Textarea
+                            id={`leaveNote-${leave.id}`}
+                            name="leaveNote"
+                            defaultValue={leave.note ?? ""}
+                            rows={3}
+                            disabled={leavePending}
+                          />
+                        </div>
+                        <Button type="submit" disabled={leavePending}>
+                          {messages.updateLeave}
+                        </Button>
+                      </form>
+                    ) : null}
+                  </details>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {messages.noLeaves}
                 </p>
               )}
             </div>

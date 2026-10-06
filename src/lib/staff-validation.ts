@@ -5,6 +5,8 @@ import type {
   EmploymentContractStatus,
   EmploymentContractType,
   EmploymentExitReason,
+  EmploymentLeaveKind,
+  EmploymentLeaveStatus,
   EmploymentType,
   IdentityType,
   TeacherCategory,
@@ -50,6 +52,19 @@ const COMPENSATION_AMOUNT_KINDS = new Set<EmploymentCompensationAmountKind>([
 const COMPENSATION_STATUSES = new Set<EmploymentCompensationStatus>([
   "ACTIVE",
   "ENDED",
+  "CANCELLED",
+]);
+const LEAVE_KINDS = new Set<EmploymentLeaveKind>([
+  "ANNUAL",
+  "SICK",
+  "UNPAID",
+  "MATERNITY",
+  "ADMINISTRATIVE",
+  "OTHER",
+]);
+const LEAVE_STATUSES = new Set<EmploymentLeaveStatus>([
+  "PLANNED",
+  "APPROVED",
   "CANCELLED",
 ]);
 
@@ -128,6 +143,13 @@ export type StaffField =
   | "compensationStartedOn"
   | "compensationEndedOn"
   | "compensationNote"
+  | "leaveId"
+  | "leaveKind"
+  | "leaveStatus"
+  | "leaveStartedOn"
+  | "leaveEndedOn"
+  | "leaveDayCount"
+  | "leaveNote"
   | "catalogKind"
   | "catalogId"
   | "code"
@@ -225,6 +247,18 @@ export type SaveEmploymentCompensationInput = {
   note: string | null;
 };
 
+export type SaveEmploymentLeaveInput = {
+  employmentId: string;
+  leaveId: string | null;
+  revision: string | null;
+  kind: EmploymentLeaveKind;
+  status: EmploymentLeaveStatus;
+  startedOn: Date;
+  endedOn: Date;
+  dayCount: string;
+  note: string | null;
+};
+
 export type StaffCatalogKind = "department" | "position";
 export type StaffCatalogTransition = "archive" | "restore";
 
@@ -289,6 +323,26 @@ function currencyCode(value: FormDataEntryValue | null) {
       ? value.trim().toUpperCase()
       : "EUR";
   return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
+}
+
+function inclusiveCalendarDayCount(startedOn: Date, endedOn: Date) {
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Math.floor((endedOn.getTime() - startedOn.getTime()) / dayMs) + 1;
+}
+
+function leaveDayCount(
+  value: FormDataEntryValue | null,
+  startedOn: Date | null,
+  endedOn: Date | null,
+) {
+  const raw = typeof value === "string" ? value.trim().replace(",", ".") : "";
+  const normalized =
+    raw || (startedOn && endedOn ? String(inclusiveCalendarDayCount(startedOn, endedOn)) : "");
+  if (!/^\d{1,3}(\.\d{1,2})?$/.test(normalized)) return null;
+  const count = Number(normalized);
+  return Number.isFinite(count) && count > 0 && count <= 366
+    ? normalized
+    : null;
 }
 
 function invalid(fieldErrors: StaffState["fieldErrors"]): Parsed<never> {
@@ -770,6 +824,79 @@ export function parseSaveEmploymentCompensation(
       status,
       startedOn,
       endedOn,
+      note,
+    },
+  };
+}
+
+export function parseSaveEmploymentLeave(
+  form: FormData,
+  messages: StaffMessages = tr.staff,
+): Parsed<SaveEmploymentLeaveInput> {
+  const employmentId = form.get("employmentId");
+  const leaveIdRaw = form.get("leaveId");
+  const leaveId =
+    typeof leaveIdRaw === "string" && leaveIdRaw ? leaveIdRaw : null;
+  const revisionRaw = form.get("revision");
+  const revision =
+    typeof revisionRaw === "string" && revisionRaw ? revisionRaw : null;
+  const kindRaw = form.get("leaveKind");
+  const kind =
+    typeof kindRaw === "string" && LEAVE_KINDS.has(kindRaw as EmploymentLeaveKind)
+      ? (kindRaw as EmploymentLeaveKind)
+      : null;
+  const statusRaw = form.get("leaveStatus");
+  const status =
+    typeof statusRaw === "string" &&
+    LEAVE_STATUSES.has(statusRaw as EmploymentLeaveStatus)
+      ? (statusRaw as EmploymentLeaveStatus)
+      : null;
+  const startedOn = parseDateOnly(form.get("leaveStartedOn"));
+  const endedOn = parseDateOnly(form.get("leaveEndedOn"));
+  const dayCountRaw = form.get("leaveDayCount");
+  const dayCount = leaveDayCount(dayCountRaw, startedOn, endedOn);
+  const noteRaw = form.get("leaveNote");
+  const note = optionalText(noteRaw, 1000);
+  const fieldErrors: StaffState["fieldErrors"] = {};
+
+  if (!validSchoolId(employmentId)) fieldErrors.record = messages.failed;
+  if (leaveId && !validSchoolId(leaveId)) fieldErrors.leaveId = messages.invalid;
+  if (leaveId && !validRevision(revision)) fieldErrors.record = messages.conflict;
+  if (!kind) fieldErrors.leaveKind = messages.invalid;
+  if (!status) fieldErrors.leaveStatus = messages.invalid;
+  if (!startedOn) fieldErrors.leaveStartedOn = messages.invalidDate;
+  if (!endedOn) fieldErrors.leaveEndedOn = messages.invalidDate;
+  if (startedOn && endedOn && endedOn < startedOn)
+    fieldErrors.leaveEndedOn = messages.invalidLeaveDates;
+  if (!dayCount) fieldErrors.leaveDayCount = messages.invalidLeaveDayCount;
+  if (provided(noteRaw) && !note) fieldErrors.leaveNote = messages.invalid;
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(employmentId) ||
+    (leaveId && (!validSchoolId(leaveId) || !validRevision(revision))) ||
+    !kind ||
+    !status ||
+    !startedOn ||
+    !endedOn ||
+    !dayCount
+  )
+    return {
+      success: false,
+      state: { status: "error", message: messages.invalid, fieldErrors },
+    };
+
+  return {
+    success: true,
+    data: {
+      employmentId,
+      leaveId,
+      revision,
+      kind,
+      status,
+      startedOn,
+      endedOn,
+      dayCount,
       note,
     },
   };

@@ -5,6 +5,7 @@ import {
   parseEmploymentTransition,
   parseSaveEmploymentCompensation,
   parseSaveEmploymentContract,
+  parseSaveEmploymentLeave,
   parseStaffCatalogItem,
   parseStaffCatalogTransition,
   parseTeacherProfile,
@@ -28,6 +29,7 @@ const positionId = "8bc89aad-a709-451c-aa20-e2505b5be0fd";
 const catalogId = "4e7a0b1a-0b18-4af9-86ac-3e57adfd7767";
 const contractId = "5b2985f2-a8c4-4fa2-bf7c-43ce4f2620d7";
 const compensationId = "46f9279e-0951-4805-86f3-77f478d7800a";
+const leaveId = "9ae75c13-6b7b-461a-9342-46ce0ef2efcb";
 const subjectOne = "0b9a5fbf-d073-42c6-a314-a6de017409a1";
 const subjectTwo = "32bbbf77-cb2a-4b2e-83ac-6b138c0e0d4a";
 const revision = "2026-10-01T12:00:00.000Z";
@@ -235,6 +237,61 @@ test("employment compensation parser normalizes amount, currency and dates", () 
     assert.ok(update.state.fieldErrors?.compensationAmount);
     assert.ok(update.state.fieldErrors?.compensationCurrency);
     assert.ok(update.state.fieldErrors?.compensationEndedOn);
+  }
+});
+
+test("employment leave parser derives day count and validates ranges", () => {
+  const parsed = parseSaveEmploymentLeave(
+    form({
+      employmentId,
+      leaveKind: "SICK",
+      leaveStatus: "APPROVED",
+      leaveStartedOn: "2026-10-01",
+      leaveEndedOn: "2026-10-03",
+      leaveDayCount: "",
+      leaveNote: "Medical report.",
+    }),
+  );
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.leaveId, null);
+    assert.equal(parsed.data.kind, "SICK");
+    assert.equal(parsed.data.status, "APPROVED");
+    assert.equal(parsed.data.dayCount, "3");
+  }
+
+  const halfDay = parseSaveEmploymentLeave(
+    form({
+      employmentId,
+      leaveId,
+      revision,
+      leaveKind: "ANNUAL",
+      leaveStatus: "PLANNED",
+      leaveStartedOn: "2026-10-05",
+      leaveEndedOn: "2026-10-05",
+      leaveDayCount: "0,5",
+    }),
+  );
+  assert.equal(halfDay.success, true);
+  if (halfDay.success) assert.equal(halfDay.data.dayCount, "0.5");
+
+  const invalid = parseSaveEmploymentLeave(
+    form({
+      employmentId,
+      leaveId,
+      revision,
+      leaveKind: "VACATION",
+      leaveStatus: "APPROVED",
+      leaveStartedOn: "2026-10-10",
+      leaveEndedOn: "2026-10-09",
+      leaveDayCount: "0",
+    }),
+  );
+  assert.equal(invalid.success, false);
+  if (!invalid.success) {
+    assert.ok(invalid.state.fieldErrors?.leaveKind);
+    assert.ok(invalid.state.fieldErrors?.leaveEndedOn);
+    assert.ok(invalid.state.fieldErrors?.leaveDayCount);
   }
 });
 

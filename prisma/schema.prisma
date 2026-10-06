@@ -251,6 +251,21 @@ enum EmploymentCompensationStatus {
   CANCELLED
 }
 
+enum EmploymentLeaveKind {
+  ANNUAL
+  SICK
+  UNPAID
+  MATERNITY
+  ADMINISTRATIVE
+  OTHER
+}
+
+enum EmploymentLeaveStatus {
+  PLANNED
+  APPROVED
+  CANCELLED
+}
+
 enum EmploymentExitReason {
   RESIGNED
   TERMINATED
@@ -363,6 +378,7 @@ model School {
   employmentHrProfiles            EmploymentHrProfile[]
   employmentContracts             EmploymentContract[]
   employmentCompensations         EmploymentCompensation[]
+  employmentLeaves                EmploymentLeave[]
   employmentLifecycleEvents       EmploymentLifecycleEvent[]
   teacherProfiles                 TeacherProfile[]
   teacherProfileTranslations      TeacherProfileTranslation[]
@@ -1413,6 +1429,7 @@ model Employment {
   hrProfile       EmploymentHrProfile?
   contracts       EmploymentContract[]
   compensations   EmploymentCompensation[]
+  leaves          EmploymentLeave[]
   lifecycleEvents EmploymentLifecycleEvent[]
   teacherProfile  TeacherProfile?
 
@@ -1489,6 +1506,27 @@ model EmploymentCompensation {
   @@index([schoolId, employmentId, status])
   @@index([schoolId, status])
   @@map("employment_compensations")
+}
+
+model EmploymentLeave {
+  id           String                @id @default(uuid()) @db.Uuid
+  schoolId     String                @map("school_id") @db.Uuid
+  employmentId String                @map("employment_id") @db.Uuid
+  kind         EmploymentLeaveKind
+  status       EmploymentLeaveStatus @default(APPROVED)
+  startedOn    DateTime              @map("started_on") @db.Date
+  endedOn      DateTime              @map("ended_on") @db.Date
+  dayCount     Decimal               @map("day_count") @db.Decimal(5, 2)
+  note         String?               @db.VarChar(1000)
+  createdAt    DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employment Employment @relation(fields: [employmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([schoolId, employmentId, startedOn])
+  @@index([schoolId, status, startedOn])
+  @@map("employment_leaves")
 }
 
 model EmploymentLifecycleEvent {
