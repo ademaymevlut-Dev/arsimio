@@ -158,6 +158,12 @@ enum StudentAttendanceStatus {
   LATE
 }
 
+enum StudentFinanceContractStatus {
+  DRAFT
+  ACTIVE
+  CANCELLED
+}
+
 enum GuardianRelationshipType {
   MOTHER
   FATHER
@@ -394,6 +400,7 @@ model School {
   examNotificationEntries           ExamNotificationEntry[]
   studentCommentEntries             StudentCommentEntry[]
   studentAttendanceRecords          StudentAttendanceRecord[]
+  studentFinanceContracts           StudentFinanceContract[]
   numberSequences                   SchoolNumberSequence[]
   studentProfiles                   StudentProfile[]
   studentPreviousEducationRecords   StudentPreviousEducationRecord[]
@@ -739,6 +746,7 @@ model AcademicYear {
   examNotificationEntries      ExamNotificationEntry[]
   studentCommentEntries        StudentCommentEntry[]
   studentAttendanceRecords     StudentAttendanceRecord[]
+  studentFinanceContracts      StudentFinanceContract[]
   setupRuns                    AcademicYearSetupRun[]
   enrollments                  Enrollment[]
   studentGroupPlacements       StudentGroupPlacement[]
@@ -1963,6 +1971,7 @@ model StudentProfile {
   commentEntries           StudentCommentEntry[]
   attendanceRecords        StudentAttendanceRecord[]
   previousEducationRecords StudentPreviousEducationRecord[]
+  financeContracts         StudentFinanceContract[]
 
   @@unique([personId, schoolId])
   @@unique([schoolId, studentNumber])
@@ -2008,16 +2017,47 @@ model GuardianRelationship {
   createdAt              DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt              DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school         School         @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  student        StudentProfile @relation(fields: [studentProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
-  guardianPerson Person         @relation("GuardianPerson", fields: [guardianPersonId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  school           School                   @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  student          StudentProfile           @relation(fields: [studentProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  guardianPerson   Person                   @relation("GuardianPerson", fields: [guardianPersonId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  financeContracts StudentFinanceContract[]
 
   @@unique([schoolId, studentProfileId, guardianPersonId])
   @@unique([id, schoolId])
+  @@unique([id, schoolId, studentProfileId], map: "gr_id_school_student_key")
   @@index([schoolId, guardianPersonId, archivedAt])
   @@index([schoolId, studentProfileId, archivedAt])
   @@index([schoolId, studentProfileId, isFinancialResponsible])
   @@map("guardian_relationships")
+}
+
+model StudentFinanceContract {
+  id                                String                       @id @default(uuid()) @db.Uuid
+  schoolId                          String                       @map("school_id") @db.Uuid
+  studentProfileId                  String                       @map("student_profile_id") @db.Uuid
+  academicYearId                    String                       @map("academic_year_id") @db.Uuid
+  responsibleGuardianRelationshipId String                       @map("responsible_guardian_relationship_id") @db.Uuid
+  protocolNumber                    String                       @map("protocol_number") @db.VarChar(80)
+  status                            StudentFinanceContractStatus @default(DRAFT)
+  currencyCode                      String                       @default("EUR") @map("currency_code") @db.Char(3)
+  issuedOn                          DateTime                     @default(dbgenerated("CURRENT_DATE")) @map("issued_on") @db.Date
+  note                              String?                      @db.VarChar(1000)
+  createdByUserId                   String?                      @map("created_by_user_id") @db.Uuid
+  updatedByUserId                   String?                      @map("updated_by_user_id") @db.Uuid
+  createdAt                         DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                         DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school                          School               @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  studentProfile                  StudentProfile       @relation(fields: [studentProfileId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  academicYear                    AcademicYear         @relation(fields: [academicYearId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  responsibleGuardianRelationship GuardianRelationship @relation(fields: [responsibleGuardianRelationshipId, schoolId, studentProfileId], references: [id, schoolId, studentProfileId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([schoolId, academicYearId, protocolNumber], map: "sfc_school_year_protocol_key")
+  @@unique([id, schoolId])
+  @@index([schoolId, studentProfileId, academicYearId, status], map: "sfc_student_year_status_idx")
+  @@index([schoolId, academicYearId, status], map: "sfc_year_status_idx")
+  @@index([schoolId, responsibleGuardianRelationshipId], map: "sfc_responsible_guardian_idx")
+  @@map("student_finance_contracts")
 }
 
 model Enrollment {
