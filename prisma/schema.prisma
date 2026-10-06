@@ -190,6 +190,11 @@ enum StudentFinanceInstallmentStatus {
   ARCHIVED
 }
 
+enum StudentFinancePaymentStatus {
+  ACTIVE
+  ARCHIVED
+}
+
 enum GuardianRelationshipType {
   MOTHER
   FATHER
@@ -429,6 +434,7 @@ model School {
   studentFinanceContracts           StudentFinanceContract[]
   studentFinanceContractItems       StudentFinanceContractItem[]
   studentFinanceInstallments        StudentFinanceInstallment[]
+  studentFinancePayments            StudentFinancePayment[]
   numberSequences                   SchoolNumberSequence[]
   studentProfiles                   StudentProfile[]
   studentPreviousEducationRecords   StudentPreviousEducationRecord[]
@@ -2081,6 +2087,7 @@ model StudentFinanceContract {
   responsibleGuardianRelationship GuardianRelationship         @relation(fields: [responsibleGuardianRelationshipId, schoolId, studentProfileId], references: [id, schoolId, studentProfileId], onDelete: Restrict, onUpdate: Restrict)
   items                           StudentFinanceContractItem[]
   installments                    StudentFinanceInstallment[]
+  payments                        StudentFinancePayment[]
 
   @@unique([schoolId, academicYearId, protocolNumber], map: "sfc_school_year_protocol_key")
   @@unique([id, schoolId])
@@ -2141,6 +2148,28 @@ model StudentFinanceInstallment {
   @@index([schoolId, contractId, status, sequence], map: "sfi_contract_status_sequence_idx")
   @@index([schoolId, dueDate, status], map: "sfi_due_status_idx")
   @@map("student_finance_installments")
+}
+
+model StudentFinancePayment {
+  id              String                      @id @default(uuid()) @db.Uuid
+  schoolId        String                      @map("school_id") @db.Uuid
+  contractId      String                      @map("contract_id") @db.Uuid
+  paidOn          DateTime                    @map("paid_on") @db.Date
+  amount          Decimal                     @db.Decimal(12, 2)
+  description     String                      @db.VarChar(300)
+  status          StudentFinancePaymentStatus @default(ACTIVE)
+  createdByUserId String?                     @map("created_by_user_id") @db.Uuid
+  updatedByUserId String?                     @map("updated_by_user_id") @db.Uuid
+  createdAt       DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school   School                 @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  contract StudentFinanceContract @relation(fields: [contractId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([id, schoolId])
+  @@index([schoolId, contractId, status, paidOn], map: "sfp_contract_status_paid_on_idx")
+  @@index([schoolId, paidOn, status], map: "sfp_paid_on_status_idx")
+  @@map("student_finance_payments")
 }
 
 model Enrollment {

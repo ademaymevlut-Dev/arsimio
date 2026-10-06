@@ -3,6 +3,7 @@ import type {
   StudentFinanceContractItemStatus,
   StudentFinanceInstallmentKind,
   StudentFinanceContractStatus,
+  StudentFinancePaymentStatus,
 } from "@/generated/prisma/client";
 import { validRevision, validSchoolId } from "./platform-school-validation";
 
@@ -30,6 +31,10 @@ const ITEM_STATUSES = new Set<StudentFinanceContractItemStatus>([
   "ACTIVE",
   "ARCHIVED",
 ]);
+const PAYMENT_STATUSES = new Set<StudentFinancePaymentStatus>([
+  "ACTIVE",
+  "ARCHIVED",
+]);
 
 export type FinanceField =
   | "record"
@@ -54,7 +59,12 @@ export type FinanceField =
   | "downPaymentAmount"
   | "downPaymentDueDate"
   | "installmentCount"
-  | "firstDueDate";
+  | "firstDueDate"
+  | "paymentId"
+  | "paidOn"
+  | "paymentAmount"
+  | "paymentDescription"
+  | "paymentStatus";
 
 export type FinanceState = {
   status?: "success" | "error";
@@ -121,6 +131,23 @@ export type SaveStudentFinanceInstallmentPlanInput =
   StudentFinanceInstallmentPreview & {
     contractId: string;
   };
+
+export type StudentFinanceBalanceSummary = {
+  totalDebt: string;
+  totalPaid: string;
+  remainingBalance: string;
+  overpaidAmount: string;
+};
+
+export type SaveStudentFinancePaymentInput = {
+  contractId: string;
+  paymentId: string | null;
+  revision: string | null;
+  paidOn: Date;
+  amount: string;
+  description: string;
+  status: StudentFinancePaymentStatus;
+};
 
 type Parsed<T> =
   | { success: true; data: T }
@@ -255,6 +282,45 @@ export function calculateStudentFinanceContractItemAmounts(
     discountRate: formatBasisPoints(basisPoints),
     discountAmount: formatCents(discountCents),
     netAmount: formatCents(netCents),
+  };
+}
+
+export function calculateStudentFinanceBalance(
+  activeItemNetAmounts: string[],
+  activePaymentAmounts: string[],
+): StudentFinanceBalanceSummary | null {
+  const itemCents = activeItemNetAmounts.map((amount) =>
+    parseMoneyCents(amount),
+  );
+  const paymentCents = activePaymentAmounts.map((amount) =>
+    parseMoneyCents(amount),
+  );
+
+  if (
+    itemCents.some((amount) => amount === null) ||
+    paymentCents.some((amount) => amount === null)
+  )
+    return null;
+
+  const totalDebtCents = (itemCents as bigint[]).reduce(
+    (sum, amount) => sum + amount,
+    ZERO,
+  );
+  const totalPaidCents = (paymentCents as bigint[]).reduce(
+    (sum, amount) => sum + amount,
+    ZERO,
+  );
+  const netBalanceCents = totalDebtCents - totalPaidCents;
+
+  return {
+    totalDebt: formatCents(totalDebtCents),
+    totalPaid: formatCents(totalPaidCents),
+    remainingBalance: formatCents(
+      netBalanceCents > ZERO ? netBalanceCents : ZERO,
+    ),
+    overpaidAmount: formatCents(
+      netBalanceCents < ZERO ? -netBalanceCents : ZERO,
+    ),
   };
 }
 
@@ -617,6 +683,77 @@ export function parseSaveStudentFinanceInstallmentPlan(
     data: {
       contractId,
       ...preview,
+    },
+  };
+}
+
+export function parseSaveStudentFinancePayment(
+  form: FormData,
+): Parsed<SaveStudentFinancePaymentInput> {
+  const contractId = form.get("contractId");
+  const paymentIdRaw = form.get("paymentId");
+  const paymentId =
+    typeof paymentIdRaw === "string" && paymentIdRaw ? paymentIdRaw : null;
+  const revisionRaw = form.get("revision");
+  const revision =
+    typeof revisionRaw === "string" && revisionRaw ? revisionRaw : null;
+  const paidOnRaw = form.get("paidOn");
+  const paidOn = parseDateOnly(paidOnRaw);
+  const amountCents = parseMoneyCents(form.get("paymentAmount"));
+  const description = text(form.get("paymentDescription"), 300);
+  const statusRaw = form.get("paymentStatus");
+  const status =
+    typeof statusRaw === "string" &&
+    PAYMENT_STATUSES.has(statusRaw as StudentFinancePaymentStatus)
+      ? (statusRaw as StudentFinancePaymentStatus)
+      : "ACTIVE";
+  const fieldErrors: FinanceState["fieldErrors"] = {};
+
+  if (!validSchoolId(contractId)) fieldErrors.contractId = "Kontrat gecersiz.";
+  if (paymentId && !validSchoolId(paymentId))
+    fieldErrors.paymentId = "Odeme kaydi gecersiz.";
+  if (paymentId && !validRevision(revision))
+    fieldErrors.record = "Odeme kaydi guncel degil.";
+  if (!paidOn) fieldErrors.paidOn = "Odeme tarihi gecersiz.";
+  if (amountCents === null || amountCents <= ZERO)
+    fieldErrors.paymentAmount = "Odeme tutari gecersiz.";
+  if (!description)
+    fieldErrors.paymentDescription = "Odeme aciklamasi gecersiz.";
+  if (
+    provided(statusRaw) &&
+    !PAYMENT_STATUSES.has(statusRaw as StudentFinancePaymentStatus)
+  )
+    fieldErrors.paymentStatus = "Odeme durumu gecersiz.";
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(contractId) ||
+    (paymentId && (!validSchoolId(paymentId) || !validRevision(revision))) ||
+    !paidOn ||
+    amountCents === null ||
+    amountCents <= ZERO ||
+    !description
+  ) {
+    return {
+      success: false,
+      state: {
+        status: "error",
+        message: "Odeme bilgileri gecersiz.",
+        fieldErrors,
+      },
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      contractId,
+      paymentId,
+      revision,
+      paidOn,
+      amount: formatCents(amountCents),
+      description,
+      status,
     },
   };
 }

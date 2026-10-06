@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildStudentFinanceInstallmentPreview,
+  calculateStudentFinanceBalance,
   calculateStudentFinanceContractItemAmounts,
   formatStudentFinanceContractDisplayNumber,
   parseSaveStudentFinanceContract,
   parseSaveStudentFinanceContractItem,
   parseSaveStudentFinanceInstallmentPlan,
+  parseSaveStudentFinancePayment,
   redistributeStudentFinanceInstallmentAmounts,
 } from "../src/lib/finance-validation";
 
@@ -18,6 +20,7 @@ function form(values: Record<string, string>) {
 
 const contractId = "5b2985f2-a8c4-4fa2-bf7c-43ce4f2620d7";
 const itemId = "812cdbf9-573c-43f8-a093-a267dc4ae86c";
+const paymentId = "6f41c121-b804-42fe-b238-08d342526e56";
 const studentProfileId = "2f9d5c1e-874c-4cef-9584-07ff73e74827";
 const academicYearId = "25a01724-71bb-48bc-879c-1298c951d3c0";
 const guardianRelationshipId = "0b9a5fbf-d073-42c6-a314-a6de017409a1";
@@ -282,4 +285,75 @@ test("student finance installment plan parser validates contract, dates and amou
     assert.ok(invalid.state.fieldErrors?.installmentCount);
     assert.ok(invalid.state.fieldErrors?.firstDueDate);
   }
+});
+
+test("student finance payment parser accepts partial payment movements", () => {
+  const parsed = parseSaveStudentFinancePayment(
+    form({
+      contractId,
+      paymentId,
+      revision,
+      paidOn: "2026-10-15",
+      paymentAmount: "250,50",
+      paymentDescription: " Ekim odemesi ",
+      paymentStatus: "ACTIVE",
+    }),
+  );
+
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.contractId, contractId);
+    assert.equal(parsed.data.paymentId, paymentId);
+    assert.equal(parsed.data.amount, "250.50");
+    assert.equal(parsed.data.description, "Ekim odemesi");
+    assert.equal(parsed.data.status, "ACTIVE");
+    assert.equal(parsed.data.paidOn.toISOString().slice(0, 10), "2026-10-15");
+  }
+});
+
+test("student finance payment parser rejects invalid payment metadata", () => {
+  const parsed = parseSaveStudentFinancePayment(
+    form({
+      contractId: "foreign",
+      paymentId,
+      revision,
+      paidOn: "2026-02-30",
+      paymentAmount: "0",
+      paymentDescription: "",
+      paymentStatus: "VOID",
+    }),
+  );
+
+  assert.equal(parsed.success, false);
+  if (!parsed.success) {
+    assert.ok(parsed.state.fieldErrors?.contractId);
+    assert.ok(parsed.state.fieldErrors?.paidOn);
+    assert.ok(parsed.state.fieldErrors?.paymentAmount);
+    assert.ok(parsed.state.fieldErrors?.paymentDescription);
+    assert.ok(parsed.state.fieldErrors?.paymentStatus);
+  }
+});
+
+test("student finance balance summarizes debt, paid and remaining amounts", () => {
+  assert.deepEqual(
+    calculateStudentFinanceBalance(
+      ["2240.00", "500.00", "12.50"],
+      ["1000", "500.50"],
+    ),
+    {
+      totalDebt: "2752.50",
+      totalPaid: "1500.50",
+      remainingBalance: "1252.00",
+      overpaidAmount: "0.00",
+    },
+  );
+});
+
+test("student finance balance exposes overpayment separately", () => {
+  assert.deepEqual(calculateStudentFinanceBalance(["100"], ["125"]), {
+    totalDebt: "100.00",
+    totalPaid: "125.00",
+    remainingBalance: "0.00",
+    overpaidAmount: "25.00",
+  });
 });
