@@ -92,6 +92,8 @@ const STAFF_CATALOG_TRANSITIONS = new Set<StaffCatalogTransition>([
   "restore",
 ]);
 const CATALOG_CODE = /^[A-Z0-9][A-Z0-9_-]{1,49}$/;
+const TEMPLATE_CODE = /^[A-Z0-9][A-Z0-9_-]{1,79}$/;
+const TEMPLATE_LOCALES = new Set(["tr", "sq", "en"]);
 
 export type StaffField =
   | "record"
@@ -128,6 +130,7 @@ export type StaffField =
   | "identityValue"
   | "identityCountry"
   | "contractId"
+  | "contractTemplateId"
   | "contractNumber"
   | "contractType"
   | "contractStatus"
@@ -155,7 +158,18 @@ export type StaffField =
   | "code"
   | "nameTr"
   | "nameSq"
-  | "nameEn";
+  | "nameEn"
+  | "templateId"
+  | "templateCode"
+  | "templateLocale"
+  | "templateTitle"
+  | "templateHeader"
+  | "templateFooter"
+  | "templateNote"
+  | "clauseId"
+  | "clauseOrder"
+  | "clauseTitle"
+  | "clauseBody";
 
 export type StaffState = {
   status?: "success" | "error";
@@ -224,6 +238,7 @@ export type UpdateStaffHrProfileInput = {
 export type SaveEmploymentContractInput = {
   employmentId: string;
   contractId: string | null;
+  templateId: string | null;
   revision: string | null;
   contractNumber: string;
   type: EmploymentContractType;
@@ -277,6 +292,39 @@ export type StaffCatalogTransitionInput = {
   transition: StaffCatalogTransition;
 };
 
+export type ContractTemplateInput = {
+  templateId: string | null;
+  revision: string | null;
+  code: string;
+  locale: "tr" | "sq" | "en";
+  title: string;
+  headerText: string | null;
+  footerText: string | null;
+  note: string | null;
+};
+
+export type ContractTemplateTransitionInput = {
+  templateId: string;
+  revision: string;
+  transition: StaffCatalogTransition;
+};
+
+export type ContractTemplateClauseInput = {
+  templateId: string;
+  clauseId: string | null;
+  revision: string | null;
+  sortOrder: number;
+  title: string;
+  body: string;
+};
+
+export type ContractTemplateClauseTransitionInput = {
+  templateId: string;
+  clauseId: string;
+  revision: string;
+  transition: StaffCatalogTransition;
+};
+
 type Parsed<T> =
   | { success: true; data: T }
   | { success: false; state: StaffState };
@@ -292,9 +340,28 @@ function optionalText(value: FormDataEntryValue | null, max: number) {
   return text(value, max);
 }
 
+const MULTILINE_CONTROL_CHARACTERS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
+
+function multilineText(value: FormDataEntryValue | null, max: number) {
+  if (typeof value !== "string" || MULTILINE_CONTROL_CHARACTERS.test(value))
+    return null;
+  const normalized = value.replace(/\r\n/g, "\n").trim();
+  return normalized.length >= 1 && normalized.length <= max ? normalized : null;
+}
+
+function optionalMultilineText(value: FormDataEntryValue | null, max: number) {
+  if (value === null || value === "") return null;
+  return multilineText(value, max);
+}
+
 function catalogCode(value: FormDataEntryValue | null) {
   const normalized = text(value, 50)?.toUpperCase().replace(/\s+/g, "_") ?? null;
   return normalized && CATALOG_CODE.test(normalized) ? normalized : null;
+}
+
+function templateCode(value: FormDataEntryValue | null) {
+  const normalized = text(value, 80)?.toUpperCase().replace(/\s+/g, "_") ?? null;
+  return normalized && TEMPLATE_CODE.test(normalized) ? normalized : null;
 }
 
 function provided(value: FormDataEntryValue | null) {
@@ -666,6 +733,9 @@ export function parseSaveEmploymentContract(
   const contractIdRaw = form.get("contractId");
   const contractId =
     typeof contractIdRaw === "string" && contractIdRaw ? contractIdRaw : null;
+  const templateIdRaw = form.get("contractTemplateId");
+  const templateId =
+    typeof templateIdRaw === "string" && templateIdRaw ? templateIdRaw : null;
   const revisionRaw = form.get("revision");
   const revision =
     typeof revisionRaw === "string" && revisionRaw ? revisionRaw : null;
@@ -692,6 +762,8 @@ export function parseSaveEmploymentContract(
   if (!validSchoolId(employmentId)) fieldErrors.record = messages.failed;
   if (contractId && !validSchoolId(contractId))
     fieldErrors.contractId = messages.invalid;
+  if (templateId && !validSchoolId(templateId))
+    fieldErrors.contractTemplateId = messages.invalid;
   if (contractId && !validRevision(revision))
     fieldErrors.record = messages.conflict;
   if (!contractNumber) fieldErrors.contractNumber = messages.invalidContractNumber;
@@ -707,6 +779,7 @@ export function parseSaveEmploymentContract(
   if (
     Object.keys(fieldErrors).length ||
     !validSchoolId(employmentId) ||
+    (templateId && !validSchoolId(templateId)) ||
     (contractId && (!validSchoolId(contractId) || !validRevision(revision))) ||
     !contractNumber ||
     !type ||
@@ -723,6 +796,7 @@ export function parseSaveEmploymentContract(
     data: {
       employmentId,
       contractId,
+      templateId,
       revision,
       contractNumber,
       type,
@@ -1003,5 +1077,189 @@ export function parseStaffCatalogTransition(
       revision,
       transition,
     },
+  };
+}
+
+export function parseContractTemplate(
+  form: FormData,
+  messages: StaffMessages = tr.staff,
+): Parsed<ContractTemplateInput> {
+  const templateIdRaw = form.get("templateId");
+  const templateId =
+    typeof templateIdRaw === "string" && templateIdRaw ? templateIdRaw : null;
+  const revisionRaw = form.get("revision");
+  const revision =
+    typeof revisionRaw === "string" && revisionRaw ? revisionRaw : null;
+  const code = templateCode(form.get("templateCode"));
+  const localeRaw = form.get("templateLocale");
+  const locale =
+    typeof localeRaw === "string" && TEMPLATE_LOCALES.has(localeRaw)
+      ? (localeRaw as "tr" | "sq" | "en")
+      : null;
+  const title = text(form.get("templateTitle"), 200);
+  const headerRaw = form.get("templateHeader");
+  const headerText = optionalMultilineText(headerRaw, 2000);
+  const footerRaw = form.get("templateFooter");
+  const footerText = optionalMultilineText(footerRaw, 2000);
+  const noteRaw = form.get("templateNote");
+  const note = optionalMultilineText(noteRaw, 1000);
+  const fieldErrors: StaffState["fieldErrors"] = {};
+
+  if (templateId && !validSchoolId(templateId))
+    fieldErrors.templateId = messages.invalid;
+  if (templateId && !validRevision(revision)) fieldErrors.record = messages.conflict;
+  if (!code) fieldErrors.templateCode = messages.invalidTemplateCode;
+  if (!locale) fieldErrors.templateLocale = messages.invalid;
+  if (!title) fieldErrors.templateTitle = messages.invalidTemplateTitle;
+  if (provided(headerRaw) && !headerText)
+    fieldErrors.templateHeader = messages.invalid;
+  if (provided(footerRaw) && !footerText)
+    fieldErrors.templateFooter = messages.invalid;
+  if (provided(noteRaw) && !note) fieldErrors.templateNote = messages.invalid;
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !code ||
+    !locale ||
+    !title ||
+    (templateId && (!validSchoolId(templateId) || !validRevision(revision)))
+  )
+    return {
+      success: false,
+      state: { status: "error", message: messages.invalid, fieldErrors },
+    };
+
+  return {
+    success: true,
+    data: {
+      templateId,
+      revision,
+      code,
+      locale,
+      title,
+      headerText,
+      footerText,
+      note,
+    },
+  };
+}
+
+export function parseContractTemplateTransition(
+  form: FormData,
+  messages: StaffMessages = tr.staff,
+): Parsed<ContractTemplateTransitionInput> {
+  const templateId = form.get("templateId");
+  const revision = form.get("revision");
+  const transitionRaw = form.get("transition");
+  const transition =
+    typeof transitionRaw === "string" &&
+    STAFF_CATALOG_TRANSITIONS.has(transitionRaw as StaffCatalogTransition)
+      ? (transitionRaw as StaffCatalogTransition)
+      : null;
+  const fieldErrors: StaffState["fieldErrors"] = {};
+
+  if (!validSchoolId(templateId)) fieldErrors.templateId = messages.invalid;
+  if (!validRevision(revision)) fieldErrors.record = messages.conflict;
+  if (!transition) fieldErrors.record = messages.invalid;
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(templateId) ||
+    !validRevision(revision) ||
+    !transition
+  )
+    return {
+      success: false,
+      state: { status: "error", message: messages.invalid, fieldErrors },
+    };
+
+  return {
+    success: true,
+    data: { templateId, revision, transition },
+  };
+}
+
+export function parseContractTemplateClause(
+  form: FormData,
+  messages: StaffMessages = tr.staff,
+): Parsed<ContractTemplateClauseInput> {
+  const templateId = form.get("templateId");
+  const clauseIdRaw = form.get("clauseId");
+  const clauseId =
+    typeof clauseIdRaw === "string" && clauseIdRaw ? clauseIdRaw : null;
+  const revisionRaw = form.get("revision");
+  const revision =
+    typeof revisionRaw === "string" && revisionRaw ? revisionRaw : null;
+  const orderRaw = form.get("clauseOrder");
+  const sortOrder =
+    typeof orderRaw === "string" && /^\d{1,3}$/.test(orderRaw)
+      ? Number(orderRaw)
+      : null;
+  const title = text(form.get("clauseTitle"), 200);
+  const body = multilineText(form.get("clauseBody"), 5000);
+  const fieldErrors: StaffState["fieldErrors"] = {};
+
+  if (!validSchoolId(templateId)) fieldErrors.templateId = messages.invalid;
+  if (clauseId && !validSchoolId(clauseId)) fieldErrors.clauseId = messages.invalid;
+  if (clauseId && !validRevision(revision)) fieldErrors.record = messages.conflict;
+  if (!sortOrder || sortOrder < 1 || sortOrder > 999)
+    fieldErrors.clauseOrder = messages.invalidClauseOrder;
+  if (!title) fieldErrors.clauseTitle = messages.invalidClauseTitle;
+  if (!body) fieldErrors.clauseBody = messages.invalidClauseBody;
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(templateId) ||
+    (clauseId && (!validSchoolId(clauseId) || !validRevision(revision))) ||
+    !sortOrder ||
+    !title ||
+    !body
+  )
+    return {
+      success: false,
+      state: { status: "error", message: messages.invalid, fieldErrors },
+    };
+
+  return {
+    success: true,
+    data: { templateId, clauseId, revision, sortOrder, title, body },
+  };
+}
+
+export function parseContractTemplateClauseTransition(
+  form: FormData,
+  messages: StaffMessages = tr.staff,
+): Parsed<ContractTemplateClauseTransitionInput> {
+  const templateId = form.get("templateId");
+  const clauseId = form.get("clauseId");
+  const revision = form.get("revision");
+  const transitionRaw = form.get("transition");
+  const transition =
+    typeof transitionRaw === "string" &&
+    STAFF_CATALOG_TRANSITIONS.has(transitionRaw as StaffCatalogTransition)
+      ? (transitionRaw as StaffCatalogTransition)
+      : null;
+  const fieldErrors: StaffState["fieldErrors"] = {};
+
+  if (!validSchoolId(templateId)) fieldErrors.templateId = messages.invalid;
+  if (!validSchoolId(clauseId)) fieldErrors.clauseId = messages.invalid;
+  if (!validRevision(revision)) fieldErrors.record = messages.conflict;
+  if (!transition) fieldErrors.record = messages.invalid;
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(templateId) ||
+    !validSchoolId(clauseId) ||
+    !validRevision(revision) ||
+    !transition
+  )
+    return {
+      success: false,
+      state: { status: "error", message: messages.invalid, fieldErrors },
+    };
+
+  return {
+    success: true,
+    data: { templateId, clauseId, revision, transition },
   };
 }

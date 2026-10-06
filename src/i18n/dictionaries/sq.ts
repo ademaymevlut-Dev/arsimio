@@ -422,6 +422,41 @@ const sq = {
     contractStatusActive: "Aktive",
     contractStatusEnded: "E përfunduar",
     contractStatusCancelled: "E anuluar",
+    contractTemplate: "Shablloni i kontratës",
+    noContractTemplate: "Pa shabllon / manuale",
+    contractTemplateSettingsTitle: "Shabllonet dhe nenet e kontratës",
+    contractTemplateSettingsDescription:
+      "Menaxhoni shabllonet e përsëritshme të kontratave të personelit dhe nenet e renditura për këtë shkollë.",
+    contractTemplateHelp:
+      "Ky ekran ende nuk krijon print/PDF. Shabllonet dhe nenet përgatiten këtu; kontrata e printueshme lidhet në fazën tjetër.",
+    createContractTemplate: "Krijo shabllon kontrate",
+    noContractTemplates: "Nuk ka ende shabllon kontrate.",
+    templateCode: "Kodi i shabllonit",
+    templateLocale: "Gjuha e shabllonit",
+    localeTr: "Turqisht",
+    localeSq: "Shqip",
+    localeEn: "Anglisht",
+    templateTitle: "Titulli i shabllonit",
+    templateTitlePlaceholder: "Kontratë praktike për personel",
+    templateHeader: "Teksti hyrës / header",
+    templateFooter: "Teksti fundor / nënshkrimet",
+    templateNote: "Shënim i shabllonit",
+    contractTemplateUsage: "kontrata të lidhura",
+    contractClauses: "Nenet e kontratës",
+    addContractClause: "Shto nen",
+    noContractClauses: "Ky shabllon nuk ka ende nen.",
+    clauseOrder: "Renditja",
+    clauseTitle: "Titulli i nenit",
+    clauseTitlePlaceholder: "Detyrat dhe përgjegjësitë",
+    clauseBody: "Teksti i nenit",
+    contractTemplateCreated: "Shablloni i kontratës u krijua.",
+    contractTemplateUpdated: "Shablloni i kontratës u përditësua.",
+    contractTemplateArchived: "Shablloni i kontratës u arkivua.",
+    contractTemplateRestored: "Shablloni i kontratës u rikthye.",
+    contractClauseCreated: "Neni i kontratës u krijua.",
+    contractClauseUpdated: "Neni i kontratës u përditësua.",
+    contractClauseArchived: "Neni i kontratës u arkivua.",
+    contractClauseRestored: "Neni i kontratës u rikthye.",
     compensationTitle: "Paga / kompensimi",
     compensationDescription:
       "Menaxhoni pagën si historik të ndarë dhe të ndjeshëm nga kontratat. Një personel mund të ketë vetëm një regjistrim aktiv kompensimi në të njëjtën kohë.",
@@ -484,8 +519,21 @@ const sq = {
     contractNumberDuplicate: "Ky numër kontrate ekziston tashmë në shkollë.",
     activeContractExists: "Ky personel ka tashmë një kontratë aktive.",
     contractUnavailable: "Regjistrimi i kontratës nuk u gjet.",
+    contractTemplateUnavailable: "Shablloni i kontratës nuk u gjet.",
+    contractClauseUnavailable: "Neni i kontratës nuk u gjet.",
+    contractTemplateCodeDuplicate:
+      "Ky kod shablloni ekziston tashmë në shkollë.",
     contractRequiresOpenEmployment:
       "Nuk mund të krijohet kontratë aktive për punësim të përfunduar.",
+    invalidTemplateCode:
+      "Kodi i shabllonit duhet të jetë 2-80 karaktere dhe të përdorë shkronja, numra, vizë ose nënvizë.",
+    invalidTemplateTitle:
+      "Titulli i shabllonit është i detyrueshëm dhe maksimumi 200 karaktere.",
+    invalidClauseOrder: "Renditja e nenit duhet të jetë midis 1 dhe 999.",
+    invalidClauseTitle:
+      "Titulli i nenit është i detyrueshëm dhe maksimumi 200 karaktere.",
+    invalidClauseBody:
+      "Teksti i nenit është i detyrueshëm dhe maksimumi 5000 karaktere.",
     invalidCompensationAmount:
       "Shuma e kompensimit duhet të jetë pozitive dhe me maksimumi dy dhjetore.",
     invalidCurrency: "Valuta duhet të jetë kod me 3 shkronja. P.sh.: EUR.",

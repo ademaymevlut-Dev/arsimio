@@ -335,70 +335,72 @@ model School {
   createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  createdBy                       User?                                 @relation("SchoolCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  archivedBy                      User?                                 @relation("SchoolArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
-  domains                         SchoolDomain[]
-  branding                        SchoolBranding?
-  memberships                     SchoolMembership[]
-  roles                           Role[]
-  invitations                     SchoolInvitation[]
-  auditEvents                     AuditEvent[]
-  academicYears                   AcademicYear[]
-  academicTerms                   AcademicTerm[]
-  academicTermTranslations        AcademicTermTranslation[]
-  educationStageDefinitions       EducationStageDefinition[]
-  stageDefinitionTranslations     EducationStageDefinitionTranslation[]
-  gradeLevelDefinitions           GradeLevelDefinition[]
-  classSectionDefinitions         ClassSectionDefinition[]
-  academicStructureVersions       AcademicStructureVersion[]
-  academicStructureLevels         AcademicStructureLevel[]
-  curriculumVersions              CurriculumVersion[]
-  curriculumItems                 CurriculumItem[]
-  academicYearCurricula           AcademicYearCurriculum[]
-  scheduleProfiles                ScheduleProfile[]
-  scheduleProfileVersions         ScheduleProfileVersion[]
-  schedulePeriods                 SchedulePeriod[]
-  schedulePeriodTranslations      SchedulePeriodTranslation[]
-  academicWeeks                   AcademicWeek[]
-  academicCalendarDays            AcademicCalendarDay[]
-  academicYearClassSections       AcademicYearClassSection[]
-  academicYearSetupRuns           AcademicYearSetupRun[]
-  subjects                        Subject[]
-  subjectTranslations             SubjectTranslation[]
-  courseOfferings                 CourseOffering[]
-  persons                         Person[]
-  personIdentities                PersonIdentity[]
-  personContactPoints             PersonContactPoint[]
-  personAccounts                  PersonAccount[]
-  staffDepartments                StaffDepartment[]
-  staffDepartmentTranslations     StaffDepartmentTranslation[]
-  staffPositions                  StaffPosition[]
-  staffPositionTranslations       StaffPositionTranslation[]
-  employments                     Employment[]
-  employmentHrProfiles            EmploymentHrProfile[]
-  employmentContracts             EmploymentContract[]
-  employmentCompensations         EmploymentCompensation[]
-  employmentLeaves                EmploymentLeave[]
-  employmentLifecycleEvents       EmploymentLifecycleEvent[]
-  teacherProfiles                 TeacherProfile[]
-  teacherProfileTranslations      TeacherProfileTranslation[]
-  teacherSubjectCapabilities      TeacherSubjectCapability[]
-  homeroomTeacherAssignments      HomeroomTeacherAssignment[]
-  courseTeacherAssignments        CourseTeacherAssignment[]
-  timetableSessions               TimetableSession[]
-  timetableSessionParticipants    TimetableSessionParticipant[]
-  lessonTopicEntries              LessonTopicEntry[]
-  homeworkEntries                 HomeworkEntry[]
-  examNotificationEntries         ExamNotificationEntry[]
-  studentCommentEntries           StudentCommentEntry[]
-  studentAttendanceRecords        StudentAttendanceRecord[]
-  numberSequences                 SchoolNumberSequence[]
-  studentProfiles                 StudentProfile[]
-  studentPreviousEducationRecords StudentPreviousEducationRecord[]
-  guardianRelationships           GuardianRelationship[]
-  enrollments                     Enrollment[]
-  studentGroupPlacements          StudentGroupPlacement[]
-  studentLifecycleEvents          StudentLifecycleEvent[]
+  createdBy                         User?                                 @relation("SchoolCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  archivedBy                        User?                                 @relation("SchoolArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
+  domains                           SchoolDomain[]
+  branding                          SchoolBranding?
+  memberships                       SchoolMembership[]
+  roles                             Role[]
+  invitations                       SchoolInvitation[]
+  auditEvents                       AuditEvent[]
+  academicYears                     AcademicYear[]
+  academicTerms                     AcademicTerm[]
+  academicTermTranslations          AcademicTermTranslation[]
+  educationStageDefinitions         EducationStageDefinition[]
+  stageDefinitionTranslations       EducationStageDefinitionTranslation[]
+  gradeLevelDefinitions             GradeLevelDefinition[]
+  classSectionDefinitions           ClassSectionDefinition[]
+  academicStructureVersions         AcademicStructureVersion[]
+  academicStructureLevels           AcademicStructureLevel[]
+  curriculumVersions                CurriculumVersion[]
+  curriculumItems                   CurriculumItem[]
+  academicYearCurricula             AcademicYearCurriculum[]
+  scheduleProfiles                  ScheduleProfile[]
+  scheduleProfileVersions           ScheduleProfileVersion[]
+  schedulePeriods                   SchedulePeriod[]
+  schedulePeriodTranslations        SchedulePeriodTranslation[]
+  academicWeeks                     AcademicWeek[]
+  academicCalendarDays              AcademicCalendarDay[]
+  academicYearClassSections         AcademicYearClassSection[]
+  academicYearSetupRuns             AcademicYearSetupRun[]
+  subjects                          Subject[]
+  subjectTranslations               SubjectTranslation[]
+  courseOfferings                   CourseOffering[]
+  persons                           Person[]
+  personIdentities                  PersonIdentity[]
+  personContactPoints               PersonContactPoint[]
+  personAccounts                    PersonAccount[]
+  staffDepartments                  StaffDepartment[]
+  staffDepartmentTranslations       StaffDepartmentTranslation[]
+  staffPositions                    StaffPosition[]
+  staffPositionTranslations         StaffPositionTranslation[]
+  employments                       Employment[]
+  employmentHrProfiles              EmploymentHrProfile[]
+  employmentContracts               EmploymentContract[]
+  employmentContractTemplates       EmploymentContractTemplate[]
+  employmentContractTemplateClauses EmploymentContractTemplateClause[]
+  employmentCompensations           EmploymentCompensation[]
+  employmentLeaves                  EmploymentLeave[]
+  employmentLifecycleEvents         EmploymentLifecycleEvent[]
+  teacherProfiles                   TeacherProfile[]
+  teacherProfileTranslations        TeacherProfileTranslation[]
+  teacherSubjectCapabilities        TeacherSubjectCapability[]
+  homeroomTeacherAssignments        HomeroomTeacherAssignment[]
+  courseTeacherAssignments          CourseTeacherAssignment[]
+  timetableSessions                 TimetableSession[]
+  timetableSessionParticipants      TimetableSessionParticipant[]
+  lessonTopicEntries                LessonTopicEntry[]
+  homeworkEntries                   HomeworkEntry[]
+  examNotificationEntries           ExamNotificationEntry[]
+  studentCommentEntries             StudentCommentEntry[]
+  studentAttendanceRecords          StudentAttendanceRecord[]
+  numberSequences                   SchoolNumberSequence[]
+  studentProfiles                   StudentProfile[]
+  studentPreviousEducationRecords   StudentPreviousEducationRecord[]
+  guardianRelationships             GuardianRelationship[]
+  enrollments                       Enrollment[]
+  studentGroupPlacements            StudentGroupPlacement[]
+  studentLifecycleEvents            StudentLifecycleEvent[]
 
   @@index([status])
   @@map("schools")
@@ -1467,6 +1469,7 @@ model EmploymentContract {
   id             String                   @id @default(uuid()) @db.Uuid
   schoolId       String                   @map("school_id") @db.Uuid
   employmentId   String                   @map("employment_id") @db.Uuid
+  templateId     String?                  @map("template_id") @db.Uuid
   contractNumber String                   @map("contract_number") @db.VarChar(80)
   type           EmploymentContractType
   status         EmploymentContractStatus @default(ACTIVE)
@@ -1476,13 +1479,57 @@ model EmploymentContract {
   createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  school     School     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  employment Employment @relation(fields: [employmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  school     School                      @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  employment Employment                  @relation(fields: [employmentId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+  template   EmploymentContractTemplate? @relation(fields: [templateId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
 
   @@unique([schoolId, contractNumber])
   @@index([schoolId, employmentId, status])
   @@index([schoolId, status])
+  @@index([schoolId, templateId])
   @@map("employment_contracts")
+}
+
+model EmploymentContractTemplate {
+  id         String    @id @default(uuid()) @db.Uuid
+  schoolId   String    @map("school_id") @db.Uuid
+  code       String    @db.VarChar(80)
+  locale     String    @default("sq") @db.VarChar(10)
+  title      String    @db.VarChar(200)
+  headerText String?   @map("header_text") @db.VarChar(2000)
+  footerText String?   @map("footer_text") @db.VarChar(2000)
+  note       String?   @db.VarChar(1000)
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school    School                             @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  clauses   EmploymentContractTemplateClause[]
+  contracts EmploymentContract[]
+
+  @@unique([schoolId, code])
+  @@unique([id, schoolId])
+  @@index([schoolId, archivedAt, title])
+  @@map("employment_contract_templates")
+}
+
+model EmploymentContractTemplateClause {
+  id         String    @id @default(uuid()) @db.Uuid
+  schoolId   String    @map("school_id") @db.Uuid
+  templateId String    @map("template_id") @db.Uuid
+  sortOrder  Int       @map("sort_order")
+  title      String    @db.VarChar(200)
+  body       String    @db.Text
+  archivedAt DateTime? @map("archived_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  school   School                     @relation(fields: [schoolId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  template EmploymentContractTemplate @relation(fields: [templateId, schoolId], references: [id, schoolId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([id, schoolId])
+  @@index([schoolId, templateId, archivedAt, sortOrder])
+  @@map("employment_contract_template_clauses")
 }
 
 model EmploymentCompensation {

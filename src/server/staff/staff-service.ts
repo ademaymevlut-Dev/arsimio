@@ -2,6 +2,10 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import type {
   CreateEmploymentInput,
+  ContractTemplateClauseInput,
+  ContractTemplateClauseTransitionInput,
+  ContractTemplateInput,
+  ContractTemplateTransitionInput,
   EmploymentTransitionInput,
   StaffCatalogItemInput,
   StaffCatalogTransitionInput,
@@ -470,6 +474,277 @@ export function persistStaffCatalogTransition(
     : persistPositionCatalogTransition(tx, actor, input);
 }
 
+export async function persistContractTemplate(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: ContractTemplateInput,
+  messages: StaffMessages,
+): Promise<StaffState> {
+  const existing = input.templateId
+    ? await tx.employmentContractTemplate.findFirst({
+        where: { id: input.templateId, schoolId: actor.schoolId },
+      })
+    : null;
+  if (input.templateId && !existing)
+    return error(messages.contractTemplateUnavailable);
+  if (
+    existing &&
+    input.revision &&
+    existing.updatedAt.toISOString() !== input.revision
+  )
+    return error(messages.conflict);
+
+  const duplicate = await tx.employmentContractTemplate.findFirst({
+    where: {
+      schoolId: actor.schoolId,
+      code: input.code,
+      ...(input.templateId ? { id: { not: input.templateId } } : {}),
+    },
+    select: { id: true },
+  });
+  if (duplicate)
+    return error(messages.contractTemplateCodeDuplicate, {
+      templateCode: messages.contractTemplateCodeDuplicate,
+    });
+
+  const data = {
+    code: input.code,
+    locale: input.locale,
+    title: input.title,
+    headerText: input.headerText,
+    footerText: input.footerText,
+    note: input.note,
+  };
+  const template = existing
+    ? await tx.employmentContractTemplate.update({
+        where: { id: existing.id },
+        data,
+      })
+    : await tx.employmentContractTemplate.create({
+        data: { schoolId: actor.schoolId, ...data },
+      });
+
+  await audit(tx, actor, {
+    action: existing
+      ? "employment_contract_template.updated"
+      : "employment_contract_template.created",
+    entityType: "EmploymentContractTemplate",
+    entityId: template.id,
+    beforeData: existing
+      ? {
+          code: existing.code,
+          locale: existing.locale,
+          title: existing.title,
+          headerText: existing.headerText,
+          footerText: existing.footerText,
+          note: existing.note,
+          archivedAt: existing.archivedAt?.toISOString() ?? null,
+        }
+      : undefined,
+    afterData: {
+      code: template.code,
+      locale: template.locale,
+      title: template.title,
+      headerText: template.headerText,
+      footerText: template.footerText,
+      note: template.note,
+      archivedAt: template.archivedAt?.toISOString() ?? null,
+    },
+    changedFields: ["employmentContractTemplate"],
+  });
+  return {
+    status: "success",
+    message: existing
+      ? messages.contractTemplateUpdated
+      : messages.contractTemplateCreated,
+    entityId: template.id,
+  };
+}
+
+export async function persistContractTemplateTransition(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: ContractTemplateTransitionInput,
+  messages: StaffMessages,
+): Promise<StaffState> {
+  const existing = await tx.employmentContractTemplate.findFirst({
+    where: { id: input.templateId, schoolId: actor.schoolId },
+  });
+  if (!existing) return error(messages.contractTemplateUnavailable);
+  if (existing.updatedAt.toISOString() !== input.revision)
+    return error(messages.conflict);
+
+  const archivedAt = input.transition === "archive" ? new Date() : null;
+  if (
+    (input.transition === "archive" && existing.archivedAt) ||
+    (input.transition === "restore" && !existing.archivedAt)
+  )
+    return { status: "success", message: messages.contractTemplateUpdated };
+
+  const template = await tx.employmentContractTemplate.update({
+    where: { id: existing.id },
+    data: { archivedAt },
+  });
+
+  await audit(tx, actor, {
+    action: `employment_contract_template.${input.transition}`,
+    entityType: "EmploymentContractTemplate",
+    entityId: existing.id,
+    beforeData: {
+      code: existing.code,
+      archivedAt: existing.archivedAt?.toISOString() ?? null,
+    },
+    afterData: {
+      code: template.code,
+      archivedAt: template.archivedAt?.toISOString() ?? null,
+    },
+    changedFields: ["employmentContractTemplate.archivedAt"],
+  });
+  return {
+    status: "success",
+    message:
+      input.transition === "archive"
+        ? messages.contractTemplateArchived
+        : messages.contractTemplateRestored,
+  };
+}
+
+export async function persistContractTemplateClause(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: ContractTemplateClauseInput,
+  messages: StaffMessages,
+): Promise<StaffState> {
+  const template = await tx.employmentContractTemplate.findFirst({
+    where: { id: input.templateId, schoolId: actor.schoolId },
+    select: { id: true, code: true },
+  });
+  if (!template) return error(messages.contractTemplateUnavailable);
+
+  const existing = input.clauseId
+    ? await tx.employmentContractTemplateClause.findFirst({
+        where: {
+          id: input.clauseId,
+          schoolId: actor.schoolId,
+          templateId: template.id,
+        },
+      })
+    : null;
+  if (input.clauseId && !existing)
+    return error(messages.contractClauseUnavailable);
+  if (
+    existing &&
+    input.revision &&
+    existing.updatedAt.toISOString() !== input.revision
+  )
+    return error(messages.conflict);
+
+  const data = {
+    sortOrder: input.sortOrder,
+    title: input.title,
+    body: input.body,
+  };
+  const clause = existing
+    ? await tx.employmentContractTemplateClause.update({
+        where: { id: existing.id },
+        data,
+      })
+    : await tx.employmentContractTemplateClause.create({
+        data: {
+          schoolId: actor.schoolId,
+          templateId: template.id,
+          ...data,
+        },
+      });
+
+  await audit(tx, actor, {
+    action: existing
+      ? "employment_contract_template_clause.updated"
+      : "employment_contract_template_clause.created",
+    entityType: "EmploymentContractTemplateClause",
+    entityId: clause.id,
+    beforeData: existing
+      ? {
+          templateId: existing.templateId,
+          sortOrder: existing.sortOrder,
+          title: existing.title,
+          body: existing.body,
+          archivedAt: existing.archivedAt?.toISOString() ?? null,
+        }
+      : undefined,
+    afterData: {
+      templateId: clause.templateId,
+      templateCode: template.code,
+      sortOrder: clause.sortOrder,
+      title: clause.title,
+      body: clause.body,
+      archivedAt: clause.archivedAt?.toISOString() ?? null,
+    },
+    changedFields: ["employmentContractTemplateClause"],
+  });
+  return {
+    status: "success",
+    message: existing ? messages.contractClauseUpdated : messages.contractClauseCreated,
+    entityId: clause.id,
+  };
+}
+
+export async function persistContractTemplateClauseTransition(
+  tx: Prisma.TransactionClient,
+  actor: StaffActor,
+  input: ContractTemplateClauseTransitionInput,
+  messages: StaffMessages,
+): Promise<StaffState> {
+  const existing = await tx.employmentContractTemplateClause.findFirst({
+    where: {
+      id: input.clauseId,
+      templateId: input.templateId,
+      schoolId: actor.schoolId,
+    },
+  });
+  if (!existing) return error(messages.contractClauseUnavailable);
+  if (existing.updatedAt.toISOString() !== input.revision)
+    return error(messages.conflict);
+
+  const archivedAt = input.transition === "archive" ? new Date() : null;
+  if (
+    (input.transition === "archive" && existing.archivedAt) ||
+    (input.transition === "restore" && !existing.archivedAt)
+  )
+    return { status: "success", message: messages.contractClauseUpdated };
+
+  const clause = await tx.employmentContractTemplateClause.update({
+    where: { id: existing.id },
+    data: { archivedAt },
+  });
+
+  await audit(tx, actor, {
+    action: `employment_contract_template_clause.${input.transition}`,
+    entityType: "EmploymentContractTemplateClause",
+    entityId: existing.id,
+    beforeData: {
+      templateId: existing.templateId,
+      sortOrder: existing.sortOrder,
+      title: existing.title,
+      archivedAt: existing.archivedAt?.toISOString() ?? null,
+    },
+    afterData: {
+      templateId: clause.templateId,
+      sortOrder: clause.sortOrder,
+      title: clause.title,
+      archivedAt: clause.archivedAt?.toISOString() ?? null,
+    },
+    changedFields: ["employmentContractTemplateClause.archivedAt"],
+  });
+  return {
+    status: "success",
+    message:
+      input.transition === "archive"
+        ? messages.contractClauseArchived
+        : messages.contractClauseRestored,
+  };
+}
+
 export async function persistEmployment(
   tx: Prisma.TransactionClient,
   actor: StaffActor,
@@ -742,6 +1017,21 @@ export async function persistEmploymentContract(
       contractNumber: messages.contractNumberDuplicate,
     });
 
+  if (input.templateId) {
+    const template = await tx.employmentContractTemplate.findFirst({
+      where: {
+        id: input.templateId,
+        schoolId: actor.schoolId,
+        archivedAt: null,
+      },
+      select: { id: true },
+    });
+    if (!template)
+      return error(messages.contractTemplateUnavailable, {
+        contractTemplateId: messages.contractTemplateUnavailable,
+      });
+  }
+
   if (input.status === "ACTIVE") {
     if (employment.status === "ENDED")
       return error(messages.contractRequiresOpenEmployment, {
@@ -763,6 +1053,7 @@ export async function persistEmploymentContract(
   }
 
   const data = {
+    templateId: input.templateId,
     contractNumber: input.contractNumber,
     type: input.type,
     status: input.status,
@@ -790,6 +1081,7 @@ export async function persistEmploymentContract(
     beforeData: existing
       ? {
           contractNumber: existing.contractNumber,
+          templateId: existing.templateId,
           type: existing.type,
           status: existing.status,
           startedOn: dateValue(existing.startedOn),
@@ -800,6 +1092,7 @@ export async function persistEmploymentContract(
     afterData: {
       employmentId: employment.id,
       staffNumber: employment.staffNumber,
+      templateId: contract.templateId,
       contractNumber: contract.contractNumber,
       type: contract.type,
       status: contract.status,

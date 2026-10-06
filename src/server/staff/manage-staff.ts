@@ -6,6 +6,10 @@ import { getDictionary, getSchoolLocale } from "@/i18n/server";
 import { getPrisma } from "@/lib/db";
 import {
   parseCreateEmployment,
+  parseContractTemplate,
+  parseContractTemplateClause,
+  parseContractTemplateClauseTransition,
+  parseContractTemplateTransition,
   parseEmploymentTransition,
   parseSaveEmploymentCompensation,
   parseSaveEmploymentContract,
@@ -21,6 +25,10 @@ import { isSameOrigin } from "@/server/auth/identifiers";
 import { requireSchoolPermission } from "@/server/authorization/guards";
 import {
   persistEmployment,
+  persistContractTemplate,
+  persistContractTemplateClause,
+  persistContractTemplateClauseTransition,
+  persistContractTemplateTransition,
   persistEmploymentCompensation,
   persistEmploymentContract,
   persistEmploymentLeave,
@@ -184,6 +192,88 @@ export async function manageSaveEmploymentLeave(
     );
   } catch (errorValue) {
     console.error("EMPLOYMENT_LEAVE_SAVE_UNAVAILABLE");
+    return databaseError(errorValue);
+  }
+}
+
+export async function manageSaveContractTemplate(
+  form: FormData,
+): Promise<StaffState> {
+  const context = await actorContext("hr.contracts.manage");
+  if (!context) return invalid();
+  const { actor, messages } = context;
+  const parsed = parseContractTemplate(form, messages);
+  if (!parsed.success) return parsed.state;
+  try {
+    return await getPrisma().$transaction(
+      (tx) => persistContractTemplate(tx, actor, parsed.data, messages),
+      { isolationLevel: "Serializable", timeout: 15000 },
+    );
+  } catch (errorValue) {
+    console.error("CONTRACT_TEMPLATE_SAVE_UNAVAILABLE");
+    return databaseError(errorValue);
+  }
+}
+
+export async function manageContractTemplateTransition(
+  form: FormData,
+): Promise<StaffState> {
+  const context = await actorContext("hr.contracts.manage");
+  if (!context) return invalid();
+  const { actor, messages } = context;
+  const parsed = parseContractTemplateTransition(form, messages);
+  if (!parsed.success) return parsed.state;
+  try {
+    return await getPrisma().$transaction(
+      (tx) => persistContractTemplateTransition(tx, actor, parsed.data, messages),
+      { isolationLevel: "Serializable", timeout: 15000 },
+    );
+  } catch (errorValue) {
+    console.error("CONTRACT_TEMPLATE_TRANSITION_UNAVAILABLE");
+    return databaseError(errorValue);
+  }
+}
+
+export async function manageSaveContractTemplateClause(
+  form: FormData,
+): Promise<StaffState> {
+  const context = await actorContext("hr.contracts.manage");
+  if (!context) return invalid();
+  const { actor, messages } = context;
+  const parsed = parseContractTemplateClause(form, messages);
+  if (!parsed.success) return parsed.state;
+  try {
+    return await getPrisma().$transaction(
+      (tx) => persistContractTemplateClause(tx, actor, parsed.data, messages),
+      { isolationLevel: "Serializable", timeout: 15000 },
+    );
+  } catch (errorValue) {
+    console.error("CONTRACT_TEMPLATE_CLAUSE_SAVE_UNAVAILABLE");
+    return databaseError(errorValue);
+  }
+}
+
+export async function manageContractTemplateClauseTransition(
+  form: FormData,
+): Promise<StaffState> {
+  const context = await actorContext("hr.contracts.manage");
+  if (!context) return invalid();
+  const { actor, messages } = context;
+  const parsed = parseContractTemplateClauseTransition(form, messages);
+  if (!parsed.success) return parsed.state;
+  try {
+    return await getPrisma().$transaction(
+      (tx) =>
+        persistContractTemplateClauseTransition(
+          tx,
+          actor,
+          parsed.data,
+          messages,
+        ),
+      { isolationLevel: "Serializable", timeout: 15000 },
+    );
+  } catch (errorValue) {
+    console.error("CONTRACT_TEMPLATE_CLAUSE_TRANSITION_UNAVAILABLE");
     return databaseError(errorValue);
   }
 }

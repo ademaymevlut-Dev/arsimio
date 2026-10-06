@@ -4,8 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { StaffState } from "@/lib/staff-validation";
 import {
+  manageContractTemplateClauseTransition,
+  manageContractTemplateTransition,
   manageCreateEmployment,
   manageEmploymentTransition,
+  manageSaveContractTemplate,
+  manageSaveContractTemplateClause,
   manageSaveEmploymentCompensation,
   manageSaveEmploymentContract,
   manageSaveEmploymentLeave,
@@ -82,6 +86,47 @@ export async function saveEmploymentLeaveAction(
     if (typeof employmentId === "string" && employmentId)
       revalidatePath(`/staff/${employmentId}`);
   }
+  return result;
+}
+
+function revalidateContractTemplateScreens() {
+  revalidatePath("/staff");
+  revalidatePath("/staff/settings");
+}
+
+export async function saveContractTemplateAction(
+  _state: StaffState,
+  form: FormData,
+) {
+  const result = await manageSaveContractTemplate(form);
+  if (result.status === "success") revalidateContractTemplateScreens();
+  return result;
+}
+
+export async function transitionContractTemplateAction(
+  _state: StaffState,
+  form: FormData,
+) {
+  const result = await manageContractTemplateTransition(form);
+  if (result.status === "success") revalidateContractTemplateScreens();
+  return result;
+}
+
+export async function saveContractTemplateClauseAction(
+  _state: StaffState,
+  form: FormData,
+) {
+  const result = await manageSaveContractTemplateClause(form);
+  if (result.status === "success") revalidateContractTemplateScreens();
+  return result;
+}
+
+export async function transitionContractTemplateClauseAction(
+  _state: StaffState,
+  form: FormData,
+) {
+  const result = await manageContractTemplateClauseTransition(form);
+  if (result.status === "success") revalidateContractTemplateScreens();
   return result;
 }
 

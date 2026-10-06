@@ -133,6 +133,27 @@ export type StaffCatalogItem = {
   employmentCount: number;
 };
 
+export type StaffContractTemplate = {
+  id: string;
+  code: string;
+  locale: string;
+  title: string;
+  headerText: string | null;
+  footerText: string | null;
+  note: string | null;
+  archived: boolean;
+  revision: string;
+  contractCount: number;
+  clauses: {
+    id: string;
+    sortOrder: number;
+    title: string;
+    body: string;
+    archived: boolean;
+    revision: string;
+  }[];
+};
+
 export async function getStaffRegistrationContext(
   schoolId: string,
   locale: string,
@@ -245,6 +266,39 @@ export async function getStaffCatalogs(schoolId: string, locale: string) {
   };
 }
 
+export async function getStaffContractTemplates(schoolId: string) {
+  const templates = await getPrisma().employmentContractTemplate.findMany({
+    where: { schoolId },
+    orderBy: [{ archivedAt: "asc" }, { title: "asc" }, { code: "asc" }],
+    include: {
+      clauses: {
+        orderBy: [{ archivedAt: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
+      },
+      _count: { select: { contracts: true } },
+    },
+  });
+  return templates.map((template): StaffContractTemplate => ({
+    id: template.id,
+    code: template.code,
+    locale: template.locale,
+    title: template.title,
+    headerText: template.headerText,
+    footerText: template.footerText,
+    note: template.note,
+    archived: Boolean(template.archivedAt),
+    revision: template.updatedAt.toISOString(),
+    contractCount: template._count.contracts,
+    clauses: template.clauses.map((clause) => ({
+      id: clause.id,
+      sortOrder: clause.sortOrder,
+      title: clause.title,
+      body: clause.body,
+      archived: Boolean(clause.archivedAt),
+      revision: clause.updatedAt.toISOString(),
+    })),
+  }));
+}
+
 export async function getStaffDirectory(
   schoolId: string,
   locale: string,
@@ -343,6 +397,14 @@ export async function getStaffDetail(
     ? await db.employmentContract.findMany({
         where: { schoolId, employmentId: employment.id },
         orderBy: [{ status: "asc" }, { startedOn: "desc" }, { createdAt: "desc" }],
+        include: { template: true },
+      })
+    : [];
+  const contractTemplates = includeContracts
+    ? await db.employmentContractTemplate.findMany({
+        where: { schoolId, archivedAt: null },
+        orderBy: [{ title: "asc" }, { code: "asc" }],
+        select: { id: true, code: true, title: true, locale: true },
       })
     : [];
   const compensations = includeCompensations
@@ -399,6 +461,8 @@ export async function getStaffDetail(
       : null,
     contracts: contracts.map((contract) => ({
       id: contract.id,
+      templateId: contract.templateId,
+      templateTitle: contract.template?.title ?? null,
       contractNumber: contract.contractNumber,
       type: contract.type,
       status: contract.status,
@@ -408,6 +472,12 @@ export async function getStaffDetail(
       createdAt: contract.createdAt.toISOString(),
       updatedAt: contract.updatedAt.toISOString(),
       revision: contract.updatedAt.toISOString(),
+    })),
+    contractTemplates: contractTemplates.map((template) => ({
+      id: template.id,
+      code: template.code,
+      title: template.title,
+      locale: template.locale,
     })),
     compensations: compensations.map((compensation) => ({
       id: compensation.id,

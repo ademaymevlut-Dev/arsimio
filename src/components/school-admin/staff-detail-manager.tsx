@@ -102,6 +102,8 @@ type StaffDetail = {
   photoUpdatedAt: string | null;
   contracts: {
     id: string;
+    templateId: string | null;
+    templateTitle: string | null;
     contractNumber: string;
     type:
       | "INDEFINITE"
@@ -117,6 +119,12 @@ type StaffDetail = {
     createdAt: string;
     updatedAt: string;
     revision: string;
+  }[];
+  contractTemplates: {
+    id: string;
+    code: string;
+    title: string;
+    locale: string;
   }[];
   compensations: {
     id: string;
@@ -284,6 +292,11 @@ export function StaffDetailManager({
       CANCELLED: messages.contractStatusCancelled,
     };
     return labels[value] ?? value;
+  }
+  function contractTemplateLabel(
+    template: StaffDetail["contractTemplates"][number],
+  ) {
+    return `${template.title} · ${template.code} · ${template.locale.toUpperCase()}`;
   }
   function compensationAmountKindLabel(
     value: StaffDetail["compensations"][number]["amountKind"],
@@ -457,6 +470,29 @@ export function StaffDetailManager({
                 className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2"
               >
                 <input type="hidden" name="employmentId" value={staff.id} />
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="newContractTemplate">
+                    {messages.contractTemplate}
+                  </Label>
+                  <NativeSelect
+                    id="newContractTemplate"
+                    name="contractTemplateId"
+                    disabled={contractPending}
+                    defaultValue=""
+                  >
+                    <option value="">{messages.noContractTemplate}</option>
+                    {staff.contractTemplates.map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {contractTemplateLabel(template)}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                  <FieldError
+                    state={contractState}
+                    field="contractTemplateId"
+                    id="new-contract-template-error"
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="newContractNumber">
                     {messages.contractNumber}
@@ -588,6 +624,12 @@ export function StaffDetailManager({
                       </div>
                       <div>
                         <span className="text-muted-foreground">
+                          {messages.contractTemplate}
+                        </span>
+                        <p>{contract.templateTitle ?? messages.noContractTemplate}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
                           {messages.updatedAt}
                         </span>
                         <p>{formatDate(contract.updatedAt.slice(0, 10), locale)}</p>
@@ -611,6 +653,32 @@ export function StaffDetailManager({
                           name="revision"
                           value={contract.revision}
                         />
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label htmlFor={`contractTemplate-${contract.id}`}>
+                            {messages.contractTemplate}
+                          </Label>
+                          <NativeSelect
+                            id={`contractTemplate-${contract.id}`}
+                            name="contractTemplateId"
+                            defaultValue={contract.templateId ?? ""}
+                            disabled={contractPending}
+                          >
+                            <option value="">{messages.noContractTemplate}</option>
+                            {staff.contractTemplates.map((template) => (
+                              <option key={template.id} value={template.id}>
+                                {contractTemplateLabel(template)}
+                              </option>
+                            ))}
+                            {contract.templateId &&
+                            !staff.contractTemplates.some(
+                              (template) => template.id === contract.templateId,
+                            ) ? (
+                              <option value={contract.templateId}>
+                                {contract.templateTitle ?? messages.archived}
+                              </option>
+                            ) : null}
+                          </NativeSelect>
+                        </div>
                         <div className="space-y-2">
                           <Label htmlFor={`contractNumber-${contract.id}`}>
                             {messages.contractNumber}

@@ -224,3 +224,15 @@ Kontrattan ayrı maaş/ücret çekirdeği ikinci küçük paket olarak kodlandı
 - personel işten ayrılınca aktif ücret kaydı otomatik `bitmiş` durumuna alınacak şekilde servis davranışı eklendi
 
 Bu faz hâlâ payroll/bordro, banka bilgisi, ödeme emri, muhasebe veya kontrat template motoru değildir. Bunlar ayrı fazlarda ele alınacak.
+
+## 7. 2026-10-06 kontrat template / madde çekirdeği uygulama notu
+
+Kontrat şablonu için ilk küçük paket kodlandı:
+
+- okul bazlı `employment_contract_templates` tablosu eklendi
+- şablona bağlı sıralı `employment_contract_template_clauses` tablosu eklendi
+- personel kontrat kaydına opsiyonel şablon bağlantısı eklendi
+- personel tanımları ekranında şablon ve madde oluşturma/güncelleme/arşivleme eklendi
+- personel kontrat formunda aktif şablon seçimi eklendi
+
+Bu paket henüz PDF, çıktı, header/footer görseli veya placeholder motoru değildir. Bunlar bir sonraki küçük fazda ele alınacak.

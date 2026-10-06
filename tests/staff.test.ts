@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  parseContractTemplate,
+  parseContractTemplateClause,
+  parseContractTemplateClauseTransition,
+  parseContractTemplateTransition,
   parseCreateEmployment,
   parseEmploymentTransition,
   parseSaveEmploymentCompensation,
@@ -30,6 +34,8 @@ const catalogId = "4e7a0b1a-0b18-4af9-86ac-3e57adfd7767";
 const contractId = "5b2985f2-a8c4-4fa2-bf7c-43ce4f2620d7";
 const compensationId = "46f9279e-0951-4805-86f3-77f478d7800a";
 const leaveId = "9ae75c13-6b7b-461a-9342-46ce0ef2efcb";
+const templateId = "812cdbf9-573c-43f8-a093-a267dc4ae86c";
+const clauseId = "ff66a78e-8b6a-4363-87d4-449770e5f9de";
 const subjectOne = "0b9a5fbf-d073-42c6-a314-a6de017409a1";
 const subjectTwo = "32bbbf77-cb2a-4b2e-83ac-6b138c0e0d4a";
 const revision = "2026-10-01T12:00:00.000Z";
@@ -163,6 +169,7 @@ test("employment contract parser accepts manual contract numbers and optional en
     form({
       employmentId,
       contractNumber: "PRAKTIKE-2025/10-BI",
+      contractTemplateId: templateId,
       contractType: "INTERN",
       contractStatus: "ACTIVE",
       contractStartedOn: "2026-10-01",
@@ -173,6 +180,7 @@ test("employment contract parser accepts manual contract numbers and optional en
   assert.equal(parsed.success, true);
   if (parsed.success) {
     assert.equal(parsed.data.contractId, null);
+    assert.equal(parsed.data.templateId, templateId);
     assert.equal(parsed.data.contractNumber, "PRAKTIKE-2025/10-BI");
     assert.equal(parsed.data.type, "INTERN");
     assert.equal(parsed.data.endedOn, null);
@@ -184,6 +192,7 @@ test("employment contract parser accepts manual contract numbers and optional en
       contractId,
       revision,
       contractNumber: "PRAKTIKE-2025/10-BI",
+      contractTemplateId: "foreign",
       contractType: "INTERN",
       contractStatus: "ENDED",
       contractStartedOn: "2026-10-01",
@@ -191,7 +200,10 @@ test("employment contract parser accepts manual contract numbers and optional en
     }),
   );
   assert.equal(update.success, false);
-  if (!update.success) assert.ok(update.state.fieldErrors?.contractEndedOn);
+  if (!update.success) {
+    assert.ok(update.state.fieldErrors?.contractTemplateId);
+    assert.ok(update.state.fieldErrors?.contractEndedOn);
+  }
 });
 
 test("employment compensation parser normalizes amount, currency and dates", () => {
@@ -356,4 +368,95 @@ test("staff catalog archive and restore actions require trusted record metadata"
   );
   assert.equal(invalid.success, false);
   if (!invalid.success) assert.ok(invalid.state.fieldErrors?.catalogId);
+});
+
+test("contract template parser accepts multilingual text blocks and clauses", () => {
+  const parsed = parseContractTemplate(
+    form({
+      templateCode: " praktike 2026 ",
+      templateLocale: "sq",
+      templateTitle: "Kontrate praktike",
+      templateHeader: "Palet bien dakord:\nShkolla dhe praktikanti.",
+      templateFooter: "Drejtori\nPunonjësi",
+      templateNote: "Office template.",
+    }),
+  );
+  assert.equal(parsed.success, true);
+  if (parsed.success) {
+    assert.equal(parsed.data.code, "PRAKTIKE_2026");
+    assert.equal(parsed.data.locale, "sq");
+    assert.match(parsed.data.headerText ?? "", /Palet bien dakord/);
+  }
+
+  const clause = parseContractTemplateClause(
+    form({
+      templateId,
+      clauseOrder: "2",
+      clauseTitle: "Detyrat",
+      clauseBody: "Punonjësi kryen detyrat sipas planit.\nEmoji OK 😊",
+    }),
+  );
+  assert.equal(clause.success, true);
+  if (clause.success) {
+    assert.equal(clause.data.templateId, templateId);
+    assert.equal(clause.data.sortOrder, 2);
+    assert.match(clause.data.body, /Emoji OK/);
+  }
+});
+
+test("contract template parser rejects invalid identity and transitions", () => {
+  const invalidTemplate = parseContractTemplate(
+    form({
+      templateId,
+      revision,
+      templateCode: "!",
+      templateLocale: "de",
+      templateTitle: "",
+    }),
+  );
+  assert.equal(invalidTemplate.success, false);
+  if (!invalidTemplate.success) {
+    assert.ok(invalidTemplate.state.fieldErrors?.templateCode);
+    assert.ok(invalidTemplate.state.fieldErrors?.templateLocale);
+    assert.ok(invalidTemplate.state.fieldErrors?.templateTitle);
+  }
+
+  const transition = parseContractTemplateTransition(
+    form({
+      templateId,
+      revision,
+      transition: "archive",
+    }),
+  );
+  assert.equal(transition.success, true);
+  if (transition.success) assert.equal(transition.data.transition, "archive");
+
+  const invalidClause = parseContractTemplateClause(
+    form({
+      templateId,
+      clauseId,
+      revision,
+      clauseOrder: "0",
+      clauseTitle: "",
+      clauseBody: "",
+    }),
+  );
+  assert.equal(invalidClause.success, false);
+  if (!invalidClause.success) {
+    assert.ok(invalidClause.state.fieldErrors?.clauseOrder);
+    assert.ok(invalidClause.state.fieldErrors?.clauseTitle);
+    assert.ok(invalidClause.state.fieldErrors?.clauseBody);
+  }
+
+  const clauseTransition = parseContractTemplateClauseTransition(
+    form({
+      templateId,
+      clauseId,
+      revision,
+      transition: "restore",
+    }),
+  );
+  assert.equal(clauseTransition.success, true);
+  if (clauseTransition.success)
+    assert.equal(clauseTransition.data.transition, "restore");
 });
