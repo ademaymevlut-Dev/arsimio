@@ -11,6 +11,10 @@ import { getPrisma } from "@/lib/db";
 import { validSchoolId } from "@/lib/platform-school-validation";
 import { calculateStudentFinanceBalance } from "@/lib/finance-validation";
 
+const ZERO = BigInt(0);
+const HUNDRED = BigInt(100);
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
 function fullName(person: {
   firstName: string;
   middleName?: string | null;
@@ -27,6 +31,32 @@ function dateOnly(value: Date | null) {
 
 function money(value: { toString(): string }) {
   return value.toString();
+}
+
+function parseCents(value: string) {
+  const match = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(value);
+  if (!match) return ZERO;
+  const sign = match[1] === "-" ? -BigInt(1) : BigInt(1);
+  return (
+    sign *
+    (BigInt(match[2]) * HUNDRED +
+      BigInt((match[3] ?? "").padEnd(2, "0")))
+  );
+}
+
+function formatCents(cents: bigint) {
+  const sign = cents < ZERO ? "-" : "";
+  const absolute = cents < ZERO ? -cents : cents;
+  return `${sign}${absolute / HUNDRED}.${(absolute % HUNDRED)
+    .toString()
+    .padStart(2, "0")}`;
+}
+
+function addCents(values: Array<{ toString(): string }>): bigint {
+  return values.reduce<bigint>(
+    (sum, value) => sum + parseCents(value.toString()),
+    ZERO,
+  );
 }
 
 function summarize(
@@ -85,6 +115,37 @@ export type StudentFinanceContractSummary = {
     remainingBalance: string;
     overpaidAmount: string;
   };
+};
+
+export type StudentFinanceOverviewLine = {
+  contractId: string;
+  displayNumber: string;
+  student: { id: string; studentNumber: string; fullName: string };
+  responsibleGuardian: {
+    fullName: string;
+    phone: string | null;
+    email: string | null;
+  };
+  currencyCode: string;
+  label: string;
+  dueDate: string | null;
+  amount: string;
+};
+
+export type StudentFinanceOverview = {
+  currencyCode: string;
+  totals: {
+    grossTotal: string;
+    discountTotal: string;
+    netTotal: string;
+    totalPaid: string;
+    remainingBalance: string;
+    overpaidAmount: string;
+    activeContractCount: number;
+  };
+  debtors: StudentFinanceOverviewLine[];
+  upcomingDues: StudentFinanceOverviewLine[];
+  overdueDues: StudentFinanceOverviewLine[];
 };
 
 export type StudentFinanceContractDetail = StudentFinanceContractSummary & {
@@ -291,6 +352,150 @@ export async function getStudentFinanceContracts(
   });
 
   return contracts.map(mapContractSummary);
+}
+
+export async function getStudentFinanceOverview(
+  schoolId: string,
+  filters: {
+    academicYearId?: string;
+    status?: StudentFinanceContractStatus;
+  } = {},
+  todayIso: string,
+): Promise<StudentFinanceOverview> {
+  const today = new Date(`${todayIso}T00:00:00.000Z`);
+  const upcomingLimit = new Date(today.getTime() + THIRTY_DAYS_MS);
+  const contracts = await getPrisma().studentFinanceContract.findMany({
+    where: {
+      schoolId,
+      status: filters.status ?? "ACTIVE",
+      ...(filters.academicYearId && validSchoolId(filters.academicYearId)
+        ? { academicYearId: filters.academicYearId }
+        : {}),
+    },
+    orderBy: [
+      { academicYear: { startDate: "desc" } },
+      { protocolNumber: "asc" },
+    ],
+    include: {
+      academicYear: { select: { id: true, name: true } },
+      studentProfile: { include: { person: true } },
+      responsibleGuardianRelationship: {
+        include: {
+          guardianPerson: {
+            include: { contactPoints: { where: { archivedAt: null } } },
+          },
+        },
+      },
+      items: { where: { status: "ACTIVE" } },
+      installments: {
+        where: { status: "ACTIVE" },
+        orderBy: [{ sequence: "asc" }],
+      },
+      payments: { where: { status: "ACTIVE" } },
+    },
+  });
+
+  let grossTotal = ZERO;
+  let discountTotal = ZERO;
+  let netTotal = ZERO;
+  let totalPaid = ZERO;
+  const debtors: StudentFinanceOverviewLine[] = [];
+  const upcomingDues: StudentFinanceOverviewLine[] = [];
+  const overdueDues: StudentFinanceOverviewLine[] = [];
+
+  for (const contract of contracts) {
+    const guardian = contract.responsibleGuardianRelationship.guardianPerson;
+    const phone = guardian.contactPoints.find((point) => point.kind === "PHONE");
+    const email = guardian.contactPoints.find((point) => point.kind === "EMAIL");
+    const gross = addCents(contract.items.map((item) => item.grossAmount));
+    const discount = addCents(contract.items.map((item) => item.discountAmount));
+    const net = addCents(contract.items.map((item) => item.netAmount));
+    const paid = addCents(contract.payments.map((payment) => payment.amount));
+    const remaining = net - paid;
+    const baseLine = {
+      contractId: contract.id,
+      displayNumber: `${contract.academicYear.name} - Protocol ${contract.protocolNumber}`,
+      student: {
+        id: contract.studentProfile.id,
+        studentNumber: contract.studentProfile.studentNumber,
+        fullName: fullName(contract.studentProfile.person),
+      },
+      responsibleGuardian: {
+        fullName: fullName(guardian),
+        phone: phone?.value ?? null,
+        email: email?.value ?? null,
+      },
+      currencyCode: contract.currencyCode,
+    };
+
+    grossTotal += gross;
+    discountTotal += discount;
+    netTotal += net;
+    totalPaid += paid;
+
+    if (remaining > ZERO) {
+      debtors.push({
+        ...baseLine,
+        label: contract.protocolNumber,
+        dueDate: null,
+        amount: formatCents(remaining),
+      });
+    }
+
+    let unappliedPaid = paid;
+    for (const installment of contract.installments) {
+      const installmentAmount = parseCents(installment.amount.toString());
+      const covered =
+        unappliedPaid >= installmentAmount ? installmentAmount : unappliedPaid;
+      const installmentRemaining = installmentAmount - covered;
+      unappliedPaid -= covered;
+      if (installmentRemaining <= ZERO) continue;
+
+      const dueDateOnly = dateOnly(installment.dueDate)!;
+      const dueDate = new Date(`${dueDateOnly}T00:00:00.000Z`);
+      const line = {
+        ...baseLine,
+        label: installment.label,
+        dueDate: dueDateOnly,
+        amount: formatCents(installmentRemaining),
+      };
+      if (dueDate < today) overdueDues.push(line);
+      else if (dueDate <= upcomingLimit) upcomingDues.push(line);
+    }
+  }
+
+  const remainingBalance = netTotal - totalPaid;
+  const byAmountDesc = (
+    a: StudentFinanceOverviewLine,
+    b: StudentFinanceOverviewLine,
+  ) => {
+    const diff = parseCents(b.amount) - parseCents(a.amount);
+    return diff > ZERO ? 1 : diff < ZERO ? -1 : 0;
+  };
+  const byDueDate = (
+    a: StudentFinanceOverviewLine,
+    b: StudentFinanceOverviewLine,
+  ) => String(a.dueDate).localeCompare(String(b.dueDate));
+
+  return {
+    currencyCode: contracts[0]?.currencyCode ?? "EUR",
+    totals: {
+      grossTotal: formatCents(grossTotal),
+      discountTotal: formatCents(discountTotal),
+      netTotal: formatCents(netTotal),
+      totalPaid: formatCents(totalPaid),
+      remainingBalance: formatCents(
+        remainingBalance > ZERO ? remainingBalance : ZERO,
+      ),
+      overpaidAmount: formatCents(
+        remainingBalance < ZERO ? -remainingBalance : ZERO,
+      ),
+      activeContractCount: contracts.length,
+    },
+    debtors: debtors.sort(byAmountDesc).slice(0, 50),
+    upcomingDues: upcomingDues.sort(byDueDate).slice(0, 50),
+    overdueDues: overdueDues.sort(byDueDate).slice(0, 50),
+  };
 }
 
 export async function getStudentFinanceContractDetail(

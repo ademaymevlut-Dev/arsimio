@@ -12,6 +12,7 @@ import {
   getStudentFinanceContext,
   getStudentFinanceContractDetail,
   getStudentFinanceContracts,
+  getStudentFinanceOverview,
 } from "@/server/finance/finance";
 
 export const dynamic = "force-dynamic";
@@ -59,19 +60,29 @@ export default async function FinancePage({
     query.contractId && validSchoolId(query.contractId)
       ? query.contractId
       : null;
+  const todayIso = today();
 
-  const [dictionary, context, contracts, selectedContract] = await Promise.all([
-    getDictionary(locale),
-    getStudentFinanceContext(tenant.school.id),
-    getStudentFinanceContracts(tenant.school.id, {
-      query: query.q,
-      academicYearId: selectedYearId,
-      status: selectedStatus,
-    }),
-    selectedContractId
-      ? getStudentFinanceContractDetail(tenant.school.id, selectedContractId)
-      : Promise.resolve(null),
-  ]);
+  const [dictionary, context, contracts, selectedContract, overview] =
+    await Promise.all([
+      getDictionary(locale),
+      getStudentFinanceContext(tenant.school.id),
+      getStudentFinanceContracts(tenant.school.id, {
+        query: query.q,
+        academicYearId: selectedYearId,
+        status: selectedStatus,
+      }),
+      selectedContractId
+        ? getStudentFinanceContractDetail(tenant.school.id, selectedContractId)
+        : Promise.resolve(null),
+      getStudentFinanceOverview(
+        tenant.school.id,
+        {
+          academicYearId: selectedYearId,
+          status: selectedStatus,
+        },
+        todayIso,
+      ),
+    ]);
   const text = dictionary.finance;
 
   return (
@@ -132,9 +143,10 @@ export default async function FinancePage({
       <StudentFinanceManager
         context={context}
         contracts={contracts}
+        overview={overview}
         selectedContract={selectedContract}
         selectedContractId={selectedContractId}
-        today={today()}
+        today={todayIso}
         locale={locale}
         messages={text}
         canManageContracts={permissions.includes("finance.contracts.manage")}

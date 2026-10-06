@@ -39,6 +39,7 @@ import type {
   StudentFinanceContext,
   StudentFinanceContractDetail,
   StudentFinanceContractSummary,
+  StudentFinanceOverview,
 } from "@/server/finance/finance";
 
 const initialState: FinanceState = {};
@@ -151,6 +152,190 @@ function Section({
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
+  );
+}
+
+type FinanceOverviewLine = StudentFinanceOverview["debtors"][number];
+
+function guardianContact(line: FinanceOverviewLine) {
+  return (
+    line.responsibleGuardian.phone ??
+    line.responsibleGuardian.email ??
+    "—"
+  );
+}
+
+function FinanceOverviewTable({
+  title,
+  description,
+  emptyTitle,
+  lines,
+  locale,
+  messages,
+}: {
+  title: string;
+  description: string;
+  emptyTitle: string;
+  lines: FinanceOverviewLine[];
+  locale: Locale;
+  messages: FinanceMessages;
+}) {
+  return (
+    <DataTableShell
+      title={title}
+      description={description}
+      footer={`${lines.length} ${messages.records}`}
+    >
+      {lines.length === 0 ? (
+        <TableEmptyState title={emptyTitle} description={description} />
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{messages.protocolNumber}</TableHead>
+              <TableHead>{messages.student}</TableHead>
+              <TableHead>{messages.responsibleGuardian}</TableHead>
+              <TableHead>{messages.dueDate}</TableHead>
+              <TableHead>{messages.amount}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {lines.map((line) => (
+              <TableRow
+                key={`${line.contractId}-${line.label}-${line.dueDate ?? "balance"}`}
+              >
+                <TableCell>
+                  <Link
+                    href={`/finance?contractId=${line.contractId}`}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {line.displayNumber}
+                  </Link>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {line.label}
+                  </p>
+                </TableCell>
+                <TableCell>
+                  <p className="font-medium">{line.student.fullName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    No: {line.student.studentNumber}
+                  </p>
+                </TableCell>
+                <TableCell>
+                  <p>{line.responsibleGuardian.fullName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {messages.contact}: {guardianContact(line)}
+                  </p>
+                </TableCell>
+                <TableCell>
+                  {line.dueDate ? dateLabel(line.dueDate, locale) : "—"}
+                </TableCell>
+                <TableCell>
+                  {money(line.amount, line.currencyCode, locale)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </DataTableShell>
+  );
+}
+
+function FinanceOverview({
+  overview,
+  locale,
+  messages,
+}: {
+  overview: StudentFinanceOverview;
+  locale: Locale;
+  messages: FinanceMessages;
+}) {
+  return (
+    <Section
+      title={messages.overviewTitle}
+      description={messages.overviewDescription}
+    >
+      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-7">
+        <StatCard
+          label={messages.activeContracts}
+          value={String(overview.totals.activeContractCount)}
+        />
+        <StatCard
+          label={messages.grossTotal}
+          value={money(overview.totals.grossTotal, overview.currencyCode, locale)}
+        />
+        <StatCard
+          label={messages.discountTotal}
+          value={money(
+            overview.totals.discountTotal,
+            overview.currencyCode,
+            locale,
+          )}
+        />
+        <StatCard
+          label={messages.netTotal}
+          value={money(overview.totals.netTotal, overview.currencyCode, locale)}
+        />
+        <StatCard
+          label={messages.totalPaid}
+          value={money(overview.totals.totalPaid, overview.currencyCode, locale)}
+          tone="success"
+        />
+        <StatCard
+          label={messages.remaining}
+          value={money(
+            overview.totals.remainingBalance,
+            overview.currencyCode,
+            locale,
+          )}
+          tone="danger"
+        />
+        <StatCard
+          label={messages.overpaid}
+          value={money(
+            overview.totals.overpaidAmount,
+            overview.currencyCode,
+            locale,
+          )}
+        />
+      </div>
+
+      <div className="mt-6 space-y-6">
+        <div>
+          <h3 className="text-sm font-semibold">{messages.managementOutputs}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {messages.managementOutputsDescription}
+          </p>
+        </div>
+        <div className="grid gap-6 xl:grid-cols-3">
+          <FinanceOverviewTable
+            title={messages.debtorsTitle}
+            description={messages.debtorsDescription}
+            emptyTitle={messages.noDebtors}
+            lines={overview.debtors}
+            locale={locale}
+            messages={messages}
+          />
+          <FinanceOverviewTable
+            title={messages.overdueDuesTitle}
+            description={messages.overdueDuesDescription}
+            emptyTitle={messages.noOverdueDues}
+            lines={overview.overdueDues}
+            locale={locale}
+            messages={messages}
+          />
+          <FinanceOverviewTable
+            title={messages.upcomingDuesTitle}
+            description={messages.upcomingDuesDescription}
+            emptyTitle={messages.noUpcomingDues}
+            lines={overview.upcomingDues}
+            locale={locale}
+            messages={messages}
+          />
+        </div>
+      </div>
+    </Section>
   );
 }
 
@@ -789,6 +974,7 @@ function ContractDetail({
 export function StudentFinanceManager({
   context,
   contracts,
+  overview,
   selectedContract,
   selectedContractId,
   today,
@@ -799,6 +985,7 @@ export function StudentFinanceManager({
 }: {
   context: StudentFinanceContext;
   contracts: StudentFinanceContractSummary[];
+  overview: StudentFinanceOverview;
   selectedContract: StudentFinanceContractDetail | null;
   selectedContractId: string | null;
   today: string;
@@ -809,6 +996,7 @@ export function StudentFinanceManager({
 }) {
   return (
     <div className="space-y-6">
+      <FinanceOverview overview={overview} locale={locale} messages={messages} />
       {canManageContracts && (
         <ContractForm context={context} today={today} messages={messages} />
       )}
