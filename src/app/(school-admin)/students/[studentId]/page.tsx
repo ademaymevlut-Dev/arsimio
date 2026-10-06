@@ -17,12 +17,15 @@ export const dynamic = "force-dynamic";
 
 export default async function StudentDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ studentId: string }>;
+  searchParams: Promise<{ tab?: string | string[] }>;
 }) {
-  const [{ tenant, membership, permissions }, route] = await Promise.all([
+  const [{ tenant, membership, permissions }, route, query] = await Promise.all([
     requireSchoolPermission("students.read"),
     params,
+    searchParams,
   ]);
   if (!validSchoolId(route.studentId)) notFound();
 
@@ -60,6 +63,7 @@ export default async function StudentDetailPage({
       canManageAccounts={permissions.includes("accounts.manage")}
       canReadFinance={canReadFinance}
       financeContracts={financeContracts}
+      initialTab={Array.isArray(query.tab) ? query.tab[0] : query.tab}
       defaultEffectiveOn={dateOnlyValue(
         dateOnlyInTimeZone(new Date(), tenant.school.timezone),
       )}

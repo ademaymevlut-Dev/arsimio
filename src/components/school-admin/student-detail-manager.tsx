@@ -3,7 +3,19 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useActionState, useState, type ReactNode } from "react";
-import { ArrowLeft, Plus, UserCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpenCheck,
+  CircleDollarSign,
+  GraduationCap,
+  History,
+  LayoutDashboard,
+  Plus,
+  ShieldCheck,
+  UserCheck,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
 import {
   addPreviousEducation,
   addGuardian,
@@ -14,7 +26,6 @@ import {
   updateStudentDetails,
   uploadStudentPhoto,
 } from "@/app/(school-admin)/students/actions";
-import { PageHeader } from "@/components/admin/page-header";
 import { PersonAccountPanel } from "@/components/school-admin/person-account-panel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -52,8 +63,52 @@ import type {
   StudentDetailRecord,
 } from "@/server/students/students";
 import type { StudentFinanceContractSummary } from "@/server/finance/finance";
+import { cn } from "@/lib/utils";
 
 const initialState: StudentState = {};
+
+type StudentDetailTab =
+  | "overview"
+  | "personal"
+  | "academic"
+  | "guardians"
+  | "finance"
+  | "access";
+
+function studentTabHref(studentId: string, tab: StudentDetailTab) {
+  return `/students/${studentId}?tab=${tab}`;
+}
+
+function initials(firstName: string, lastName: string) {
+  return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+}
+
+function SummaryMetric({
+  icon,
+  label,
+  value,
+  note,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: ReactNode;
+  note?: ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border bg-card p-4">
+      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <span className="text-primary">{icon}</span>
+        {label}
+      </div>
+      <div className="mt-3 min-w-0 text-lg font-semibold text-foreground">
+        {value}
+      </div>
+      {note ? (
+        <div className="mt-1 truncate text-xs text-muted-foreground">{note}</div>
+      ) : null}
+    </div>
+  );
+}
 
 function FieldError({
   state,
@@ -1041,6 +1096,299 @@ function StudentStatusDialog({
   );
 }
 
+function StudentLifecycleCard({
+  student,
+  locale,
+  eventLabels,
+  messages,
+  limit,
+}: {
+  student: StudentDetailRecord;
+  locale: Locale;
+  eventLabels: Record<string, string>;
+  messages: Pick<AppDictionary, "students">;
+  limit?: number;
+}) {
+  const events = limit
+    ? student.lifecycleEvents.slice(0, limit)
+    : student.lifecycleEvents;
+  const text = messages.students;
+
+  return (
+    <Card>
+      <CardHeader className="border-b">
+        <CardTitle>{text.lifecycleTitle}</CardTitle>
+        <CardDescription>{text.lifecycleDescription}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {events.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{text.noHistory}</p>
+        ) : (
+          <ol className="space-y-4">
+            {events.map((event) => (
+              <li key={event.id} className="border-l-2 border-primary/25 pl-4">
+                <p className="font-medium">
+                  {eventLabels[event.type] ?? event.type}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatDate(event.effectiveOn, locale)}
+                </p>
+                {event.note ? <p className="mt-2 text-sm">{event.note}</p> : null}
+              </li>
+            ))}
+          </ol>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function StudentEnrollmentCard({
+  student,
+  locale,
+  messages,
+}: {
+  student: StudentDetailRecord;
+  locale: Locale;
+  messages: Pick<AppDictionary, "students">;
+}) {
+  const text = messages.students;
+
+  return (
+    <Card>
+      <CardHeader className="border-b">
+        <CardTitle>{text.enrollmentTitle}</CardTitle>
+        <CardDescription>{text.enrollmentDescription}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {student.enrollments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">—</p>
+        ) : (
+          <div className="space-y-4">
+            {student.enrollments.map((enrollment) => (
+              <section
+                key={enrollment.id}
+                className="rounded-xl border bg-background p-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="font-medium">{enrollment.academicYear}</h3>
+                  <Badge
+                    variant={
+                      enrollment.status === "ACTIVE" ? "success" : "outline"
+                    }
+                  >
+                    {enrollment.status === "ACTIVE"
+                      ? text.enrollmentActive
+                      : enrollment.status}
+                  </Badge>
+                </div>
+                <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+                  <Definition label={text.enrolledOn}>
+                    {formatDate(enrollment.enrolledOn, locale)}
+                  </Definition>
+                  <Definition label={text.endedOn}>
+                    {enrollment.endedOn
+                      ? formatDate(enrollment.endedOn, locale)
+                      : text.current}
+                  </Definition>
+                </dl>
+                <div className="mt-4 space-y-2">
+                  {enrollment.placements.map((placement) => (
+                    <div
+                      key={placement.id}
+                      className="flex flex-col justify-between gap-1 rounded-lg bg-muted/50 px-3 py-2 sm:flex-row sm:items-center"
+                    >
+                      <span className="font-medium">{placement.classSection}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {text.placementDates}:{" "}
+                        {formatDate(placement.validFrom, locale)} –{" "}
+                        {placement.validTo
+                          ? formatDate(placement.validTo, locale)
+                          : text.current}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function StudentGuardiansCard({
+  student,
+  candidates,
+  canManageGuardians,
+  canManageAccounts,
+  messages,
+}: {
+  student: StudentDetailRecord;
+  candidates: GuardianCandidate[];
+  canManageGuardians: boolean;
+  canManageAccounts: boolean;
+  messages: Pick<AppDictionary, "common" | "students">;
+}) {
+  const text = messages.students;
+
+  return (
+    <Card>
+      <CardHeader className="border-b">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+          <div>
+            <CardTitle>{text.guardiansTitle}</CardTitle>
+            <CardDescription className="mt-1">
+              {text.guardiansDescription}
+            </CardDescription>
+          </div>
+          {canManageGuardians ? (
+            <AddGuardianDialog
+              studentId={student.id}
+              candidates={candidates}
+              messages={messages}
+            />
+          ) : null}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {student.guardians.length === 0 ? (
+          <div className="py-8 text-center">
+            <p className="font-medium">{text.noGuardians}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {text.noGuardiansDescription}
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-2">
+            {student.guardians.map((guardian) => (
+              <article key={guardian.id} className="rounded-xl border p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-medium">{guardian.fullName}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {guardian.relationshipType === "MOTHER"
+                        ? text.mother
+                        : text.father}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {guardian.isPrimaryContact ? (
+                      <Badge variant="success">{text.primary}</Badge>
+                    ) : null}
+                    {guardian.isFinancialResponsible ? (
+                      <Badge variant="info">{text.financialResponsible}</Badge>
+                    ) : null}
+                    {guardian.isLegalGuardian ? (
+                      <Badge variant="outline">{text.legalGuardian}</Badge>
+                    ) : null}
+                  </div>
+                </div>
+                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                  <Definition label={text.phone}>{guardian.phone ?? "—"}</Definition>
+                  <Definition label={text.email}>{guardian.email ?? "—"}</Definition>
+                  <Definition label={text.occupation}>
+                    {guardian.occupation ?? "—"}
+                  </Definition>
+                  <Definition label={text.guardianNote}>
+                    {guardian.note ?? "—"}
+                  </Definition>
+                </dl>
+                {canManageGuardians &&
+                (!guardian.isPrimaryContact ||
+                  !guardian.isFinancialResponsible) ? (
+                  <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
+                    {!guardian.isPrimaryContact ? (
+                      <PrimaryGuardianButton
+                        studentId={student.id}
+                        relationshipId={guardian.id}
+                        messages={messages}
+                      />
+                    ) : null}
+                    {!guardian.isFinancialResponsible ? (
+                      <FinancialGuardianButton
+                        studentId={student.id}
+                        relationshipId={guardian.id}
+                        messages={messages}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+                <div className="mt-4 border-t pt-4">
+                  <PersonAccountPanel
+                    title={text.guardianAccountTitle}
+                    portal="GUARDIAN"
+                    personId={guardian.personId}
+                    studentProfileId={student.id}
+                    existingAccount={guardian.account}
+                    canManage={canManageAccounts}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function StudentFinanceContractsCard({
+  financeContracts,
+  locale,
+  messages,
+}: {
+  financeContracts: StudentFinanceContractSummary[];
+  locale: Locale;
+  messages: Pick<AppDictionary, "finance">;
+}) {
+  return (
+    <Card>
+      <CardHeader className="border-b">
+        <CardTitle>{messages.finance.studentContractsTitle}</CardTitle>
+        <CardDescription>
+          {messages.finance.studentContractsDescription}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {financeContracts.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {messages.finance.noContractsDescription}
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {financeContracts.map((contract) => (
+              <div
+                key={contract.id}
+                className="flex flex-col justify-between gap-3 rounded-xl border p-4 md:flex-row md:items-center"
+              >
+                <div>
+                  <p className="font-medium">{contract.displayNumber}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {contract.responsibleGuardian.fullName} ·{" "}
+                    {messages.finance.remaining}:{" "}
+                    {formatMoney(
+                      contract.totals.remainingBalance,
+                      contract.currencyCode,
+                      locale,
+                    )}
+                  </p>
+                </div>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/finance?contractId=${contract.id}`}>
+                    {messages.finance.viewFinance}
+                  </Link>
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function StudentDetailManager({
   student,
   candidates,
@@ -1051,6 +1399,7 @@ export function StudentDetailManager({
   canReadFinance,
   financeContracts,
   defaultEffectiveOn,
+  initialTab,
   locale,
   messages,
 }: {
@@ -1063,10 +1412,23 @@ export function StudentDetailManager({
   canReadFinance: boolean;
   financeContracts: StudentFinanceContractSummary[];
   defaultEffectiveOn: string;
+  initialTab?: string;
   locale: Locale;
   messages: Pick<AppDictionary, "common" | "students" | "finance">;
 }) {
   const text = messages.students;
+  const activeEnrollment =
+    student.enrollments.find((enrollment) => enrollment.status === "ACTIVE") ??
+    student.enrollments[0] ??
+    null;
+  const activePlacement =
+    activeEnrollment?.placements.find((placement) => !placement.validTo) ??
+    activeEnrollment?.placements[0] ??
+    null;
+  const primaryGuardian =
+    student.guardians.find((guardian) => guardian.isPrimaryContact) ?? null;
+  const financialGuardian =
+    student.guardians.find((guardian) => guardian.isFinancialResponsible) ?? null;
   const statusLabels: Record<StudentDetailRecord["status"], string> = {
     ACTIVE: text.active,
     INACTIVE: text.inactive,
@@ -1090,339 +1452,371 @@ export function StudentDetailManager({
     WITHDRAWN: text.eventWithdrawn,
     GRADUATED: text.eventGraduated,
   };
+  const navigation: Array<{
+    value: StudentDetailTab;
+    label: string;
+    icon: typeof LayoutDashboard;
+    count?: number;
+  }> = [
+    { value: "overview", label: text.overviewTab, icon: LayoutDashboard },
+    { value: "personal", label: text.personalInformation, icon: UserRound },
+    { value: "academic", label: text.academicTab, icon: GraduationCap },
+    ...(canReadGuardians
+      ? [
+          {
+            value: "guardians" as const,
+            label: text.guardiansTitle,
+            icon: UsersRound,
+            count: student.guardians.length,
+          },
+        ]
+      : []),
+    ...(canReadFinance
+      ? [
+          {
+            value: "finance" as const,
+            label: messages.finance.studentContractsTitle,
+            icon: CircleDollarSign,
+            count: financeContracts.length,
+          },
+        ]
+      : []),
+    { value: "access", label: text.accessHistoryTab, icon: ShieldCheck },
+  ];
+  const activeTab = navigation.some((item) => item.value === initialTab)
+    ? (initialTab as StudentDetailTab)
+    : "overview";
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        eyebrow={text.eyebrow}
-        title={student.person.fullName}
-        description={formatMessage(text.detailDescription, {
-          number: student.studentNumber,
-        })}
-        actions={
-          <div className="flex flex-wrap gap-2">
+    <div className="space-y-5">
+      <section className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            {student.person.photoUrl ? (
+              <Image
+                src={student.person.photoUrl}
+                alt={student.person.fullName}
+                width={72}
+                height={72}
+                priority
+                className="size-16 shrink-0 rounded-xl border object-cover sm:size-18"
+              />
+            ) : (
+              <div className="flex size-16 shrink-0 items-center justify-center rounded-xl border bg-primary/10 text-lg font-semibold text-primary sm:size-18">
+                {initials(student.person.firstName, student.person.lastName)}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold tracking-[0.16em] text-primary">
+                {text.eyebrow}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <h1 className="truncate text-2xl font-semibold tracking-tight text-foreground">
+                  {student.person.fullName}
+                </h1>
+                <Badge variant={statusVariant}>
+                  {statusLabels[student.status]}
+                </Badge>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {formatMessage(text.detailDescription, {
+                  number: student.studentNumber,
+                })}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span>
+                  {text.academicYear}: {activeEnrollment?.academicYear ?? "—"}
+                </span>
+                <span>
+                  {text.classSection}: {activePlacement?.classSection ?? "—"}
+                </span>
+                {primaryGuardian ? (
+                  <span>
+                    {text.primaryGuardian}: {primaryGuardian.fullName}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 xl:justify-end">
             <Button asChild variant="outline">
               <Link href="/students">
                 <ArrowLeft aria-hidden />
                 {text.backToStudents}
               </Link>
             </Button>
-            {canManageStudent && student.status !== "GRADUATED" && (
+            {canManageStudent && student.status !== "GRADUATED" ? (
               <StudentStatusDialog
                 student={student}
                 defaultEffectiveOn={defaultEffectiveOn}
                 messages={messages}
               />
-            )}
+            ) : null}
           </div>
-        }
-      />
+        </div>
+      </section>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="border-b">
-            <CardTitle>{text.profileTitle}</CardTitle>
-            <CardDescription>{text.profileDescription}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              <Definition label={text.studentNumber}>
-                <span className="font-mono">{student.studentNumber}</span>
-              </Definition>
-              <Definition label={messages.common.status}>
-                <Badge
-                  variant={statusVariant}
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start">
+        <aside className="min-w-0 rounded-xl border bg-card p-2 lg:sticky lg:top-4">
+          <nav
+            aria-label={text.detailNavigation}
+            className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible"
+          >
+            {navigation.map(({ value, label, icon: Icon, count }) => {
+              const active = value === activeTab;
+              return (
+                <Link
+                  key={value}
+                  href={studentTabHref(student.id, value)}
+                  scroll={false}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex min-w-max items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
                 >
-                  {statusLabels[student.status]}
-                </Badge>
-              </Definition>
-              <Definition label={text.admittedOn}>
-                {formatDate(student.admittedOn, locale)}
-              </Definition>
-              <Definition label={text.birthDate}>
-                {formatDate(student.person.birthDate, locale)}
-              </Definition>
-              <Definition label={text.birthPlace}>
-                {student.person.birthPlace ?? "—"}
-              </Definition>
-              <Definition label={text.nationality}>
-                {student.person.nationality ?? "—"}
-              </Definition>
-              <Definition label={text.sex}>
-                {student.person.sex === "MALE"
-                  ? text.male
-                  : student.person.sex === "FEMALE"
-                    ? text.female
-                    : text.notSpecified}
-              </Definition>
-              {student.person.identities.map((identity) => (
-                <Definition key={identity.type} label={text.identityInformation}>
-                  {formatMessage(text.identityMasked, {
-                    lastFour: identity.lastFour,
-                  })}
-                </Definition>
-              ))}
-            </dl>
-            <div className="mt-6">
-              <PersonAccountPanel
-                title="Ogrenci giris hesabi"
-                portal="STUDENT"
-                personId={student.person.id}
-                studentProfileId={student.id}
-                existingAccount={student.person.account}
-                canManage={canManageAccounts}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="border-b">
-            <CardTitle>{text.lifecycleTitle}</CardTitle>
-            <CardDescription>{text.lifecycleDescription}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {student.lifecycleEvents.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{text.noHistory}</p>
-            ) : (
-              <ol className="space-y-4">
-                {student.lifecycleEvents.map((event) => (
-                  <li key={event.id} className="border-l-2 border-primary/25 pl-4">
-                    <p className="font-medium">
-                      {eventLabels[event.type] ?? event.type}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {formatDate(event.effectiveOn, locale)}
-                    </p>
-                    {event.note && <p className="mt-2 text-sm">{event.note}</p>}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <StudentPhotoCard
-          student={student}
-          canManageStudent={canManageStudent}
-          locale={locale}
-          messages={messages}
-        />
-        <StudentDetailsCard
-          student={student}
-          canManageStudent={canManageStudent}
-          messages={messages}
-        />
-      </div>
-
-      <PreviousEducationCard
-        student={student}
-        canManageStudent={canManageStudent}
-        messages={messages}
-      />
-
-      {canReadFinance && (
-        <Card>
-          <CardHeader className="border-b">
-            <CardTitle>{messages.finance.studentContractsTitle}</CardTitle>
-            <CardDescription>
-              {messages.finance.studentContractsDescription}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {financeContracts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                {messages.finance.noContractsDescription}
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {financeContracts.map((contract) => (
-                  <div
-                    key={contract.id}
-                    className="flex flex-col justify-between gap-3 rounded-lg border p-4 md:flex-row md:items-center"
-                  >
-                    <div>
-                      <p className="font-medium">{contract.displayNumber}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {contract.responsibleGuardian.fullName} ·{" "}
-                        {messages.finance.remaining}:{" "}
-                        {formatMoney(
-                          contract.totals.remainingBalance,
-                          contract.currencyCode,
-                          locale,
-                        )}
-                      </p>
-                    </div>
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={`/finance?contractId=${contract.id}`}>
-                        {messages.finance.viewFinance}
-                      </Link>
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {canReadGuardians && <Card>
-        <CardHeader className="border-b">
-          <CardTitle>{text.enrollmentTitle}</CardTitle>
-          <CardDescription>{text.enrollmentDescription}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {student.enrollments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">—</p>
-          ) : (
-            <div className="space-y-5">
-              {student.enrollments.map((enrollment) => (
-                <section
-                  key={enrollment.id}
-                  className="rounded-lg border bg-background p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h3 className="font-medium">{enrollment.academicYear}</h3>
-                    <Badge
-                      variant={enrollment.status === "ACTIVE" ? "success" : "outline"}
+                  <Icon className="size-4" aria-hidden />
+                  <span>{label}</span>
+                  {typeof count === "number" ? (
+                    <span
+                      className={cn(
+                        "ml-auto rounded-full px-2 py-0.5 text-[11px]",
+                        active
+                          ? "bg-primary-foreground/15 text-primary-foreground"
+                          : "bg-muted text-muted-foreground",
+                      )}
                     >
-                      {enrollment.status === "ACTIVE"
-                        ? text.enrollmentActive
-                        : enrollment.status}
-                    </Badge>
-                  </div>
-                  <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
-                    <Definition label={text.enrolledOn}>
-                      {formatDate(enrollment.enrolledOn, locale)}
-                    </Definition>
-                    <Definition label={text.endedOn}>
-                      {enrollment.endedOn
-                        ? formatDate(enrollment.endedOn, locale)
-                        : text.current}
-                    </Definition>
-                  </dl>
-                  <div className="mt-4 space-y-2">
-                    {enrollment.placements.map((placement) => (
-                      <div
-                        key={placement.id}
-                        className="flex flex-col justify-between gap-1 rounded-lg bg-muted/40 px-3 py-2 sm:flex-row sm:items-center"
-                      >
-                        <span className="font-medium">{placement.classSection}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {text.placementDates}: {formatDate(placement.validFrom, locale)} –{" "}
-                          {placement.validTo
-                            ? formatDate(placement.validTo, locale)
-                            : text.current}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>}
+                      {count}
+                    </span>
+                  ) : null}
+                </Link>
+              );
+            })}
+          </nav>
+        </aside>
 
-      <Card>
-        <CardHeader className="border-b">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-            <div>
-              <CardTitle>{text.guardiansTitle}</CardTitle>
-              <CardDescription className="mt-1">
-                {text.guardiansDescription}
-              </CardDescription>
-            </div>
-            {canManageGuardians && (
-              <AddGuardianDialog
-                studentId={student.id}
-                candidates={candidates}
+        <section
+          aria-label={navigation.find((item) => item.value === activeTab)?.label}
+          className="min-w-0 space-y-4 lg:max-h-[calc(100svh-18rem)] lg:min-h-[430px] lg:overflow-y-auto lg:pr-2"
+        >
+          {activeTab === "overview" ? (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <SummaryMetric
+                  icon={<BookOpenCheck className="size-4" aria-hidden />}
+                  label={text.academicYear}
+                  value={activeEnrollment?.academicYear ?? "—"}
+                  note={activePlacement?.classSection ?? text.noClassSection}
+                />
+                <SummaryMetric
+                  icon={<UsersRound className="size-4" aria-hidden />}
+                  label={text.guardiansTitle}
+                  value={student.guardians.length}
+                  note={primaryGuardian?.fullName ?? text.noPrimaryGuardian}
+                />
+                <SummaryMetric
+                  icon={<ShieldCheck className="size-4" aria-hidden />}
+                  label={text.studentAccountTitle}
+                  value={
+                    student.person.account?.username ?? text.noStudentAccount
+                  }
+                  note={student.person.account?.status}
+                />
+                {canReadFinance ? (
+                  <SummaryMetric
+                    icon={<CircleDollarSign className="size-4" aria-hidden />}
+                    label={messages.finance.studentContractsTitle}
+                    value={financeContracts.length}
+                    note={financeContracts[0]?.displayNumber}
+                  />
+                ) : (
+                  <SummaryMetric
+                    icon={<History className="size-4" aria-hidden />}
+                    label={text.admittedOn}
+                    value={formatDate(student.admittedOn, locale)}
+                  />
+                )}
+              </div>
+
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
+                <Card>
+                  <CardHeader className="border-b">
+                    <CardTitle>{text.recordOverview}</CardTitle>
+                    <CardDescription>{text.profileDescription}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      <Definition label={text.studentNumber}>
+                        <span className="font-mono">{student.studentNumber}</span>
+                      </Definition>
+                      <Definition label={text.birthDate}>
+                        {formatDate(student.person.birthDate, locale)}
+                      </Definition>
+                      <Definition label={text.birthPlace}>
+                        {student.person.birthPlace ?? "—"}
+                      </Definition>
+                      <Definition label={text.nationality}>
+                        {student.person.nationality ?? "—"}
+                      </Definition>
+                      <Definition label={text.residenceCity}>
+                        {student.residenceCity ?? "—"}
+                      </Definition>
+                      <Definition label={text.financialResponsible}>
+                        {financialGuardian?.fullName ?? "—"}
+                      </Definition>
+                    </dl>
+                    {student.hasSpecialCondition ? (
+                      <Alert variant="warning">
+                        <AlertDescription className="mt-0">
+                          <span className="font-medium">
+                            {text.specialCondition}:
+                          </span>{" "}
+                          {student.specialConditionNote ?? text.hasSpecialCondition}
+                        </AlertDescription>
+                      </Alert>
+                    ) : null}
+                  </CardContent>
+                </Card>
+                <StudentLifecycleCard
+                  student={student}
+                  locale={locale}
+                  eventLabels={eventLabels}
+                  messages={messages}
+                  limit={4}
+                />
+              </div>
+            </>
+          ) : null}
+
+          {activeTab === "personal" ? (
+            <>
+              <Card>
+                <CardHeader className="border-b">
+                  <CardTitle>{text.personalInformation}</CardTitle>
+                  <CardDescription>{text.personalDescription}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <dl className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                    <Definition label={text.firstName}>
+                      {student.person.firstName}
+                    </Definition>
+                    <Definition label={text.middleName}>
+                      {student.person.middleName ?? "—"}
+                    </Definition>
+                    <Definition label={text.lastName}>
+                      {student.person.lastName}
+                    </Definition>
+                    <Definition label={text.admittedOn}>
+                      {formatDate(student.admittedOn, locale)}
+                    </Definition>
+                    <Definition label={text.birthDate}>
+                      {formatDate(student.person.birthDate, locale)}
+                    </Definition>
+                    <Definition label={text.birthPlace}>
+                      {student.person.birthPlace ?? "—"}
+                    </Definition>
+                    <Definition label={text.nationality}>
+                      {student.person.nationality ?? "—"}
+                    </Definition>
+                    <Definition label={text.sex}>
+                      {student.person.sex === "MALE"
+                        ? text.male
+                        : student.person.sex === "FEMALE"
+                          ? text.female
+                          : text.notSpecified}
+                    </Definition>
+                    {student.person.identities.map((identity) => (
+                      <Definition
+                        key={identity.type}
+                        label={text.identityInformation}
+                      >
+                        {formatMessage(text.identityMasked, {
+                          lastFour: identity.lastFour,
+                        })}
+                      </Definition>
+                    ))}
+                  </dl>
+                </CardContent>
+              </Card>
+              <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+                <StudentPhotoCard
+                  student={student}
+                  canManageStudent={canManageStudent}
+                  locale={locale}
+                  messages={messages}
+                />
+                <StudentDetailsCard
+                  student={student}
+                  canManageStudent={canManageStudent}
+                  messages={messages}
+                />
+              </div>
+            </>
+          ) : null}
+
+          {activeTab === "academic" ? (
+            <>
+              <StudentEnrollmentCard
+                student={student}
+                locale={locale}
                 messages={messages}
               />
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {student.guardians.length === 0 ? (
-            <div className="py-6 text-center">
-              <p className="font-medium">{text.noGuardians}</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {text.noGuardiansDescription}
-              </p>
+              <PreviousEducationCard
+                student={student}
+                canManageStudent={canManageStudent}
+                messages={messages}
+              />
+            </>
+          ) : null}
+
+          {activeTab === "guardians" && canReadGuardians ? (
+            <StudentGuardiansCard
+              student={student}
+              candidates={candidates}
+              canManageGuardians={canManageGuardians}
+              canManageAccounts={canManageAccounts}
+              messages={messages}
+            />
+          ) : null}
+
+          {activeTab === "finance" && canReadFinance ? (
+            <StudentFinanceContractsCard
+              financeContracts={financeContracts}
+              locale={locale}
+              messages={messages}
+            />
+          ) : null}
+
+          {activeTab === "access" ? (
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
+              <Card>
+                <CardHeader className="border-b">
+                  <CardTitle>{text.studentAccountTitle}</CardTitle>
+                  <CardDescription>{text.studentAccountDescription}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PersonAccountPanel
+                    title={text.studentAccountTitle}
+                    portal="STUDENT"
+                    personId={student.person.id}
+                    studentProfileId={student.id}
+                    existingAccount={student.person.account}
+                    canManage={canManageAccounts}
+                  />
+                </CardContent>
+              </Card>
+              <StudentLifecycleCard
+                student={student}
+                locale={locale}
+                eventLabels={eventLabels}
+                messages={messages}
+              />
             </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {student.guardians.map((guardian) => (
-                <article key={guardian.id} className="rounded-lg border p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-medium">{guardian.fullName}</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {guardian.relationshipType === "MOTHER"
-                          ? text.mother
-                          : text.father}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap justify-end gap-2">
-                      {guardian.isPrimaryContact && (
-                        <Badge variant="success">{text.primary}</Badge>
-                      )}
-                      {guardian.isFinancialResponsible && (
-                        <Badge variant="info">{text.financialResponsible}</Badge>
-                      )}
-                      {guardian.isLegalGuardian && (
-                        <Badge variant="outline">{text.legalGuardian}</Badge>
-                      )}
-                    </div>
-                  </div>
-                  <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                    <Definition label={text.phone}>{guardian.phone ?? "—"}</Definition>
-                    <Definition label={text.email}>{guardian.email ?? "—"}</Definition>
-                    <Definition label={text.occupation}>
-                      {guardian.occupation ?? "—"}
-                    </Definition>
-                    <Definition label={text.guardianNote}>
-                      {guardian.note ?? "—"}
-                    </Definition>
-                  </dl>
-                  {canManageGuardians &&
-                    (!guardian.isPrimaryContact ||
-                      !guardian.isFinancialResponsible) && (
-                    <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
-                      {!guardian.isPrimaryContact && (
-                        <PrimaryGuardianButton
-                          studentId={student.id}
-                          relationshipId={guardian.id}
-                          messages={messages}
-                        />
-                      )}
-                      {!guardian.isFinancialResponsible && (
-                        <FinancialGuardianButton
-                          studentId={student.id}
-                          relationshipId={guardian.id}
-                          messages={messages}
-                        />
-                      )}
-                    </div>
-                  )}
-                  <div className="mt-4 border-t pt-4">
-                    <PersonAccountPanel
-                      title="Veli giris hesabi"
-                      portal="GUARDIAN"
-                      personId={guardian.personId}
-                      studentProfileId={student.id}
-                      existingAccount={guardian.account}
-                      canManage={canManageAccounts}
-                    />
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          ) : null}
+        </section>
+      </div>
     </div>
   );
 }
