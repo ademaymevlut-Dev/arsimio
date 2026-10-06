@@ -51,6 +51,7 @@ import type {
   GuardianCandidate,
   StudentDetailRecord,
 } from "@/server/students/students";
+import type { StudentFinanceContractSummary } from "@/server/finance/finance";
 
 const initialState: StudentState = {};
 
@@ -90,6 +91,15 @@ function Definition({ label, children }: { label: string; children: ReactNode })
       <dd className="mt-1 font-medium">{children || "—"}</dd>
     </div>
   );
+}
+
+function formatMoney(value: string, currencyCode: string, locale: Locale) {
+  const amount = Number.parseFloat(value);
+  if (!Number.isFinite(amount)) return `${value} ${currencyCode}`;
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: currencyCode,
+  }).format(amount);
 }
 
 function formatDate(value: string | null, locale: Locale) {
@@ -1038,6 +1048,8 @@ export function StudentDetailManager({
   canReadGuardians,
   canManageGuardians,
   canManageAccounts,
+  canReadFinance,
+  financeContracts,
   defaultEffectiveOn,
   locale,
   messages,
@@ -1048,9 +1060,11 @@ export function StudentDetailManager({
   canReadGuardians: boolean;
   canManageGuardians: boolean;
   canManageAccounts: boolean;
+  canReadFinance: boolean;
+  financeContracts: StudentFinanceContractSummary[];
   defaultEffectiveOn: string;
   locale: Locale;
-  messages: Pick<AppDictionary, "common" | "students">;
+  messages: Pick<AppDictionary, "common" | "students" | "finance">;
 }) {
   const text = messages.students;
   const statusLabels: Record<StudentDetailRecord["status"], string> = {
@@ -1208,6 +1222,51 @@ export function StudentDetailManager({
         canManageStudent={canManageStudent}
         messages={messages}
       />
+
+      {canReadFinance && (
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle>{messages.finance.studentContractsTitle}</CardTitle>
+            <CardDescription>
+              {messages.finance.studentContractsDescription}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {financeContracts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {messages.finance.noContractsDescription}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {financeContracts.map((contract) => (
+                  <div
+                    key={contract.id}
+                    className="flex flex-col justify-between gap-3 rounded-lg border p-4 md:flex-row md:items-center"
+                  >
+                    <div>
+                      <p className="font-medium">{contract.displayNumber}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {contract.responsibleGuardian.fullName} ·{" "}
+                        {messages.finance.remaining}:{" "}
+                        {formatMoney(
+                          contract.totals.remainingBalance,
+                          contract.currencyCode,
+                          locale,
+                        )}
+                      </p>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/finance?contractId=${contract.id}`}>
+                        {messages.finance.viewFinance}
+                      </Link>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {canReadGuardians && <Card>
         <CardHeader className="border-b">

@@ -9,6 +9,7 @@ import {
   CalendarRange,
   Check,
   Circle,
+  CreditCard,
   FileText,
   LibraryBig,
   LayoutDashboard,
@@ -96,6 +97,13 @@ function createNavigation(messages: AppDictionary["shell"]) {
     label: messages.staffCatalog,
     icon: Settings2,
     permission: "hr.catalog.read",
+  },
+  {
+    group: messages.contracts,
+    href: "/finance",
+    label: messages.finance,
+    icon: CreditCard,
+    permission: "finance.contracts.read",
   },
   {
     group: messages.contracts,

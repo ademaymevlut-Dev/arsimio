@@ -6,9 +6,11 @@ import { PersonAccountPanel } from "@/components/school-admin/person-account-pan
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getDictionary, getSchoolLocale } from "@/i18n/server";
 import { validSchoolId } from "@/lib/platform-school-validation";
 import { getGuardianDetail } from "@/server/accounts/accounts";
 import { requireSchoolPermission } from "@/server/authorization/guards";
+import { getStudentFinanceContractsForGuardian } from "@/server/finance/finance";
 
 export const dynamic = "force-dynamic";
 
@@ -17,14 +19,26 @@ export default async function GuardianDetailPage({
 }: {
   params: Promise<{ personId: string }>;
 }) {
-  const [{ tenant, permissions }, route] = await Promise.all([
+  const [{ tenant, membership, permissions }, route] = await Promise.all([
     requireSchoolPermission("guardians.read"),
     params,
   ]);
   if (!validSchoolId(route.personId)) notFound();
-  const guardian = await getGuardianDetail(tenant.school.id, route.personId);
+  const locale = await getSchoolLocale(
+    membership.preferredLocale,
+    tenant.school.defaultLocale,
+  );
+  const canReadFinance = permissions.includes("finance.contracts.read");
+  const [guardian, dictionary, financeContracts] = await Promise.all([
+    getGuardianDetail(tenant.school.id, route.personId),
+    getDictionary(locale),
+    canReadFinance
+      ? getStudentFinanceContractsForGuardian(tenant.school.id, route.personId)
+      : Promise.resolve([]),
+  ]);
   if (!guardian) notFound();
   const canManageAccounts = permissions.includes("accounts.manage");
+  const finance = dictionary.finance;
 
   return (
     <div className="space-y-6">
@@ -107,6 +121,46 @@ export default async function GuardianDetailPage({
           </div>
         </CardContent>
       </Card>
+
+      {canReadFinance && (
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle>{finance.guardianContractsTitle}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-muted-foreground">
+              {finance.guardianContractsDescription}
+            </p>
+            {financeContracts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {finance.noContractsDescription}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {financeContracts.map((contract) => (
+                  <div
+                    key={contract.id}
+                    className="flex flex-col justify-between gap-3 rounded-lg border p-4 sm:flex-row sm:items-center"
+                  >
+                    <div>
+                      <p className="font-medium">{contract.displayNumber}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {contract.student.fullName} · {finance.remaining}:{" "}
+                        {contract.totals.remainingBalance} {contract.currencyCode}
+                      </p>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/finance?contractId=${contract.id}`}>
+                        {finance.viewFinance}
+                      </Link>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
