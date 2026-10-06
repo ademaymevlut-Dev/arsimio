@@ -309,6 +309,20 @@ test("student finance payment parser accepts partial payment movements", () => {
     assert.equal(parsed.data.status, "ACTIVE");
     assert.equal(parsed.data.paidOn.toISOString().slice(0, 10), "2026-10-15");
   }
+
+  const defaultDescription = parseSaveStudentFinancePayment(
+    form({
+      contractId,
+      paidOn: "2026-10-16",
+      paymentAmount: "100",
+      paymentDescription: "",
+      paymentStatus: "ACTIVE",
+    }),
+  );
+
+  assert.equal(defaultDescription.success, true);
+  if (defaultDescription.success)
+    assert.equal(defaultDescription.data.description, "Ödeme");
 });
 
 test("student finance payment parser rejects invalid payment metadata", () => {
@@ -319,7 +333,7 @@ test("student finance payment parser rejects invalid payment metadata", () => {
       revision,
       paidOn: "2026-02-30",
       paymentAmount: "0",
-      paymentDescription: "",
+      paymentDescription: "x".repeat(301),
       paymentStatus: "VOID",
     }),
   );

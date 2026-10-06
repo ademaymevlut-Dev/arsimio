@@ -700,7 +700,8 @@ export function parseSaveStudentFinancePayment(
   const paidOnRaw = form.get("paidOn");
   const paidOn = parseDateOnly(paidOnRaw);
   const amountCents = parseMoneyCents(form.get("paymentAmount"));
-  const description = text(form.get("paymentDescription"), 300);
+  const descriptionRaw = form.get("paymentDescription");
+  const description = optionalText(descriptionRaw, 300) ?? "Ödeme";
   const statusRaw = form.get("paymentStatus");
   const status =
     typeof statusRaw === "string" &&
@@ -717,7 +718,11 @@ export function parseSaveStudentFinancePayment(
   if (!paidOn) fieldErrors.paidOn = "Odeme tarihi gecersiz.";
   if (amountCents === null || amountCents <= ZERO)
     fieldErrors.paymentAmount = "Odeme tutari gecersiz.";
-  if (!description)
+  if (
+    typeof descriptionRaw === "string" &&
+    descriptionRaw.trim().length > 0 &&
+    !optionalText(descriptionRaw, 300)
+  )
     fieldErrors.paymentDescription = "Odeme aciklamasi gecersiz.";
   if (
     provided(statusRaw) &&
@@ -731,8 +736,7 @@ export function parseSaveStudentFinancePayment(
     (paymentId && (!validSchoolId(paymentId) || !validRevision(revision))) ||
     !paidOn ||
     amountCents === null ||
-    amountCents <= ZERO ||
-    !description
+    amountCents <= ZERO
   ) {
     return {
       success: false,

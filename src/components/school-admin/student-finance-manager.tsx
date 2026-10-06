@@ -816,14 +816,17 @@ function Payments({
           <div className="space-y-2">
             <Label htmlFor="payment-date">{messages.paidOn}</Label>
             <Input id="payment-date" name="paidOn" type="date" defaultValue={today} disabled={pending} required />
+            <FieldError state={state} field="paidOn" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="payment-amount">{messages.paymentAmount}</Label>
             <Input id="payment-amount" name="paymentAmount" inputMode="decimal" disabled={pending} required />
+            <FieldError state={state} field="paymentAmount" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="payment-description">{messages.paymentDescription}</Label>
-            <Input id="payment-description" name="paymentDescription" disabled={pending} required />
+            <Input id="payment-description" name="paymentDescription" disabled={pending} />
+            <FieldError state={state} field="paymentDescription" />
           </div>
           <Hidden name="paymentStatus" value="ACTIVE" />
           <Button type="submit" disabled={pending}>
