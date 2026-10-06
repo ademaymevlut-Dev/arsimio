@@ -294,7 +294,7 @@ test("student finance payment parser accepts partial payment movements", () => {
       paymentId,
       revision,
       paidOn: "2026-10-15",
-      paymentAmount: "250,50",
+      paymentAmount: "250,50 EUR",
       paymentDescription: " Ekim odemesi ",
       paymentStatus: "ACTIVE",
     }),

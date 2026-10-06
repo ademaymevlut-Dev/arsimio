@@ -71,6 +71,7 @@ export type FinanceState = {
   message?: string;
   fieldErrors?: Partial<Record<FinanceField, string>>;
   entityId?: string;
+  values?: Partial<Record<FinanceField, string>>;
 };
 
 export type SaveStudentFinanceContractInput = {
@@ -176,7 +177,13 @@ function provided(value: FormDataEntryValue | null) {
 
 function parseMoneyCents(value: FormDataEntryValue | null) {
   if (typeof value !== "string" || CONTROL_CHARACTERS.test(value)) return null;
-  const normalized = value.trim().replace(",", ".");
+  const normalized = value
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/€/g, "")
+    .replace(/^(eur|euro)/i, "")
+    .replace(/(eur|euro)$/i, "")
+    .replace(",", ".");
   const match = /^(\d{1,10})(?:\.(\d{1,2}))?$/.exec(normalized);
   if (!match) return null;
   const units = BigInt(match[1]);
@@ -699,7 +706,8 @@ export function parseSaveStudentFinancePayment(
     typeof revisionRaw === "string" && revisionRaw ? revisionRaw : null;
   const paidOnRaw = form.get("paidOn");
   const paidOn = parseDateOnly(paidOnRaw);
-  const amountCents = parseMoneyCents(form.get("paymentAmount"));
+  const amountRaw = form.get("paymentAmount");
+  const amountCents = parseMoneyCents(amountRaw);
   const descriptionRaw = form.get("paymentDescription");
   const description = optionalText(descriptionRaw, 300) ?? "Ödeme";
   const statusRaw = form.get("paymentStatus");
@@ -744,6 +752,12 @@ export function parseSaveStudentFinancePayment(
         status: "error",
         message: "Odeme bilgileri gecersiz.",
         fieldErrors,
+        values: {
+          paidOn: typeof paidOnRaw === "string" ? paidOnRaw : "",
+          paymentAmount: typeof amountRaw === "string" ? amountRaw : "",
+          paymentDescription:
+            typeof descriptionRaw === "string" ? descriptionRaw : "",
+        },
       },
     };
   }

@@ -808,6 +808,7 @@ function Payments({
     saveStudentFinancePaymentAction,
     initialState,
   );
+  const submittedValues = state.status === "error" ? state.values : undefined;
   return (
     <div className="space-y-5">
       {canManage && (
@@ -815,17 +816,37 @@ function Payments({
           <Hidden name="contractId" value={contract.id} />
           <div className="space-y-2">
             <Label htmlFor="payment-date">{messages.paidOn}</Label>
-            <Input id="payment-date" name="paidOn" type="date" defaultValue={today} disabled={pending} required />
+            <Input
+              id="payment-date"
+              name="paidOn"
+              type="date"
+              defaultValue={submittedValues?.paidOn ?? today}
+              disabled={pending}
+              required
+            />
             <FieldError state={state} field="paidOn" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="payment-amount">{messages.paymentAmount}</Label>
-            <Input id="payment-amount" name="paymentAmount" inputMode="decimal" disabled={pending} required />
+            <Input
+              id="payment-amount"
+              name="paymentAmount"
+              inputMode="decimal"
+              defaultValue={submittedValues?.paymentAmount ?? ""}
+              placeholder="500 veya 500,00"
+              disabled={pending}
+              required
+            />
             <FieldError state={state} field="paymentAmount" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="payment-description">{messages.paymentDescription}</Label>
-            <Input id="payment-description" name="paymentDescription" disabled={pending} />
+            <Input
+              id="payment-description"
+              name="paymentDescription"
+              defaultValue={submittedValues?.paymentDescription ?? ""}
+              disabled={pending}
+            />
             <FieldError state={state} field="paymentDescription" />
           </div>
           <Hidden name="paymentStatus" value="ACTIVE" />
