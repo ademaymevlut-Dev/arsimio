@@ -1,4 +1,4 @@
-CREATE TABLE "employment_contract_templates" (
+CREATE TABLE IF NOT EXISTS "employment_contract_templates" (
   "id" uuid NOT NULL DEFAULT gen_random_uuid(),
   "school_id" uuid NOT NULL,
   "code" varchar(80) NOT NULL,
@@ -18,7 +18,16 @@ CREATE TABLE "employment_contract_templates" (
     CHECK ("locale" IN ('tr', 'sq', 'en'))
 );
 
-CREATE TABLE "employment_contract_template_clauses" (
+CREATE UNIQUE INDEX IF NOT EXISTS "employment_contract_templates_school_id_code_key"
+  ON "employment_contract_templates"("school_id", "code");
+
+CREATE UNIQUE INDEX IF NOT EXISTS "employment_contract_templates_id_school_id_key"
+  ON "employment_contract_templates"("id", "school_id");
+
+CREATE INDEX IF NOT EXISTS "employment_contract_templates_school_id_archived_at_title_idx"
+  ON "employment_contract_templates"("school_id", "archived_at", "title");
+
+CREATE TABLE IF NOT EXISTS "employment_contract_template_clauses" (
   "id" uuid NOT NULL DEFAULT gen_random_uuid(),
   "school_id" uuid NOT NULL,
   "template_id" uuid NOT NULL,
@@ -42,28 +51,10 @@ CREATE TABLE "employment_contract_template_clauses" (
     CHECK (length(trim("body")) > 0)
 );
 
-ALTER TABLE "employment_contracts"
-  ADD COLUMN "template_id" uuid;
-
-ALTER TABLE "employment_contracts"
-  ADD CONSTRAINT "employment_contracts_template_id_school_id_fkey"
-  FOREIGN KEY ("template_id", "school_id")
-  REFERENCES "employment_contract_templates"("id", "school_id")
-  ON DELETE RESTRICT ON UPDATE RESTRICT;
-
-CREATE UNIQUE INDEX "employment_contract_templates_school_id_code_key"
-  ON "employment_contract_templates"("school_id", "code");
-
-CREATE UNIQUE INDEX "employment_contract_templates_id_school_id_key"
-  ON "employment_contract_templates"("id", "school_id");
-
-CREATE INDEX "employment_contract_templates_school_id_archived_at_title_idx"
-  ON "employment_contract_templates"("school_id", "archived_at", "title");
-
-CREATE UNIQUE INDEX "employment_contract_template_clauses_id_school_id_key"
+CREATE UNIQUE INDEX IF NOT EXISTS "employment_contract_template_clauses_id_school_id_key"
   ON "employment_contract_template_clauses"("id", "school_id");
 
-CREATE INDEX "employment_contract_template_clauses_school_id_template_id_archived_at_sort_order_idx"
+CREATE INDEX IF NOT EXISTS "employment_contract_template_clauses_school_id_template_id_archived_at_sort_order_idx"
   ON "employment_contract_template_clauses"(
     "school_id",
     "template_id",
@@ -71,5 +62,24 @@ CREATE INDEX "employment_contract_template_clauses_school_id_template_id_archive
     "sort_order"
   );
 
-CREATE INDEX "employment_contracts_school_id_template_id_idx"
+ALTER TABLE "employment_contracts"
+  ADD COLUMN IF NOT EXISTS "template_id" uuid;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'employment_contracts_template_id_school_id_fkey'
+  ) THEN
+    ALTER TABLE "employment_contracts"
+      ADD CONSTRAINT "employment_contracts_template_id_school_id_fkey"
+      FOREIGN KEY ("template_id", "school_id")
+      REFERENCES "employment_contract_templates"("id", "school_id")
+      ON DELETE RESTRICT ON UPDATE RESTRICT;
+  END IF;
+END
+$$;
+
+CREATE INDEX IF NOT EXISTS "employment_contracts_school_id_template_id_idx"
   ON "employment_contracts"("school_id", "template_id");
