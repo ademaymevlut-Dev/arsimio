@@ -360,7 +360,7 @@ export function SchoolAdminShell({
           </div>
         </aside>
         <div className="min-w-0 bg-background">
-          <header className="flex h-18 items-center justify-between gap-4 bg-background px-4 sm:px-6 lg:px-8">
+          <header className="flex h-14 items-center justify-between gap-3 bg-background px-4 sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <Sheet>
                 <SheetTrigger asChild>
@@ -401,6 +401,7 @@ export function SchoolAdminShell({
                       locale={locale}
                       messages={messages.language}
                       compact
+                      instant
                     />
                   </div>
                 </SheetContent>
@@ -412,12 +413,13 @@ export function SchoolAdminShell({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div className="hidden xl:block">
                 <LanguageSwitcher
                   locale={locale}
                   messages={messages.language}
                   compact
+                  instant
                 />
               </div>
               <span className="hidden text-right sm:block">
@@ -427,7 +429,7 @@ export function SchoolAdminShell({
                 </span>
               </span>
               <form action={signOut}>
-                <Button variant="ghost" className="text-muted-foreground">
+                <Button variant="ghost" size="sm" className="text-muted-foreground">
                   <LogOut aria-hidden />
                   <span className="hidden sm:inline">{messages.shell.signOut}</span>
                 </Button>
@@ -436,7 +438,7 @@ export function SchoolAdminShell({
           </header>
           <main
             id="school-admin-content"
-            className="min-h-[calc(100svh-4.5rem)] px-4 py-7 sm:px-6 sm:py-8 lg:px-8 lg:py-9"
+            className="min-h-[calc(100svh-3.5rem)] px-4 py-7 sm:px-6 sm:py-8 lg:px-8 lg:py-9"
           >
             {children}
           </main>
