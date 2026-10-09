@@ -246,7 +246,7 @@ function SetupStatus({
     { label: messages.classesAndSubjects, ready: academicStructureReady },
   ];
   return (
-    <div className="rounded-xl border bg-background/60 p-4">
+    <div className="rounded-xl bg-card p-4">
       <p className="flex items-center gap-2 text-xs font-semibold text-foreground">
         <BookOpenCheck className="size-4 text-primary" aria-hidden />
         {messages.setupStatus}
@@ -323,8 +323,8 @@ export function SchoolAdminShell({
       >
         {messages.shell.skipToContent}
       </a>
-      <div className="mx-auto min-h-svh w-full max-w-[1400px] bg-card lg:grid lg:min-h-[calc(100svh-2.5rem)] lg:grid-cols-[252px_minmax(0,1fr)] lg:rounded-2xl lg:border lg:shadow-sm">
-        <aside className="hidden border-r bg-sidebar p-5 lg:flex lg:flex-col lg:rounded-l-2xl">
+      <div className="mx-auto min-h-svh w-full max-w-[1400px] bg-background lg:grid lg:min-h-[calc(100svh-2.5rem)] lg:grid-cols-[252px_minmax(0,1fr)]">
+        <aside className="hidden bg-background p-5 lg:flex lg:flex-col">
           <SchoolBrand
             schoolName={schoolName}
             primaryColor={primaryColor}
@@ -344,7 +344,7 @@ export function SchoolAdminShell({
               messages={messages.shell}
             />
           </div>
-          <div className="mt-auto border-t pt-5">
+          <div className="mt-auto pt-5">
             <div className="flex items-center gap-3 px-2">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <ShieldCheck className="size-4" aria-hidden />
@@ -358,8 +358,8 @@ export function SchoolAdminShell({
             </div>
           </div>
         </aside>
-        <div className="min-w-0 bg-background/65 lg:rounded-r-2xl">
-          <header className="flex h-18 items-center justify-between gap-4 border-b bg-card px-4 sm:px-6 lg:rounded-tr-2xl lg:px-8">
+        <div className="min-w-0 bg-background">
+          <header className="flex h-18 items-center justify-between gap-4 bg-background px-4 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
               <Sheet>
                 <SheetTrigger asChild>
@@ -445,7 +445,7 @@ export function SchoolAdminShell({
           >
             {children}
           </main>
-          <footer className="mx-4 flex flex-wrap justify-between gap-2 border-t py-5 text-xs text-muted-foreground sm:mx-6 lg:mx-8">
+          <footer className="mx-4 flex flex-wrap justify-between gap-2 py-5 text-xs text-muted-foreground sm:mx-6 lg:mx-8">
             <span>Arsimio · {schoolName}</span>
             <span>{messages.shell.secureManagement}</span>
           </footer>

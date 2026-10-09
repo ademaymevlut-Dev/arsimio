@@ -33,10 +33,12 @@ export type StudentDirectoryRecord = {
   id: string;
   studentNumber: string;
   fullName: string;
+  photoUrl: string | null;
   status: StudentStatus;
   academicYear: string | null;
   classSection: string | null;
   primaryGuardian: string | null;
+  primaryGuardianPhone: string | null;
 };
 
 export async function getStudentDirectory(
@@ -61,7 +63,6 @@ export async function getStudentDirectory(
         : {}),
     },
     orderBy: [{ status: "asc" }, { person: { lastName: "asc" } }, { person: { firstName: "asc" } }],
-    take: 250,
     include: {
       person: true,
       guardianRelationships: {
@@ -69,7 +70,17 @@ export async function getStudentDirectory(
           ? { archivedAt: null, isPrimaryContact: true }
           : { id: { in: [] } },
         take: 1,
-        include: { guardianPerson: true },
+        include: {
+          guardianPerson: {
+            include: {
+              contactPoints: {
+                where: { archivedAt: null, kind: "PHONE" },
+                orderBy: { isPrimaryForPerson: "desc" },
+                take: 1,
+              },
+            },
+          },
+        },
       },
       enrollments: {
         orderBy: { academicYear: { startDate: "desc" } },
@@ -100,12 +111,14 @@ export async function getStudentDirectory(
       id: student.id,
       studentNumber: student.studentNumber,
       fullName: fullName(student.person),
+      photoUrl: student.person.photoUrl,
       status: student.status,
       academicYear: enrollment?.academicYear.name ?? null,
       classSection: placement
         ? className(placement.academicYearClassSection)
         : null,
       primaryGuardian: primary ? fullName(primary) : null,
+      primaryGuardianPhone: primary?.contactPoints[0]?.value ?? null,
     };
   });
 }
