@@ -34,10 +34,13 @@ type PageSize = 20 | 50 | "all";
 type StatusFilter = StudentStatus | "ALL";
 type PaginationItem = number | "start-ellipsis" | "end-ellipsis";
 
-function StudentPhotoPlaceholder() {
+function StudentPhotoPlaceholder({ className }: { className?: string }) {
   return (
     <span
-      className="mx-auto flex size-11 items-center justify-center rounded-lg bg-primary/8 text-primary"
+      className={cn(
+        "mx-auto flex size-11 items-center justify-center rounded-lg bg-primary/8 text-primary",
+        className,
+      )}
       aria-hidden
     >
       <svg viewBox="0 0 48 48" className="size-8" fill="none">
@@ -137,8 +140,7 @@ export function StudentDirectoryTable({
     WITHDRAWN: text.withdrawn,
     TRANSFERRED: text.transferred,
   };
-  const statusOptions: Array<{ value: StatusFilter; label: string }> = [
-    { value: "ALL", label: text.allStudents },
+  const statusOptions: Array<{ value: StudentStatus; label: string }> = [
     { value: "ACTIVE", label: text.active },
     { value: "INACTIVE", label: text.inactive },
     { value: "GRADUATED", label: text.graduated },
@@ -211,26 +213,21 @@ export function StudentDirectoryTable({
 
   return (
     <section
-      className="overflow-hidden rounded-xl bg-card"
+      className="-mt-3 overflow-hidden rounded-xl bg-card sm:-mt-4"
       aria-label={text.listTitle}
     >
-      <div className="flex flex-col justify-between gap-4 border-b-2 border-accent/70 px-5 py-4 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">{text.listTitle}</h2>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            {text.listDescription}
-          </p>
-        </div>
+      <div className="flex flex-col justify-between gap-3 border-b-2 border-accent/70 px-4 py-3 sm:flex-row sm:items-center">
+        <h2 className="text-base font-semibold text-foreground">{text.listTitle}</h2>
         {canManage ? (
-          <Button asChild size="lg">
+          <Button asChild>
             <Link href="/students/new">{text.newStudent}</Link>
           </Button>
         ) : null}
       </div>
 
-      <div className="space-y-3 px-5 py-4">
+      <div className="space-y-2 px-4 py-2.5">
         <div
-          className="flex flex-wrap gap-2"
+          className="flex flex-wrap gap-1.5"
           role="group"
           aria-label={text.statusFilterLabel}
         >
@@ -240,17 +237,17 @@ export function StudentDirectoryTable({
               type="button"
               aria-pressed={status === option.value}
               onClick={() => {
-                setStatus(option.value);
+                setStatus((current) =>
+                  current === option.value ? "ALL" : option.value,
+                );
                 setPage(1);
               }}
               className={cn(
-                "rounded-lg px-3 py-2 text-xs font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 status === option.value
                   ? option.value === "ACTIVE"
                     ? "bg-success text-success-foreground"
-                    : option.value === "ALL"
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-primary text-primary-foreground"
+                    : "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary",
               )}
             >
@@ -260,37 +257,23 @@ export function StudentDirectoryTable({
         </div>
 
         <div
-          className="flex flex-wrap gap-2"
+          className="flex flex-wrap gap-1.5"
           role="group"
           aria-label={text.classFilterLabel}
         >
-          <button
-            type="button"
-            aria-pressed={classSection === ALL_CLASSES}
-            onClick={() => {
-              setClassSection(ALL_CLASSES);
-              setPage(1);
-            }}
-            className={cn(
-              "rounded-lg px-3 py-2 text-xs font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              classSection === ALL_CLASSES
-                ? "bg-accent text-accent-foreground"
-                : "bg-primary text-primary-foreground hover:bg-primary/80",
-            )}
-          >
-            {text.allClasses}
-          </button>
           {classOptions.map((option) => (
             <button
               key={option}
               type="button"
               aria-pressed={classSection === option}
               onClick={() => {
-                setClassSection(option);
+                setClassSection((current) =>
+                  current === option ? ALL_CLASSES : option,
+                );
                 setPage(1);
               }}
               className={cn(
-                "rounded-lg px-3 py-2 text-xs font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 classSection === option
                   ? "bg-accent text-accent-foreground"
                   : "bg-primary text-primary-foreground hover:bg-primary/80",
@@ -304,11 +287,15 @@ export function StudentDirectoryTable({
               type="button"
               aria-pressed={classSection === UNASSIGNED_CLASS}
               onClick={() => {
-                setClassSection(UNASSIGNED_CLASS);
+                setClassSection((current) =>
+                  current === UNASSIGNED_CLASS
+                    ? ALL_CLASSES
+                    : UNASSIGNED_CLASS,
+                );
                 setPage(1);
               }}
               className={cn(
-                "rounded-lg px-3 py-2 text-xs font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 classSection === UNASSIGNED_CLASS
                   ? "bg-accent text-accent-foreground"
                   : "bg-primary text-primary-foreground hover:bg-primary/80",
@@ -320,8 +307,8 @@ export function StudentDirectoryTable({
         </div>
       </div>
 
-      <div className="flex flex-col justify-between gap-4 border-y bg-muted/20 px-5 py-3 sm:flex-row sm:items-center">
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex flex-col justify-between gap-2.5 border-y bg-muted/20 px-4 py-2 sm:flex-row sm:items-center">
+        <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <span>{text.rowsPerPage}</span>
           <NativeSelect
             value={String(pageSize)}
@@ -330,17 +317,17 @@ export function StudentDirectoryTable({
               setPageSize(value === "all" ? "all" : value === "50" ? 50 : 20);
               setPage(1);
             }}
-            className="h-9 w-24 bg-card"
+            className="h-8 w-20 px-2 text-xs"
           >
             <option value="20">20</option>
             <option value="50">50</option>
             <option value="all">{text.allRows}</option>
           </NativeSelect>
         </label>
-        <label className="relative block w-full sm:max-w-xs">
+        <label className="relative block w-full sm:max-w-[260px]">
           <span className="sr-only">{text.searchLabel}</span>
           <Search
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
             aria-hidden
           />
           <Input
@@ -351,7 +338,7 @@ export function StudentDirectoryTable({
               setPage(1);
             }}
             placeholder={text.searchPlaceholder}
-            className="h-9 bg-card pl-9 text-sm shadow-none"
+            className="h-8 bg-card pl-8 text-xs shadow-none"
           />
         </label>
       </div>
@@ -369,16 +356,16 @@ export function StudentDirectoryTable({
           </p>
         </div>
       ) : (
-        <Table>
-          <TableHeader className="bg-card">
+        <Table className="text-xs">
+          <TableHeader className="bg-card text-[11px]">
             <TableRow className="border-b">
-              <TableHead className="w-20 px-4">{text.photoColumn}</TableHead>
-              <TableHead className="px-4">{text.student}</TableHead>
-              <TableHead className="px-4">{text.classSection}</TableHead>
-              <TableHead className="px-4">{text.primaryGuardian}</TableHead>
-              <TableHead className="px-4">{text.primaryGuardianPhone}</TableHead>
-              <TableHead className="px-4">{messages.common.status}</TableHead>
-              <TableHead className="w-28 px-4 text-right">
+              <TableHead className="h-8 w-16 px-3">{text.photoColumn}</TableHead>
+              <TableHead className="h-8 px-3">{text.student}</TableHead>
+              <TableHead className="h-8 px-3">{text.classSection}</TableHead>
+              <TableHead className="h-8 px-3">{text.primaryGuardian}</TableHead>
+              <TableHead className="h-8 px-3">{text.primaryGuardianPhone}</TableHead>
+              <TableHead className="h-8 px-3">{messages.common.status}</TableHead>
+              <TableHead className="h-8 w-24 px-3 text-right">
                 <span className="sr-only">{messages.common.actions}</span>
               </TableHead>
             </TableRow>
@@ -389,20 +376,22 @@ export function StudentDirectoryTable({
                 key={student.id}
                 className={cn(index % 2 === 1 && "bg-muted/35")}
               >
-                <TableCell className="px-4 py-2.5">
-                  {student.photoUrl ? (
-                    <Image
-                      src={student.photoUrl}
-                      alt={student.fullName}
-                      width={44}
-                      height={44}
-                      className="mx-auto size-11 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <StudentPhotoPlaceholder />
-                  )}
+                <TableCell className="px-3 py-1.5">
+                  <div className="mx-auto flex size-10 items-center justify-center transition-transform duration-200 ease-out hover:scale-[1.18] motion-reduce:transform-none">
+                    {student.photoUrl ? (
+                      <Image
+                        src={student.photoUrl}
+                        alt={student.fullName}
+                        width={36}
+                        height={36}
+                        className="size-9 rounded-md object-cover"
+                      />
+                    ) : (
+                      <StudentPhotoPlaceholder className="size-9 rounded-md [&_svg]:size-7" />
+                    )}
+                  </div>
                 </TableCell>
-                <TableCell className="px-4 py-2.5">
+                <TableCell className="px-3 py-1.5">
                   <Link
                     href={`/students/${student.id}`}
                     className="font-semibold text-foreground outline-none hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring"
@@ -410,22 +399,22 @@ export function StudentDirectoryTable({
                     {student.fullName}
                   </Link>
                 </TableCell>
-                <TableCell className="px-4 py-2.5">
+                <TableCell className="px-3 py-1.5">
                   {student.classSection ?? text.noClassSection}
                 </TableCell>
-                <TableCell className="px-4 py-2.5">
+                <TableCell className="px-3 py-1.5">
                   {student.primaryGuardian ?? text.noPrimaryGuardian}
                 </TableCell>
-                <TableCell className="px-4 py-2.5">
+                <TableCell className="px-3 py-1.5">
                   {student.primaryGuardianPhone ?? "—"}
                 </TableCell>
-                <TableCell className="px-4 py-2.5">
+                <TableCell className="px-3 py-1.5">
                   <Badge variant={statusBadgeVariant(student.status)}>
                     {statusLabels[student.status]}
                   </Badge>
                 </TableCell>
-                <TableCell className="px-4 py-2.5 text-right">
-                  <Button asChild size="sm">
+                <TableCell className="px-3 py-1.5 text-right">
+                  <Button asChild size="xs">
                     <Link href={`/students/${student.id}`}>
                       {text.openDetail}
                       <ArrowRight aria-hidden />
@@ -438,19 +427,19 @@ export function StudentDirectoryTable({
         </Table>
       )}
 
-      <div className="flex flex-col justify-between gap-4 border-t px-5 py-4 sm:flex-row sm:items-center">
-        <p className="text-xs text-muted-foreground">
+      <div className="flex flex-col justify-between gap-2.5 border-t px-4 py-2.5 sm:flex-row sm:items-center">
+        <p className="text-[11px] text-muted-foreground">
           {text.paginationSummary
             .replace("{from}", String(firstRecord))
             .replace("{to}", String(lastRecord))
             .replace("{count}", String(filteredStudents.length))}
         </p>
         {filteredStudents.length > 0 && pageSize !== "all" ? (
-          <nav className="flex items-center gap-1" aria-label={text.paginationLabel}>
+          <nav className="flex items-center gap-0.5" aria-label={text.paginationLabel}>
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
+              size="icon-xs"
               disabled={currentPage === 1}
               onClick={() => setPage((current) => Math.max(1, current - 1))}
               aria-label={text.previousPage}
@@ -463,7 +452,7 @@ export function StudentDirectoryTable({
                   key={item}
                   type="button"
                   variant={item === currentPage ? "default" : "ghost"}
-                  size="icon-sm"
+                  size="icon-xs"
                   onClick={() => setPage(item)}
                   aria-current={item === currentPage ? "page" : undefined}
                   aria-label={text.pageLabel.replace("{page}", String(item))}
@@ -473,7 +462,7 @@ export function StudentDirectoryTable({
               ) : (
                 <span
                   key={item}
-                  className="flex size-7 items-center justify-center text-xs text-muted-foreground"
+                  className="flex size-6 items-center justify-center text-[11px] text-muted-foreground"
                   aria-hidden
                 >
                   …
@@ -483,7 +472,7 @@ export function StudentDirectoryTable({
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
+              size="icon-xs"
               disabled={currentPage === totalPages}
               onClick={() =>
                 setPage((current) => Math.min(totalPages, current + 1))
