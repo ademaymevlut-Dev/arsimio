@@ -7,20 +7,20 @@ import {
   BookOpenCheck,
   BriefcaseBusiness,
   CalendarRange,
-  Check,
-  Circle,
+  ChevronDown,
   CreditCard,
   FileText,
   LibraryBig,
+  ListTree,
   LayoutDashboard,
   LogOut,
   Menu,
   GraduationCap,
-  Settings2,
-  ShieldCheck,
+  Settings,
   UserRoundCheck,
   UserRoundCog,
   UsersRound,
+  type LucideIcon,
 } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
@@ -40,109 +40,174 @@ import { formatMessage } from "@/i18n/format";
 import type { Locale } from "@/i18n/config";
 import type { AppDictionary } from "@/i18n/dictionaries/types";
 
-function createNavigation(messages: AppDictionary["shell"]) {
+type NavigationItem = {
+  group: string;
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  permission: string;
+  settings?: boolean;
+};
+
+function createNavigation(messages: AppDictionary["shell"]): NavigationItem[] {
   return [
     {
-    group: messages.general,
-    href: "/dashboard",
-    label: messages.overview,
-    icon: LayoutDashboard,
-    permission: "dashboard.read",
-  },
-  {
-    group: messages.academics,
-    href: "/academics/years",
-    label: messages.academicYears,
-    icon: CalendarRange,
-    permission: "academics.read",
-  },
-  {
-    group: messages.academics,
-    href: "/academics/structure",
-    label: messages.academicStructure,
-    icon: LibraryBig,
-    permission: "academics.read",
-  },
-  {
-    group: messages.academics,
-    href: "/academics/timetable",
-    label: messages.weeklySchedule,
-    icon: BookOpenCheck,
-    permission: "teaching.schedule.read",
-  },
-  {
-    group: messages.people,
-    href: "/students",
-    label: messages.students,
-    icon: GraduationCap,
-    permission: "students.read",
-  },
-  {
-    group: messages.people,
-    href: "/guardians",
-    label: messages.guardians,
-    icon: UsersRound,
-    permission: "guardians.read",
-  },
-  {
-    group: messages.people,
-    href: "/staff",
-    label: messages.staff,
-    icon: BriefcaseBusiness,
-    permission: "hr.staff.read",
-  },
-  {
-    group: messages.people,
-    href: "/staff/settings",
-    label: messages.staffCatalog,
-    icon: Settings2,
-    permission: "hr.catalog.read",
-  },
-  {
-    group: messages.contracts,
-    href: "/finance",
-    label: messages.finance,
-    icon: CreditCard,
-    permission: "finance.contracts.read",
-  },
-  {
-    group: messages.contracts,
-    href: "/contracts/templates",
-    label: messages.contractTemplates,
-    icon: FileText,
-    permission: "hr.contracts.read",
-  },
-  {
-    group: messages.people,
-    href: "/teachers",
-    label: messages.teachers,
-    icon: UserRoundCheck,
-    permission: "teachers.read",
-  },
-  {
-    group: messages.people,
-    href: "/accounts",
-    label: messages.accounts,
-    icon: UserRoundCog,
-    permission: "accounts.read",
-  },
+      group: messages.general,
+      href: "/dashboard",
+      label: messages.overview,
+      icon: LayoutDashboard,
+      permission: "dashboard.read",
+    },
+    {
+      group: messages.settings,
+      href: "/academics/years",
+      label: messages.academicYears,
+      icon: CalendarRange,
+      permission: "academics.read",
+      settings: true,
+    },
+    {
+      group: messages.settings,
+      href: "/academics/structure",
+      label: messages.academicStructure,
+      icon: LibraryBig,
+      permission: "academics.read",
+      settings: true,
+    },
+    {
+      group: messages.settings,
+      href: "/academics/timetable",
+      label: messages.weeklySchedule,
+      icon: BookOpenCheck,
+      permission: "teaching.schedule.read",
+      settings: true,
+    },
+    {
+      group: messages.people,
+      href: "/students",
+      label: messages.students,
+      icon: GraduationCap,
+      permission: "students.read",
+    },
+    {
+      group: messages.people,
+      href: "/guardians",
+      label: messages.guardians,
+      icon: UsersRound,
+      permission: "guardians.read",
+    },
+    {
+      group: messages.people,
+      href: "/staff",
+      label: messages.staff,
+      icon: BriefcaseBusiness,
+      permission: "hr.staff.read",
+    },
+    {
+      group: messages.settings,
+      href: "/staff/settings",
+      label: messages.staffCatalog,
+      icon: ListTree,
+      permission: "hr.catalog.read",
+      settings: true,
+    },
+    {
+      group: messages.contracts,
+      href: "/finance",
+      label: messages.finance,
+      icon: CreditCard,
+      permission: "finance.contracts.read",
+    },
+    {
+      group: messages.contracts,
+      href: "/contracts/templates",
+      label: messages.contractTemplates,
+      icon: FileText,
+      permission: "hr.contracts.read",
+    },
+    {
+      group: messages.people,
+      href: "/teachers",
+      label: messages.teachers,
+      icon: UserRoundCheck,
+      permission: "teachers.read",
+    },
+    {
+      group: messages.people,
+      href: "/accounts",
+      label: messages.accounts,
+      icon: UserRoundCog,
+      permission: "accounts.read",
+    },
   ];
 }
 
-type NavigationItem = ReturnType<typeof createNavigation>[number];
+function navigationItemIsActive(href: string, pathname: string) {
+  const onStaffCatalog =
+    pathname === "/staff/settings" || pathname.startsWith("/staff/settings/");
+  if (href === "/dashboard") return pathname === href;
+  if (href === "/staff") {
+    return (
+      pathname === "/staff" ||
+      (pathname.startsWith("/staff/") && !onStaffCatalog)
+    );
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NavigationLink({
+  item,
+  pathname,
+  mobile,
+  nested = false,
+}: {
+  item: NavigationItem;
+  pathname: string;
+  mobile: boolean;
+  nested?: boolean;
+}) {
+  const active = navigationItemIsActive(item.href, pathname);
+  const Icon = item.icon;
+  const link = (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "flex items-center gap-3 rounded-lg font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        nested ? "px-3 py-2 text-xs" : "px-3 py-2.5 text-sm",
+        active
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+      )}
+    >
+      <Icon className="size-4" aria-hidden />
+      {item.label}
+    </Link>
+  );
+
+  return mobile ? <SheetClose asChild>{link}</SheetClose> : link;
+}
 
 function Navigation({
   items,
   pathname,
   mobile = false,
   label,
+  settingsLabel,
 }: {
   items: NavigationItem[];
   pathname: string;
   mobile?: boolean;
   label: string;
+  settingsLabel: string;
 }) {
-  const groups = [...new Set(items.map((item) => item.group))];
+  const primaryItems = items.filter((item) => !item.settings);
+  const settingsItems = items.filter((item) => item.settings);
+  const groups = [...new Set(primaryItems.map((item) => item.group))];
+  const settingsActive = settingsItems.some((item) =>
+    navigationItemIsActive(item.href, pathname),
+  );
+
   return (
     <nav aria-label={label}>
       {groups.map((group, groupIndex) => (
@@ -151,45 +216,54 @@ function Navigation({
             {group}
           </p>
           <div className="space-y-1">
-            {items
+            {primaryItems
               .filter((item) => item.group === group)
-              .map(({ href, label, icon: Icon }) => {
-                const onStaffCatalog =
-                  pathname === "/staff/settings" ||
-                  pathname.startsWith("/staff/settings/");
-                const active =
-                  href === "/dashboard"
-                    ? pathname === href
-                    : href === "/staff"
-                      ? pathname === "/staff" ||
-                        (pathname.startsWith("/staff/") && !onStaffCatalog)
-                      : pathname === href || pathname.startsWith(`${href}/`);
-                const link = (
-                  <Link
-                    href={href}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      active
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    )}
-                  >
-                    <Icon className="size-4" aria-hidden />
-                    {label}
-                  </Link>
-                );
-                return mobile ? (
-                  <SheetClose asChild key={href}>
-                    {link}
-                  </SheetClose>
-                ) : (
-                  <div key={href}>{link}</div>
-                );
-              })}
+              .map((item) => (
+                <NavigationLink
+                  key={item.href}
+                  item={item}
+                  pathname={pathname}
+                  mobile={mobile}
+                />
+              ))}
           </div>
         </div>
       ))}
+      {settingsItems.length > 0 ? (
+        <details
+          key={settingsActive ? pathname : "settings"}
+          open={settingsActive ? true : undefined}
+          className="group mt-7"
+        >
+          <summary
+            aria-current={settingsActive ? "page" : undefined}
+            className={cn(
+              "flex cursor-pointer list-none items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden",
+              settingsActive
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <Settings className="size-4" aria-hidden />
+            <span className="flex-1">{settingsLabel}</span>
+            <ChevronDown
+              className="size-4 transition-transform group-open:rotate-180"
+              aria-hidden
+            />
+          </summary>
+          <div className="mt-1 space-y-1 pl-4">
+            {settingsItems.map((item) => (
+              <NavigationLink
+                key={item.href}
+                item={item}
+                pathname={pathname}
+                mobile={mobile}
+                nested
+              />
+            ))}
+          </div>
+        </details>
+      ) : null}
     </nav>
   );
 }
@@ -231,64 +305,13 @@ function SchoolBrand({
   );
 }
 
-function SetupStatus({
-  academicYearReady,
-  academicStructureReady,
-  messages,
-}: {
-  academicYearReady: boolean;
-  academicStructureReady: boolean;
-  messages: AppDictionary["shell"];
-}) {
-  const setupSteps = [
-    { label: messages.adminAccount, ready: true },
-    { label: messages.yearAndTerm, ready: academicYearReady },
-    { label: messages.classesAndSubjects, ready: academicStructureReady },
-  ];
-  return (
-    <div className="rounded-xl bg-card p-4">
-      <p className="flex items-center gap-2 text-xs font-semibold text-foreground">
-        <BookOpenCheck className="size-4 text-primary" aria-hidden />
-        {messages.setupStatus}
-      </p>
-      <div className="mt-4 space-y-3">
-        {setupSteps.map((step) => (
-          <div
-            key={step.label}
-            className="flex items-center gap-2.5 text-xs text-muted-foreground"
-          >
-            <span
-              className={cn(
-                "flex size-5 shrink-0 items-center justify-center rounded-full",
-                step.ready
-                  ? "bg-success text-success-foreground"
-                  : "border bg-card",
-              )}
-            >
-              {step.ready ? (
-                <Check className="size-3" aria-hidden />
-              ) : (
-                <Circle className="size-2 fill-current" aria-hidden />
-              )}
-            </span>
-            {step.label}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function SchoolAdminShell({
   schoolName,
   hostname,
   primaryColor,
   userLabel,
   username,
-  roleNames,
   permissions,
-  academicYearReady,
-  academicStructureReady,
   locale,
   messages,
   children,
@@ -298,10 +321,7 @@ export function SchoolAdminShell({
   primaryColor: string;
   userLabel: string;
   username: string | null;
-  roleNames: string[];
   permissions: string[];
-  academicYearReady: boolean;
-  academicStructureReady: boolean;
   locale: Locale;
   messages: Pick<AppDictionary, "language" | "shell">;
   children: ReactNode;
@@ -335,27 +355,8 @@ export function SchoolAdminShell({
               items={items}
               pathname={pathname}
               label={messages.shell.navigationLabel}
+              settingsLabel={messages.shell.settings}
             />
-          </div>
-          <div className="mt-7">
-            <SetupStatus
-              academicYearReady={academicYearReady}
-              academicStructureReady={academicStructureReady}
-              messages={messages.shell}
-            />
-          </div>
-          <div className="mt-auto pt-5">
-            <div className="flex items-center gap-3 px-2">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <ShieldCheck className="size-4" aria-hidden />
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-xs font-medium">{userLabel}</p>
-                <p className="mt-1 truncate text-[11px] text-muted-foreground">
-                  {roleNames.join(" · ") || messages.shell.schoolUser}
-                </p>
-              </div>
-            </div>
           </div>
         </aside>
         <div className="min-w-0 bg-background">
@@ -391,14 +392,8 @@ export function SchoolAdminShell({
                       items={items}
                       pathname={pathname}
                       label={messages.shell.navigationLabel}
+                      settingsLabel={messages.shell.settings}
                       mobile
-                    />
-                  </div>
-                  <div className="mt-7">
-                    <SetupStatus
-                      academicYearReady={academicYearReady}
-                      academicStructureReady={academicStructureReady}
-                      messages={messages.shell}
                     />
                   </div>
                   <div className="mt-7 border-t pt-5 xl:hidden">

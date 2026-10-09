@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { SchoolAdminShell } from "@/components/school-admin/school-admin-shell";
 import { DEFAULT_BRANDING, normalizeColor } from "@/lib/school-branding";
-import { getAcademicCalendarSummary } from "@/server/academics/academic-calendar";
 import { requireSchoolPermission } from "@/server/authorization/guards";
 import { getDictionary, getSchoolLocale } from "@/i18n/server";
 
@@ -14,11 +13,9 @@ export default async function SchoolAdminLayout({
 }) {
   const { user, tenant, membership, permissions } =
     await requireSchoolPermission("dashboard.read");
-  const roleNames = membership.roles.map(({ role }) => role.name);
   const primaryColor =
     normalizeColor(tenant.school.branding?.primaryColor) ??
     DEFAULT_BRANDING.primaryColor;
-  const academic = await getAcademicCalendarSummary(tenant.school.id);
   const locale = await getSchoolLocale(
     membership.preferredLocale,
     tenant.school.defaultLocale,
@@ -34,10 +31,7 @@ export default async function SchoolAdminLayout({
       primaryColor={primaryColor}
       userLabel={userLabel}
       username={membership.username}
-      roleNames={roleNames}
       permissions={permissions}
-      academicYearReady={academic.yearCount > 0}
-      academicStructureReady={academic.academicStructureReady}
       locale={locale}
       messages={{ language: dictionary.language, shell: dictionary.shell }}
     >
