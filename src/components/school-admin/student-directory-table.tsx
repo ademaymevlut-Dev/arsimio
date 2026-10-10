@@ -468,7 +468,10 @@ export function StudentDirectoryTable({
             {visibleStudents.map((student, index) => (
               <TableRow
                 key={student.id}
-                className={cn(index % 2 === 1 && "bg-muted/35")}
+                className={cn(
+                  index % 2 === 1 ? "bg-muted/55" : "bg-card",
+                  "hover:bg-primary/5 focus-within:bg-primary/5",
+                )}
               >
                 <TableCell className="px-3 py-1.5">
                   <div className="mx-auto flex size-10 items-center justify-center transition-transform duration-200 ease-out hover:scale-[1.18] motion-reduce:transform-none">
