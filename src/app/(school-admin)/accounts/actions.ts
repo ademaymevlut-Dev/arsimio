@@ -16,12 +16,15 @@ export async function createPersonAccountAction(
   const result = await manageCreatePersonAccount(form);
   if (result.status === "success") {
     const studentId = form.get("studentProfileId");
+    const personId = form.get("personId");
     revalidatePath("/accounts");
     revalidatePath("/guardians");
     revalidatePath("/staff");
     revalidatePath("/teachers");
     if (typeof studentId === "string" && studentId)
       revalidatePath(`/students/${studentId}`);
+    if (typeof personId === "string" && personId)
+      revalidatePath(`/guardians/${personId}`);
   }
   return result;
 }
@@ -32,10 +35,13 @@ export async function resetPersonAccountPasswordAction(
 ) {
   const result = await manageResetPersonAccountPassword(form);
   if (result.status === "success") {
+    const personId = form.get("personId");
     revalidatePath("/accounts");
     revalidatePath("/guardians");
     revalidatePath("/staff");
     revalidatePath("/teachers");
+    if (typeof personId === "string" && personId)
+      revalidatePath(`/guardians/${personId}`);
   }
   return result;
 }
@@ -46,10 +52,13 @@ export async function suspendPersonAccountAction(
 ) {
   const result = await manageSuspendPersonAccount(form);
   if (result.status === "success") {
+    const personId = form.get("personId");
     revalidatePath("/accounts");
     revalidatePath("/guardians");
     revalidatePath("/staff");
     revalidatePath("/teachers");
+    if (typeof personId === "string" && personId)
+      revalidatePath(`/guardians/${personId}`);
   }
   return result;
 }

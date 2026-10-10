@@ -134,9 +134,11 @@ function CreateAccountDialogContent({
 
 function ResetPasswordDialogContent({
   accountId,
+  personId,
   onOpenChange,
 }: {
   accountId: string;
+  personId: string;
   onOpenChange: (open: boolean) => void;
 }) {
   const [state, action, pending] = useActionState(
@@ -158,6 +160,7 @@ function ResetPasswordDialogContent({
       </DialogHeader>
       <form action={action} className="space-y-4">
         <input type="hidden" name="personAccountId" value={accountId} />
+        <input type="hidden" name="personId" value={personId} />
         <AccountActionAlert state={state} />
         <DialogFooter>
           <Button
@@ -181,9 +184,11 @@ function ResetPasswordDialogContent({
 
 function SuspendAccountDialogContent({
   accountId,
+  personId,
   onOpenChange,
 }: {
   accountId: string;
+  personId: string;
   onOpenChange: (open: boolean) => void;
 }) {
   const [state, action, pending] = useActionState(
@@ -207,6 +212,7 @@ function SuspendAccountDialogContent({
       </DialogHeader>
       <form action={action} className="space-y-4">
         <input type="hidden" name="personAccountId" value={accountId} />
+        <input type="hidden" name="personId" value={personId} />
         <AccountActionAlert state={state} />
         <DialogFooter>
           <Button
@@ -296,6 +302,7 @@ export function PersonAccountPanel({
                 {resetOpen ? (
                   <ResetPasswordDialogContent
                     accountId={existingAccount.id}
+                    personId={personId}
                     onOpenChange={setResetOpen}
                   />
                 ) : null}
@@ -312,6 +319,7 @@ export function PersonAccountPanel({
                 {suspendOpen ? (
                   <SuspendAccountDialogContent
                     accountId={existingAccount.id}
+                    personId={personId}
                     onOpenChange={setSuspendOpen}
                   />
                 ) : null}

@@ -102,6 +102,31 @@ export type GuardianDirectoryRecord = {
   account: Awaited<ReturnType<typeof getPersonAccountForPerson>>;
 };
 
+export type GuardianDetailRecord = {
+  personId: string;
+  revision: string;
+  fullName: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  occupation: string | null;
+  phone: string | null;
+  email: string | null;
+  account: Awaited<ReturnType<typeof getPersonAccountForPerson>>;
+  children: Array<{
+    relationshipId: string;
+    studentProfileId: string;
+    studentNumber: string;
+    fullName: string;
+    relationshipType: string;
+    isPrimaryContact: boolean;
+    isFinancialResponsible: boolean;
+    isLegalGuardian: boolean;
+    classSection: string | null;
+    academicYear: string | null;
+  }>;
+};
+
 export async function getGuardianDirectory(
   schoolId: string,
 ): Promise<GuardianDirectoryRecord[]> {
@@ -151,7 +176,10 @@ export async function getGuardianDirectory(
   });
 }
 
-export async function getGuardianDetail(schoolId: string, personId: string) {
+export async function getGuardianDetail(
+  schoolId: string,
+  personId: string,
+): Promise<GuardianDetailRecord | null> {
   const guardian = await getPrisma().person.findFirst({
     where: { id: personId, schoolId, status: "ACTIVE" },
     include: {
@@ -199,9 +227,12 @@ export async function getGuardianDetail(schoolId: string, personId: string) {
   const membership = account?.user.memberships[0];
   return {
     personId: guardian.id,
+    revision: guardian.updatedAt.toISOString(),
     fullName: fullName(guardian),
     firstName: guardian.firstName,
+    middleName: guardian.middleName,
     lastName: guardian.lastName,
+    occupation: guardian.occupationText,
     phone: phone?.value ?? null,
     email: email?.value ?? null,
     account: account
@@ -223,6 +254,8 @@ export async function getGuardianDetail(schoolId: string, personId: string) {
         fullName: fullName(relationship.student.person),
         relationshipType: relationship.relationshipType,
         isPrimaryContact: relationship.isPrimaryContact,
+        isFinancialResponsible: relationship.isFinancialResponsible,
+        isLegalGuardian: relationship.isLegalGuardian,
         classSection: placement
           ? className(placement.academicYearClassSection)
           : null,
