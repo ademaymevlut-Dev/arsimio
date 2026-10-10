@@ -34,8 +34,13 @@ export default async function SchoolDetailPage({
   params: Promise<{ schoolId: string }>;
 }) {
   const { schoolId } = await params;
-  const { school, canEditProfile, canEditBranding, canCreateInitialAdmin } =
-    await getPlatformSchool(schoolId);
+  const {
+    school,
+    canEditProfile,
+    canEditBranding,
+    canCreateInitialAdmin,
+    canResetAdminPassword,
+  } = await getPlatformSchool(schoolId);
   const colors = resolveBranding(school.branding);
   return (
     <div className="space-y-7">
@@ -165,6 +170,7 @@ export default async function SchoolDetailPage({
           <InitialSchoolAdmin
             schoolId={school.id}
             canCreate={canCreateInitialAdmin}
+            canResetPassword={canResetAdminPassword}
             admins={school.memberships.map((membership) => ({
               id: membership.id,
               username: membership.username,

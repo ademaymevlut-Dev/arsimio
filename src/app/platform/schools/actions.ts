@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { updateSchoolSettings } from "@/server/platform/update-school";
 import type { SettingsState } from "@/lib/platform-school-validation";
 import { createInitialSchoolAdmin as createInitialSchoolAdminRecord } from "@/server/platform/create-initial-school-admin";
+import { resetSchoolAdminPassword as resetSchoolAdminPasswordRecord } from "@/server/platform/reset-school-admin-password";
 import type { InitialSchoolAdminState } from "@/lib/initial-school-admin-validation";
 
 async function save(kind: "profile" | "branding", form: FormData) {
@@ -34,6 +35,15 @@ export async function createInitialSchoolAdmin(
   form: FormData,
 ): Promise<InitialSchoolAdminState> {
   const result = await createInitialSchoolAdminRecord(form);
+  if (result.status === "success") revalidatePath("/platform", "layout");
+  return result;
+}
+
+export async function resetSchoolAdminPassword(
+  _state: InitialSchoolAdminState,
+  form: FormData,
+): Promise<InitialSchoolAdminState> {
+  const result = await resetSchoolAdminPasswordRecord(form);
   if (result.status === "success") revalidatePath("/platform", "layout");
   return result;
 }

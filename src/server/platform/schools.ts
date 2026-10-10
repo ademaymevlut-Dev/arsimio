@@ -134,5 +134,9 @@ export async function getPlatformSchool(id: string) {
       editable &&
       school.memberships.length === 0 &&
       permissions.has("platform.admins.invite"),
+    canResetAdminPassword:
+      editable &&
+      school.memberships.length > 0 &&
+      permissions.has("platform.admins.invite"),
   };
 }

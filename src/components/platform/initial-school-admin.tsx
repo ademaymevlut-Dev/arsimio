@@ -2,7 +2,10 @@
 
 import { useActionState } from "react";
 import { CheckCircle2, KeyRound, LoaderCircle, ShieldCheck } from "lucide-react";
-import { createInitialSchoolAdmin } from "@/app/platform/schools/actions";
+import {
+  createInitialSchoolAdmin,
+  resetSchoolAdminPassword,
+} from "@/app/platform/schools/actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,63 +73,136 @@ export function InitialSchoolAdmin({
   schoolId,
   admins,
   canCreate,
+  canResetPassword,
 }: {
   schoolId: string;
   admins: InitialAdminSummary[];
   canCreate: boolean;
+  canResetPassword: boolean;
 }) {
-  const [state, action, pending] = useActionState<
+  const [createState, createAction, createPending] = useActionState<
     InitialSchoolAdminState,
     FormData
   >(createInitialSchoolAdmin, {});
+  const [resetState, resetAction, resetPending] = useActionState<
+    InitialSchoolAdminState,
+    FormData
+  >(resetSchoolAdminPassword, {});
 
   if (admins.length) {
     return (
-      <DataTableShell
-        title="Okul yöneticisi"
-        description="İlk yönetici oluşturuldu. Bundan sonraki kullanıcılar okulun kendi yönetim alanından tanımlanacak."
-        footer={`${admins.length} Okul Admin üyeliği`}
-      >
-        <Table className="min-w-[680px]">
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead scope="col">Yönetici</TableHead>
-              <TableHead scope="col">Kullanıcı adı</TableHead>
-              <TableHead scope="col">Durum</TableHead>
-              <TableHead scope="col">Son giriş</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {admins.map((admin) => (
-              <TableRow key={admin.id}>
-                <TableCell className="font-medium">
-                  {[admin.firstName, admin.lastName].filter(Boolean).join(" ") ||
-                    "İsimsiz kullanıcı"}
-                </TableCell>
-                <TableCell className="font-mono text-xs">
-                  {admin.username ?? "Tanımlanmamış"}
-                </TableCell>
-                <TableCell>
-                  <AdminStatus
-                    membershipStatus={admin.membershipStatus}
-                    userStatus={admin.userStatus}
-                  />
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {admin.lastLoginAt
-                    ? dateTimeFormatter.format(new Date(admin.lastLoginAt))
-                    : "Henüz giriş yapmadı"}
-                </TableCell>
+      <div className="space-y-4">
+        {resetState.message && (
+          <Alert
+            role={resetState.status === "error" ? "alert" : "status"}
+            variant={resetState.status === "success" ? "success" : "danger"}
+          >
+            {resetState.status === "success" && (
+              <CheckCircle2 className="mt-1 size-4 shrink-0" aria-hidden />
+            )}
+            <AlertDescription className="mt-0 space-y-3">
+              <p>{resetState.message}</p>
+              {resetState.temporaryPassword && (
+                <div className="rounded-lg border bg-background p-3">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Geçici parola
+                  </p>
+                  <code className="mt-2 block select-all break-all font-mono text-base font-semibold text-foreground">
+                    {resetState.temporaryPassword}
+                  </code>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Bu parola tekrar gösterilmez. Okul yöneticisi ilk girişte
+                    yeni parola belirleme ekranına yönlendirilir.
+                  </p>
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+        <DataTableShell
+          title="Okul yöneticisi"
+          description="Okul yöneticisi oluşturuldu. Gerekirse Süper Admin bu ekrandan yeni geçici parola üretebilir."
+          footer={`${admins.length} Okul Admin üyeliği`}
+        >
+          <Table className="min-w-[820px]">
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead scope="col">Yönetici</TableHead>
+                <TableHead scope="col">Kullanıcı adı</TableHead>
+                <TableHead scope="col">Durum</TableHead>
+                <TableHead scope="col">Son giriş</TableHead>
+                <TableHead scope="col" className="text-right">
+                  İşlem
+                </TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </DataTableShell>
+            </TableHeader>
+            <TableBody>
+              {admins.map((admin) => (
+                <TableRow key={admin.id}>
+                  <TableCell className="font-medium">
+                    {[admin.firstName, admin.lastName]
+                      .filter(Boolean)
+                      .join(" ") || "İsimsiz kullanıcı"}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {admin.username ?? "Tanımlanmamış"}
+                  </TableCell>
+                  <TableCell>
+                    <AdminStatus
+                      membershipStatus={admin.membershipStatus}
+                      userStatus={admin.userStatus}
+                    />
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {admin.lastLoginAt
+                      ? dateTimeFormatter.format(new Date(admin.lastLoginAt))
+                      : "Henüz giriş yapmadı"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <form action={resetAction}>
+                      <input type="hidden" name="schoolId" value={schoolId} />
+                      <input
+                        type="hidden"
+                        name="membershipId"
+                        value={admin.id}
+                      />
+                      <Button
+                        type="submit"
+                        size="sm"
+                        variant="outline"
+                        disabled={!canResetPassword || resetPending}
+                      >
+                        {resetPending ? (
+                          <LoaderCircle
+                            className="animate-spin"
+                            aria-hidden
+                          />
+                        ) : (
+                          <KeyRound aria-hidden />
+                        )}
+                        Geçici şifre üret
+                      </Button>
+                    </form>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </DataTableShell>
+        {!canResetPassword && (
+          <Alert variant="warning">
+            <AlertDescription>
+              Okul yöneticisi şifresi sıfırlama yetkiniz yok veya okul şu anda
+              düzenlenemiyor.
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
     );
   }
 
   return (
-    <form action={action} className="space-y-6">
+    <form action={createAction} className="space-y-6">
       <input type="hidden" name="schoolId" value={schoolId} />
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
@@ -138,14 +214,16 @@ export function InitialSchoolAdmin({
             minLength={2}
             maxLength={100}
             required
-            disabled={!canCreate || pending}
-            aria-invalid={Boolean(state.fieldErrors?.firstName)}
+            disabled={!canCreate || createPending}
+            aria-invalid={Boolean(createState.fieldErrors?.firstName)}
             aria-describedby={
-              state.fieldErrors?.firstName ? "firstName-error" : undefined
+              createState.fieldErrors?.firstName
+                ? "firstName-error"
+                : undefined
             }
             className="mt-2 h-10"
           />
-          <FieldError state={state} field="firstName" />
+          <FieldError state={createState} field="firstName" />
         </div>
         <div>
           <Label htmlFor="lastName">Soyad</Label>
@@ -156,14 +234,14 @@ export function InitialSchoolAdmin({
             minLength={2}
             maxLength={100}
             required
-            disabled={!canCreate || pending}
-            aria-invalid={Boolean(state.fieldErrors?.lastName)}
+            disabled={!canCreate || createPending}
+            aria-invalid={Boolean(createState.fieldErrors?.lastName)}
             aria-describedby={
-              state.fieldErrors?.lastName ? "lastName-error" : undefined
+              createState.fieldErrors?.lastName ? "lastName-error" : undefined
             }
             className="mt-2 h-10"
           />
-          <FieldError state={state} field="lastName" />
+          <FieldError state={createState} field="lastName" />
         </div>
       </div>
       <div>
@@ -176,10 +254,10 @@ export function InitialSchoolAdmin({
           maxLength={64}
           pattern="[A-Za-z0-9][A-Za-z0-9._-]{2,63}"
           required
-          disabled={!canCreate || pending}
-          aria-invalid={Boolean(state.fieldErrors?.username)}
+          disabled={!canCreate || createPending}
+          aria-invalid={Boolean(createState.fieldErrors?.username)}
           aria-describedby={
-            state.fieldErrors?.username
+            createState.fieldErrors?.username
               ? "username-help username-error"
               : "username-help"
           }
@@ -190,7 +268,7 @@ export function InitialSchoolAdmin({
           Bu kullanıcı adı yalnız bu okulun domaininde çalışır ve küçük harfe
           çevrilir.
         </p>
-        <FieldError state={state} field="username" />
+        <FieldError state={createState} field="username" />
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
@@ -203,10 +281,10 @@ export function InitialSchoolAdmin({
             minLength={8}
             maxLength={128}
             required
-            disabled={!canCreate || pending}
-            aria-invalid={Boolean(state.fieldErrors?.password)}
+            disabled={!canCreate || createPending}
+            aria-invalid={Boolean(createState.fieldErrors?.password)}
             aria-describedby={
-              state.fieldErrors?.password
+              createState.fieldErrors?.password
                 ? "password-help password-error"
                 : "password-help"
             }
@@ -215,7 +293,7 @@ export function InitialSchoolAdmin({
           <p id="password-help" className="mt-2 text-xs text-muted-foreground">
             En az 8 karakter. Parola hiçbir rapor veya audit kaydına yazılmaz.
           </p>
-          <FieldError state={state} field="password" />
+          <FieldError state={createState} field="password" />
         </div>
         <div>
           <Label htmlFor="passwordConfirmation">Parolayı tekrar girin</Label>
@@ -227,18 +305,18 @@ export function InitialSchoolAdmin({
             minLength={8}
             maxLength={128}
             required
-            disabled={!canCreate || pending}
+            disabled={!canCreate || createPending}
             aria-invalid={Boolean(
-              state.fieldErrors?.passwordConfirmation,
+              createState.fieldErrors?.passwordConfirmation,
             )}
             aria-describedby={
-              state.fieldErrors?.passwordConfirmation
+              createState.fieldErrors?.passwordConfirmation
                 ? "passwordConfirmation-error"
                 : undefined
             }
             className="mt-2 h-10"
           />
-          <FieldError state={state} field="passwordConfirmation" />
+          <FieldError state={createState} field="passwordConfirmation" />
         </div>
       </div>
       <div className="flex flex-col gap-4 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
@@ -249,13 +327,13 @@ export function InitialSchoolAdmin({
           tarafından açılır.
         </p>
         {canCreate && (
-          <Button type="submit" size="lg" disabled={pending}>
-            {pending ? (
+          <Button type="submit" size="lg" disabled={createPending}>
+            {createPending ? (
               <LoaderCircle className="animate-spin" aria-hidden />
             ) : (
               <ShieldCheck aria-hidden />
             )}
-            {pending ? "Oluşturuluyor…" : "İlk yöneticiyi oluştur"}
+            {createPending ? "Oluşturuluyor…" : "İlk yöneticiyi oluştur"}
           </Button>
         )}
       </div>
@@ -267,15 +345,17 @@ export function InitialSchoolAdmin({
           </AlertDescription>
         </Alert>
       )}
-      {state.message && (
+      {createState.message && (
         <Alert
-          role={state.status === "error" ? "alert" : "status"}
-          variant={state.status === "success" ? "success" : "danger"}
+          role={createState.status === "error" ? "alert" : "status"}
+          variant={createState.status === "success" ? "success" : "danger"}
         >
-          {state.status === "success" && (
+          {createState.status === "success" && (
             <CheckCircle2 className="mt-1 size-4 shrink-0" aria-hidden />
           )}
-          <AlertDescription className="mt-0">{state.message}</AlertDescription>
+          <AlertDescription className="mt-0">
+            {createState.message}
+          </AlertDescription>
         </Alert>
       )}
     </form>

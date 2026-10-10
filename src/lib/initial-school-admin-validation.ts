@@ -12,6 +12,7 @@ export type InitialSchoolAdminState = {
   status?: "success" | "error";
   message?: string;
   fieldErrors?: Partial<Record<InitialSchoolAdminField, string>>;
+  temporaryPassword?: string;
 };
 
 export type InitialSchoolAdminInput = {
