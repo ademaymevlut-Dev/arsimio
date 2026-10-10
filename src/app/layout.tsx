@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AppToaster } from "@/components/ui/toaster";
 import { HTML_LOCALES, normalizeLocale } from "@/i18n/config";
 import { getRequestLocale } from "@/i18n/server";
 import { getTenantContext } from "@/server/tenancy/context";
@@ -37,7 +38,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <TooltipProvider>{children}</TooltipProvider>
+        <TooltipProvider>
+          {children}
+          <AppToaster />
+        </TooltipProvider>
       </body>
     </html>
   );

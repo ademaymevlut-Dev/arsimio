@@ -438,7 +438,7 @@ export function SchoolAdminShell({
           </header>
           <main
             id="school-admin-content"
-            className="min-h-[calc(100svh-3.5rem)] px-4 py-7 sm:px-6 sm:py-8 lg:px-8 lg:py-9"
+            className="min-h-[calc(100svh-3.5rem)] px-3 py-3 sm:px-4 sm:py-4 lg:px-5"
           >
             {children}
           </main>

@@ -119,8 +119,8 @@ function DockItem({
         className={cn(
           "relative flex size-full items-center justify-center rounded-xl outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:size-[46%]",
           active
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary",
+            ? "bg-card text-primary"
+            : "bg-primary-foreground/10 text-primary-foreground/75 hover:bg-primary-foreground/20 hover:text-primary-foreground",
         )}
       >
         {icon}
@@ -130,8 +130,8 @@ function DockItem({
             className={cn(
               "absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-semibold leading-4",
               active
-                ? "bg-primary-foreground text-primary"
-                : "bg-primary text-primary-foreground",
+                ? "bg-primary text-primary-foreground"
+                : "bg-primary-foreground text-primary",
             )}
           >
             {badge}
@@ -158,7 +158,7 @@ export function Dock({
   return (
     <div
       className={cn(
-        "relative flex min-h-20 min-w-0 items-end justify-center px-2 pt-7",
+        "relative flex min-h-[72px] min-w-0 items-end justify-center px-2",
         className,
       )}
     >
@@ -166,7 +166,7 @@ export function Dock({
         aria-label={label}
         onMouseMove={(event) => mouseX.set(event.clientX)}
         onMouseLeave={() => mouseX.set(Number.POSITIVE_INFINITY)}
-        className="flex max-w-full items-end gap-1.5 rounded-2xl border bg-card/95 p-2"
+        className="flex max-w-full items-end gap-1.5 rounded-2xl bg-primary p-2"
       >
         {items.map((item) => (
           <DockItem
