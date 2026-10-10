@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { StudentState } from "@/lib/student-validation";
 import {
   manageAddPreviousEducation,
+  manageAddEnrollment,
   manageArchivePreviousEducation,
   manageAddGuardian,
   manageCreateStudent,
@@ -86,6 +87,20 @@ export async function addPreviousEducation(
   const studentId = form.get("studentProfileId");
   if (result.status === "success" && typeof studentId === "string") {
     revalidatePath(`/students/${studentId}`);
+  }
+  return result;
+}
+
+export async function addStudentEnrollment(
+  _state: StudentState,
+  form: FormData,
+) {
+  const result = await manageAddEnrollment(form);
+  const studentId = form.get("studentProfileId");
+  if (result.status === "success" && typeof studentId === "string") {
+    revalidatePath(`/students/${studentId}`);
+    revalidatePath("/students");
+    revalidatePath("/dashboard");
   }
   return result;
 }

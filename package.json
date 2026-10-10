@@ -17,6 +17,7 @@
     "db:verify:students": "node --conditions=react-server --import tsx scripts/verify-student-records.mts",
     "db:seed:pilot": "tsx scripts/seed-pilot.mts",
     "db:seed:legacy-subjects": "tsx scripts/seed-legacy-subjects.mts",
+    "db:seed:studentlist": "tsx scripts/seed-studentlist.mts",
     "postinstall": "prisma generate",
     "db:format": "prisma format",
     "db:generate": "prisma generate",

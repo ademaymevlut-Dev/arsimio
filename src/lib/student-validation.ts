@@ -121,6 +121,13 @@ export type AddPreviousEducationInput = {
   note: string | null;
 };
 
+export type AddEnrollmentInput = {
+  studentProfileId: string;
+  academicYearId: string;
+  academicYearClassSectionId: string;
+  admittedOn: Date;
+};
+
 export type ArchivePreviousEducationInput = {
   studentProfileId: string;
   previousEducationId: string;
@@ -487,6 +494,41 @@ export function parseAddPreviousEducation(
       transportText,
       discountText,
       note,
+    },
+  };
+}
+
+export function parseAddEnrollment(
+  form: FormData,
+  messages: StudentServerMessages = tr.studentServer,
+): Parsed<AddEnrollmentInput> {
+  const studentProfileId = form.get("studentProfileId");
+  const academicYearId = form.get("academicYearId");
+  const classSectionId = form.get("classSectionId");
+  const admittedOn = parseDateOnly(form.get("admittedOn"));
+  const fieldErrors: StudentState["fieldErrors"] = {};
+
+  if (!validSchoolId(studentProfileId)) fieldErrors.record = messages.unavailable;
+  if (!validSchoolId(academicYearId)) fieldErrors.academicYearId = messages.invalidRelation;
+  if (!validSchoolId(classSectionId)) fieldErrors.classSectionId = messages.invalidRelation;
+  if (!admittedOn) fieldErrors.admittedOn = messages.invalidDate;
+
+  if (
+    Object.keys(fieldErrors).length ||
+    !validSchoolId(studentProfileId) ||
+    !validSchoolId(academicYearId) ||
+    !validSchoolId(classSectionId) ||
+    !admittedOn
+  )
+    return invalid(messages, fieldErrors);
+
+  return {
+    success: true,
+    data: {
+      studentProfileId,
+      academicYearId,
+      academicYearClassSectionId: classSectionId,
+      admittedOn,
     },
   };
 }

@@ -223,6 +223,7 @@ export type StudentDetailRecord = {
   }>;
   enrollments: Array<{
     id: string;
+    academicYearId: string;
     academicYear: string;
     status: "ACTIVE" | "COMPLETED" | "CANCELLED";
     enrolledOn: string;
@@ -395,6 +396,7 @@ export async function getStudentDetail(
     }),
     enrollments: student.enrollments.map((enrollment) => ({
       id: enrollment.id,
+      academicYearId: enrollment.academicYearId,
       academicYear: enrollment.academicYear.name,
       status: enrollment.status,
       enrolledOn: dateOnly(enrollment.enrolledOn)!,

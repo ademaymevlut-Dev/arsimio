@@ -41,6 +41,9 @@ yarn-error.log*
 # Legacy Flask/Expo project kept locally as a migration reference
 /horizonedu/
 
+# Local demo/import data with person-like names and contact fields
+/docs/studentlist.csv
+
 # vercel
 .vercel
 

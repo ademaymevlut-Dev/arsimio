@@ -17,6 +17,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import {
+  addStudentEnrollment,
   addPreviousEducation,
   addGuardian,
   archivePreviousEducation,
@@ -60,6 +61,7 @@ import type {
 } from "@/lib/student-validation";
 import type {
   GuardianCandidate,
+  StudentRegistrationContext,
   StudentDetailRecord,
 } from "@/server/students/students";
 import type { StudentFinanceContractSummary } from "@/server/finance/finance";
@@ -1145,14 +1147,34 @@ function StudentLifecycleCard({
 
 function StudentEnrollmentCard({
   student,
+  canManageStudent,
+  registrationContext,
   locale,
   messages,
 }: {
   student: StudentDetailRecord;
+  canManageStudent: boolean;
+  registrationContext: StudentRegistrationContext;
   locale: Locale;
-  messages: Pick<AppDictionary, "students">;
+  messages: Pick<AppDictionary, "common" | "students">;
 }) {
+  const [state, formAction, pending] = useActionState(
+    addStudentEnrollment,
+    initialState,
+  );
   const text = messages.students;
+  const activeYear = registrationContext.academicYear;
+  const hasActiveYearEnrollment = activeYear
+    ? student.enrollments.some(
+        (enrollment) => enrollment.academicYearId === activeYear.id,
+      )
+    : false;
+  const defaultAdmittedOn =
+    activeYear &&
+    student.admittedOn >= activeYear.startDate &&
+    student.admittedOn <= activeYear.endDate
+      ? student.admittedOn
+      : (activeYear?.startDate ?? student.admittedOn);
 
   return (
     <Card>
@@ -1160,9 +1182,11 @@ function StudentEnrollmentCard({
         <CardTitle>{text.enrollmentTitle}</CardTitle>
         <CardDescription>{text.enrollmentDescription}</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-6">
         {student.enrollments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">—</p>
+          <p className="text-sm text-muted-foreground">
+            {text.noEnrollmentRecords}
+          </p>
         ) : (
           <div className="space-y-4">
             {student.enrollments.map((enrollment) => (
@@ -1213,6 +1237,86 @@ function StudentEnrollmentCard({
             ))}
           </div>
         )}
+
+        {canManageStudent && !hasActiveYearEnrollment ? (
+          activeYear && registrationContext.classSections.length > 0 ? (
+            <form action={formAction} className="space-y-4 rounded-lg border p-4">
+              <input type="hidden" name="studentProfileId" value={student.id} />
+              <input type="hidden" name="academicYearId" value={activeYear.id} />
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <Label htmlFor="student-enrollment-year">
+                    {text.academicYear}
+                  </Label>
+                  <Input
+                    id="student-enrollment-year"
+                    value={activeYear.name}
+                    disabled
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="student-enrollment-class">
+                    {text.classSection}
+                  </Label>
+                  <NativeSelect
+                    id="student-enrollment-class"
+                    name="classSectionId"
+                    disabled={pending}
+                    aria-invalid={Boolean(state.fieldErrors?.classSectionId)}
+                    className="mt-2"
+                    defaultValue={registrationContext.classSections[0]?.id}
+                  >
+                    {registrationContext.classSections.map((section) => (
+                      <option key={section.id} value={section.id}>
+                        {section.name}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                  <FieldError
+                    state={state}
+                    field="classSectionId"
+                    id="student-enrollment-class-error"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="student-enrollment-date">
+                    {text.admittedOn}
+                  </Label>
+                  <Input
+                    id="student-enrollment-date"
+                    name="admittedOn"
+                    type="date"
+                    min={activeYear.startDate}
+                    max={activeYear.endDate}
+                    defaultValue={defaultAdmittedOn}
+                    disabled={pending}
+                    aria-invalid={Boolean(state.fieldErrors?.admittedOn)}
+                    className="mt-2"
+                  />
+                  <FieldError
+                    state={state}
+                    field="admittedOn"
+                    id="student-enrollment-date-error"
+                  />
+                </div>
+              </div>
+              <ActionAlert state={state} />
+              <Button type="submit" disabled={pending}>
+                {pending ? messages.common.saving : text.addEnrollment}
+              </Button>
+            </form>
+          ) : (
+            <Alert variant="info">
+              <AlertDescription>
+                {text.noRegistrationOptionsDescription}
+                <Button asChild variant="link" className="ml-2 h-auto p-0">
+                  <Link href="/academics/structure">{text.goToStructure}</Link>
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -1398,6 +1502,7 @@ export function StudentDetailManager({
   canManageAccounts,
   canReadFinance,
   financeContracts,
+  registrationContext,
   defaultEffectiveOn,
   initialTab,
   locale,
@@ -1411,6 +1516,7 @@ export function StudentDetailManager({
   canManageAccounts: boolean;
   canReadFinance: boolean;
   financeContracts: StudentFinanceContractSummary[];
+  registrationContext: StudentRegistrationContext;
   defaultEffectiveOn: string;
   initialTab?: string;
   locale: Locale;
@@ -1760,6 +1866,8 @@ export function StudentDetailManager({
             <>
               <StudentEnrollmentCard
                 student={student}
+                canManageStudent={canManageStudent}
+                registrationContext={registrationContext}
                 locale={locale}
                 messages={messages}
               />

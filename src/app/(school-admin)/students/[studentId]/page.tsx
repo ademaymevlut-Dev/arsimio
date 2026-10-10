@@ -10,6 +10,7 @@ import { requireSchoolPermission } from "@/server/authorization/guards";
 import { getStudentFinanceContractsForStudent } from "@/server/finance/finance";
 import {
   getGuardianCandidates,
+  getStudentRegistrationContext,
   getStudentDetail,
 } from "@/server/students/students";
 
@@ -34,7 +35,7 @@ export default async function StudentDetailPage({
     tenant.school.defaultLocale,
   );
   const canReadFinance = permissions.includes("finance.contracts.read");
-  const [student, dictionary, financeContracts] = await Promise.all([
+  const [student, dictionary, financeContracts, registrationContext] = await Promise.all([
     getStudentDetail(tenant.school.id, route.studentId, {
       includeIdentities: permissions.includes("persons.identity.read"),
       includeGuardians: permissions.includes("guardians.read"),
@@ -43,6 +44,7 @@ export default async function StudentDetailPage({
     canReadFinance
       ? getStudentFinanceContractsForStudent(tenant.school.id, route.studentId)
       : Promise.resolve([]),
+    getStudentRegistrationContext(tenant.school.id),
   ]);
   if (!student) notFound();
 
@@ -63,6 +65,7 @@ export default async function StudentDetailPage({
       canManageAccounts={permissions.includes("accounts.manage")}
       canReadFinance={canReadFinance}
       financeContracts={financeContracts}
+      registrationContext={registrationContext}
       initialTab={Array.isArray(query.tab) ? query.tab[0] : query.tab}
       defaultEffectiveOn={dateOnlyValue(
         dateOnlyInTimeZone(new Date(), tenant.school.timezone),

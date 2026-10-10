@@ -2,6 +2,7 @@ import "server-only";
 import type { Prisma, StudentLifecycleEventType } from "@/generated/prisma/client";
 import type {
   AddGuardianInput,
+  AddEnrollmentInput,
   AddPreviousEducationInput,
   ArchivePreviousEducationInput,
   CreateStudentInput,
@@ -535,6 +536,93 @@ export async function persistPreviousEducation(
     changedFields: ["previousEducation"],
   });
   return { status: "success", message: actor.messages.previousEducationSaved, entityId: record.id };
+}
+
+export async function persistStudentEnrollment(
+  tx: Prisma.TransactionClient,
+  actor: StudentActor,
+  input: AddEnrollmentInput,
+): Promise<StudentState> {
+  const student = await tx.studentProfile.findFirst({
+    where: { id: input.studentProfileId, schoolId: actor.schoolId },
+    select: { id: true, status: true },
+  });
+  if (!student) return error(actor.messages.unavailable);
+  if (student.status !== "ACTIVE") return error(actor.messages.conflict);
+
+  const annualClass = await tx.academicYearClassSection.findFirst({
+    where: {
+      id: input.academicYearClassSectionId,
+      schoolId: actor.schoolId,
+      academicYearId: input.academicYearId,
+      status: "ACTIVE",
+      academicYear: { status: "ACTIVE", archivedAt: null },
+    },
+    include: { academicYear: true },
+  });
+  if (!annualClass)
+    return error(actor.messages.noActiveYear, {
+      classSectionId: actor.messages.invalidRelation,
+    });
+  if (
+    input.admittedOn < annualClass.academicYear.startDate ||
+    input.admittedOn > annualClass.academicYear.endDate
+  )
+    return error(actor.messages.dateOutsideYear, {
+      admittedOn: actor.messages.dateOutsideYear,
+    });
+
+  const existingEnrollment = await tx.enrollment.findFirst({
+    where: {
+      schoolId: actor.schoolId,
+      studentProfileId: student.id,
+      academicYearId: annualClass.academicYearId,
+    },
+    include: {
+      placements: { where: { validTo: null }, select: { id: true } },
+    },
+  });
+  if (existingEnrollment && existingEnrollment.status !== "ACTIVE")
+    return error(actor.messages.conflict);
+  if (existingEnrollment?.placements.length) return error(actor.messages.duplicate);
+
+  const enrollment =
+    existingEnrollment ??
+    (await tx.enrollment.create({
+      data: {
+        schoolId: actor.schoolId,
+        studentProfileId: student.id,
+        academicYearId: annualClass.academicYearId,
+        enrolledOn: input.admittedOn,
+      },
+    }));
+
+  const placement = await tx.studentGroupPlacement.create({
+    data: {
+      schoolId: actor.schoolId,
+      academicYearId: annualClass.academicYearId,
+      enrollmentId: enrollment.id,
+      academicYearClassSectionId: annualClass.id,
+      validFrom: input.admittedOn,
+    },
+  });
+  await audit(tx, actor, {
+    action: "student.enrollment-created",
+    entityType: "Enrollment",
+    entityId: enrollment.id,
+    afterData: {
+      studentProfileId: student.id,
+      academicYearId: annualClass.academicYearId,
+      academicYearClassSectionId: annualClass.id,
+      placementId: placement.id,
+    },
+    changedFields: ["enrollment", "placement"],
+  });
+  return {
+    status: "success",
+    message: actor.messages.studentEnrollmentSaved,
+    entityId: enrollment.id,
+  };
 }
 
 export async function persistPreviousEducationArchive(

@@ -6,6 +6,7 @@ import { getDictionary, getSchoolLocale } from "@/i18n/server";
 import { getPrisma } from "@/lib/db";
 import {
   parseAddPreviousEducation,
+  parseAddEnrollment,
   parseArchivePreviousEducation,
   parseAddGuardian,
   parseCreateStudent,
@@ -23,6 +24,7 @@ import {
   persistFinancialGuardian,
   persistGuardianRelationship,
   persistPrimaryGuardian,
+  persistStudentEnrollment,
   persistPreviousEducation,
   persistPreviousEducationArchive,
   persistStudent,
@@ -156,6 +158,10 @@ export function manageUpdateStudentDetails(form: FormData) {
 
 export function manageAddPreviousEducation(form: FormData) {
   return run("students.manage", parseAddPreviousEducation, persistPreviousEducation, form);
+}
+
+export function manageAddEnrollment(form: FormData) {
+  return run("students.manage", parseAddEnrollment, persistStudentEnrollment, form);
 }
 
 export function manageArchivePreviousEducation(form: FormData) {
