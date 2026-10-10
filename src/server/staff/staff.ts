@@ -123,6 +123,20 @@ export type StaffDirectoryFilter = {
   status?: EmploymentStatus;
 };
 
+export type StaffDirectoryRecord = {
+  id: string;
+  staffNumber: string;
+  fullName: string;
+  photoUrl: string | null;
+  status: EmploymentStatus;
+  type: string;
+  hiredOn: string;
+  department: string;
+  position: string;
+  isTeacher: boolean;
+  teacherTitle: string | null;
+};
+
 export type StaffCatalogItem = {
   id: string;
   code: string;
@@ -303,7 +317,7 @@ export async function getStaffDirectory(
   schoolId: string,
   locale: string,
   filter: StaffDirectoryFilter = {},
-) {
+): Promise<StaffDirectoryRecord[]> {
   const query = filter.query?.trim();
   const rows = await getPrisma().employment.findMany({
     where: {
@@ -334,6 +348,7 @@ export async function getStaffDirectory(
     id: row.id,
     staffNumber: row.staffNumber,
     fullName: fullName(row.person),
+    photoUrl: row.person.photoUrl,
     status: row.status,
     type: row.type,
     hiredOn: row.hiredOn.toISOString().slice(0, 10),
