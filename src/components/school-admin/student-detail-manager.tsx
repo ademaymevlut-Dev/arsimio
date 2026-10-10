@@ -52,6 +52,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
+import { Dock, type DockItemData } from "@/components/ui/dock";
 import { formatMessage } from "@/i18n/format";
 import { HTML_LOCALES, type Locale } from "@/i18n/config";
 import type { AppDictionary } from "@/i18n/dictionaries/types";
@@ -65,7 +66,6 @@ import type {
   StudentDetailRecord,
 } from "@/server/students/students";
 import type { StudentFinanceContractSummary } from "@/server/finance/finance";
-import { cn } from "@/lib/utils";
 
 const initialState: StudentState = {};
 
@@ -1565,13 +1565,13 @@ export function StudentDetailManager({
     count?: number;
   }> = [
     { value: "overview", label: text.overviewTab, icon: LayoutDashboard },
-    { value: "personal", label: text.personalInformation, icon: UserRound },
+    { value: "personal", label: text.profileTab, icon: UserRound },
     { value: "academic", label: text.academicTab, icon: GraduationCap },
     ...(canReadGuardians
       ? [
           {
             value: "guardians" as const,
-            label: text.guardiansTitle,
+            label: text.parentsTab,
             icon: UsersRound,
             count: student.guardians.length,
           },
@@ -1581,17 +1581,27 @@ export function StudentDetailManager({
       ? [
           {
             value: "finance" as const,
-            label: messages.finance.studentContractsTitle,
+            label: text.financeTab,
             icon: CircleDollarSign,
             count: financeContracts.length,
           },
         ]
       : []),
-    { value: "access", label: text.accessHistoryTab, icon: ShieldCheck },
+    { value: "access", label: text.accountTab, icon: ShieldCheck },
   ];
   const activeTab = navigation.some((item) => item.value === initialTab)
     ? (initialTab as StudentDetailTab)
     : "overview";
+  const dockItems: DockItemData[] = navigation.map(
+    ({ value, label, icon: Icon, count }) => ({
+      id: value,
+      href: studentTabHref(student.id, value),
+      icon: <Icon aria-hidden />,
+      label,
+      active: value === activeTab,
+      badge: count,
+    }),
+  );
 
   return (
     <div className="space-y-5">
@@ -1662,51 +1672,12 @@ export function StudentDetailManager({
         </div>
       </section>
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start">
-        <aside className="min-w-0 rounded-xl border bg-card p-2 lg:sticky lg:top-4">
-          <nav
-            aria-label={text.detailNavigation}
-            className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible"
-          >
-            {navigation.map(({ value, label, icon: Icon, count }) => {
-              const active = value === activeTab;
-              return (
-                <Link
-                  key={value}
-                  href={studentTabHref(student.id, value)}
-                  scroll={false}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex min-w-max items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <Icon className="size-4" aria-hidden />
-                  <span>{label}</span>
-                  {typeof count === "number" ? (
-                    <span
-                      className={cn(
-                        "ml-auto rounded-full px-2 py-0.5 text-[11px]",
-                        active
-                          ? "bg-primary-foreground/15 text-primary-foreground"
-                          : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {count}
-                    </span>
-                  ) : null}
-                </Link>
-              );
-            })}
-          </nav>
-        </aside>
+      <Dock items={dockItems} label={text.detailNavigation} />
 
-        <section
-          aria-label={navigation.find((item) => item.value === activeTab)?.label}
-          className="min-w-0 space-y-4 lg:max-h-[calc(100svh-18rem)] lg:min-h-[430px] lg:overflow-y-auto lg:pr-2"
-        >
+      <section
+        aria-label={navigation.find((item) => item.value === activeTab)?.label}
+        className="min-w-0 space-y-4 lg:max-h-[calc(100svh-22rem)] lg:min-h-[430px] lg:overflow-y-auto lg:pr-2"
+      >
           {activeTab === "overview" ? (
             <>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1923,8 +1894,7 @@ export function StudentDetailManager({
               />
             </div>
           ) : null}
-        </section>
-      </div>
+      </section>
     </div>
   );
 }
