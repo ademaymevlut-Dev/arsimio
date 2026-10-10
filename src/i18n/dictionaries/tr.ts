@@ -378,6 +378,7 @@ export const tr = {
     withdrawn: "Ayrıldı",
     transferred: "Başka okula geçti",
     applyFilters: "Filtrele",
+    filters: "Filtreler",
     allStudents: "Tüm öğrenciler",
     statusFilterLabel: "Öğrenci durumu filtresi",
     classFilterLabel: "Sınıf filtresi",

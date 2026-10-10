@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
 import {
   ArrowRight,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ListFilter,
   Search,
 } from "lucide-react";
 import type { StudentStatus } from "@/generated/prisma/client";
@@ -33,6 +35,8 @@ const UNASSIGNED_CLASS = "__unassigned_class__";
 type PageSize = 20 | 50 | "all";
 type StatusFilter = StudentStatus | "ALL";
 type PaginationItem = number | "start-ellipsis" | "end-ellipsis";
+type FilterLayout = "compact" | "menu";
+type StatusOption = { value: StudentStatus; label: string };
 
 function StudentPhotoPlaceholder({ className }: { className?: string }) {
   return (
@@ -110,6 +114,116 @@ function statusBadgeVariant(status: StudentStatus) {
   return "danger" as const;
 }
 
+function StatusFilterButtons({
+  options,
+  selected,
+  onSelect,
+  label,
+  layout = "compact",
+}: {
+  options: StatusOption[];
+  selected: StatusFilter;
+  onSelect: (status: StudentStatus) => void;
+  label: string;
+  layout?: FilterLayout;
+}) {
+  const menu = layout === "menu";
+
+  return (
+    <div
+      className={menu ? "grid gap-1.5" : "flex flex-wrap gap-1.5"}
+      role="group"
+      aria-label={label}
+    >
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-pressed={selected === option.value}
+          onClick={() => onSelect(option.value)}
+          className={cn(
+            "rounded-md font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            menu
+              ? "w-full px-3 py-2 text-left text-xs"
+              : "px-2.5 py-1.5 text-[11px]",
+            selected === option.value
+              ? option.value === "ACTIVE"
+                ? "bg-success text-success-foreground"
+                : "bg-primary text-primary-foreground"
+              : menu
+                ? "bg-card text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ClassFilterButtons({
+  options,
+  hasUnassigned,
+  selected,
+  onSelect,
+  label,
+  unassignedLabel,
+  layout = "compact",
+}: {
+  options: string[];
+  hasUnassigned: boolean;
+  selected: string;
+  onSelect: (classSection: string) => void;
+  label: string;
+  unassignedLabel: string;
+  layout?: FilterLayout;
+}) {
+  const menu = layout === "menu";
+  const buttonClassName = (active: boolean) =>
+    cn(
+      "rounded-md font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      menu
+        ? "w-full px-3 py-2 text-left text-xs"
+        : "px-2.5 py-1.5 text-[11px]",
+      active
+        ? "bg-accent text-accent-foreground"
+        : menu
+          ? "bg-card text-foreground hover:bg-primary/10 hover:text-primary"
+          : "bg-primary text-primary-foreground hover:bg-primary/80",
+    );
+
+  return (
+    <div
+      className={menu ? "grid gap-1.5" : "flex flex-wrap gap-1.5"}
+      role="group"
+      aria-label={label}
+    >
+      {options.map((option) => (
+        <button
+          key={option}
+          type="button"
+          aria-pressed={selected === option}
+          onClick={() => onSelect(option)}
+          className={buttonClassName(selected === option)}
+        >
+          {option}
+        </button>
+      ))}
+      {hasUnassigned ? (
+        <button
+          type="button"
+          aria-pressed={selected === UNASSIGNED_CLASS}
+          onClick={() => onSelect(UNASSIGNED_CLASS)}
+          className={buttonClassName(selected === UNASSIGNED_CLASS)}
+        >
+          {unassignedLabel}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function StudentDirectoryTable({
   students,
   initialStatus,
@@ -140,7 +254,7 @@ export function StudentDirectoryTable({
     WITHDRAWN: text.withdrawn,
     TRANSFERRED: text.transferred,
   };
-  const statusOptions: Array<{ value: StudentStatus; label: string }> = [
+  const statusOptions: StatusOption[] = [
     { value: "ACTIVE", label: text.active },
     { value: "INACTIVE", label: text.inactive },
     { value: "GRADUATED", label: text.graduated },
@@ -210,6 +324,20 @@ export function StudentDirectoryTable({
     pageSize === "all"
       ? filteredStudents.length
       : Math.min(currentPage * pageSize, filteredStudents.length);
+  const activeFilterCount =
+    Number(status !== "ALL") + Number(classSection !== ALL_CLASSES);
+
+  function toggleStatusFilter(nextStatus: StudentStatus) {
+    setStatus((current) => (current === nextStatus ? "ALL" : nextStatus));
+    setPage(1);
+  }
+
+  function toggleClassFilter(nextClassSection: string) {
+    setClassSection((current) =>
+      current === nextClassSection ? ALL_CLASSES : nextClassSection,
+    );
+    setPage(1);
+  }
 
   return (
     <section
@@ -225,106 +353,72 @@ export function StudentDirectoryTable({
         ) : null}
       </div>
 
-      <div className="space-y-2 px-4 py-2.5">
-        <div
-          className="flex flex-wrap gap-1.5"
-          role="group"
-          aria-label={text.statusFilterLabel}
-        >
-          {statusOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={status === option.value}
-              onClick={() => {
-                setStatus((current) =>
-                  current === option.value ? "ALL" : option.value,
-                );
-                setPage(1);
-              }}
-              className={cn(
-                "rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                status === option.value
-                  ? option.value === "ACTIVE"
-                    ? "bg-success text-success-foreground"
-                    : "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary",
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
+      <div className="flex flex-col gap-2 border-b px-4 py-2.5 sm:grid sm:grid-cols-[minmax(0,1fr)_260px] sm:items-start sm:gap-4">
+        <div className="hidden min-w-0 space-y-2 sm:block">
+          <StatusFilterButtons
+            options={statusOptions}
+            selected={status}
+            onSelect={toggleStatusFilter}
+            label={text.statusFilterLabel}
+          />
+          <ClassFilterButtons
+            options={classOptions}
+            hasUnassigned={hasUnassignedStudents}
+            selected={classSection}
+            onSelect={toggleClassFilter}
+            label={text.classFilterLabel}
+            unassignedLabel={text.unassignedClass}
+          />
         </div>
 
-        <div
-          className="flex flex-wrap gap-1.5"
-          role="group"
-          aria-label={text.classFilterLabel}
-        >
-          {classOptions.map((option) => (
-            <button
-              key={option}
-              type="button"
-              aria-pressed={classSection === option}
-              onClick={() => {
-                setClassSection((current) =>
-                  current === option ? ALL_CLASSES : option,
-                );
-                setPage(1);
-              }}
-              className={cn(
-                "rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                classSection === option
-                  ? "bg-accent text-accent-foreground"
-                  : "bg-primary text-primary-foreground hover:bg-primary/80",
-              )}
-            >
-              {option}
-            </button>
-          ))}
-          {hasUnassignedStudents ? (
-            <button
-              type="button"
-              aria-pressed={classSection === UNASSIGNED_CLASS}
-              onClick={() => {
-                setClassSection((current) =>
-                  current === UNASSIGNED_CLASS
-                    ? ALL_CLASSES
-                    : UNASSIGNED_CLASS,
-                );
-                setPage(1);
-              }}
-              className={cn(
-                "rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                classSection === UNASSIGNED_CLASS
-                  ? "bg-accent text-accent-foreground"
-                  : "bg-primary text-primary-foreground hover:bg-primary/80",
-              )}
-            >
-              {text.unassignedClass}
-            </button>
-          ) : null}
-        </div>
-      </div>
+        <details className="group order-2 rounded-lg bg-muted/55 sm:hidden">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2">
+              <ListFilter className="size-3.5 text-primary" aria-hidden />
+              {text.filters}
+              {activeFilterCount > 0 ? (
+                <span className="flex size-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+            </span>
+            <ChevronDown
+              className="size-3.5 text-muted-foreground transition-transform group-open:rotate-180"
+              aria-hidden
+            />
+          </summary>
+          <div className="space-y-3 border-t px-3 py-3">
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+                {text.statusLabel}
+              </p>
+              <StatusFilterButtons
+                options={statusOptions}
+                selected={status}
+                onSelect={toggleStatusFilter}
+                label={text.statusFilterLabel}
+                layout="menu"
+              />
+            </div>
 
-      <div className="flex flex-col justify-between gap-2.5 border-y bg-muted/20 px-4 py-2 sm:flex-row sm:items-center">
-        <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <span>{text.rowsPerPage}</span>
-          <NativeSelect
-            value={String(pageSize)}
-            onChange={(event) => {
-              const value = event.target.value;
-              setPageSize(value === "all" ? "all" : value === "50" ? 50 : 20);
-              setPage(1);
-            }}
-            className="h-8 w-20 px-2 text-xs"
-          >
-            <option value="20">20</option>
-            <option value="50">50</option>
-            <option value="all">{text.allRows}</option>
-          </NativeSelect>
-        </label>
-        <label className="relative block w-full sm:max-w-[260px]">
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+                {text.classSection}
+              </p>
+              <ClassFilterButtons
+                options={classOptions}
+                hasUnassigned={hasUnassignedStudents}
+                selected={classSection}
+                onSelect={toggleClassFilter}
+                label={text.classFilterLabel}
+                unassignedLabel={text.unassignedClass}
+                layout="menu"
+              />
+            </div>
+          </div>
+        </details>
+
+        <label className="relative order-1 block w-full sm:order-none sm:col-start-2 sm:row-start-1">
           <span className="sr-only">{text.searchLabel}</span>
           <Search
             className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
@@ -434,55 +528,78 @@ export function StudentDirectoryTable({
             .replace("{to}", String(lastRecord))
             .replace("{count}", String(filteredStudents.length))}
         </p>
-        {filteredStudents.length > 0 && pageSize !== "all" ? (
-          <nav className="flex items-center gap-0.5" aria-label={text.paginationLabel}>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              disabled={currentPage === 1}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-              aria-label={text.previousPage}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span>{text.rowsPerPage}</span>
+            <NativeSelect
+              value={String(pageSize)}
+              onChange={(event) => {
+                const value = event.target.value;
+                setPageSize(
+                  value === "all" ? "all" : value === "50" ? 50 : 20,
+                );
+                setPage(1);
+              }}
+              className="h-7 w-18 px-2 text-[11px]"
             >
-              <ChevronLeft aria-hidden />
-            </Button>
-            {pageItems(totalPages, currentPage).map((item) =>
-              typeof item === "number" ? (
-                <Button
-                  key={item}
-                  type="button"
-                  variant={item === currentPage ? "default" : "ghost"}
-                  size="icon-xs"
-                  onClick={() => setPage(item)}
-                  aria-current={item === currentPage ? "page" : undefined}
-                  aria-label={text.pageLabel.replace("{page}", String(item))}
-                >
-                  {item}
-                </Button>
-              ) : (
-                <span
-                  key={item}
-                  className="flex size-6 items-center justify-center text-[11px] text-muted-foreground"
-                  aria-hidden
-                >
-                  …
-                </span>
-              ),
-            )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              disabled={currentPage === totalPages}
-              onClick={() =>
-                setPage((current) => Math.min(totalPages, current + 1))
-              }
-              aria-label={text.nextPage}
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="all">{text.allRows}</option>
+            </NativeSelect>
+          </label>
+          {filteredStudents.length > 0 && pageSize !== "all" ? (
+            <nav
+              className="flex items-center gap-0.5"
+              aria-label={text.paginationLabel}
             >
-              <ChevronRight aria-hidden />
-            </Button>
-          </nav>
-        ) : null}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                disabled={currentPage === 1}
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                aria-label={text.previousPage}
+              >
+                <ChevronLeft aria-hidden />
+              </Button>
+              {pageItems(totalPages, currentPage).map((item) =>
+                typeof item === "number" ? (
+                  <Button
+                    key={item}
+                    type="button"
+                    variant={item === currentPage ? "default" : "ghost"}
+                    size="icon-xs"
+                    onClick={() => setPage(item)}
+                    aria-current={item === currentPage ? "page" : undefined}
+                    aria-label={text.pageLabel.replace("{page}", String(item))}
+                  >
+                    {item}
+                  </Button>
+                ) : (
+                  <span
+                    key={item}
+                    className="flex size-6 items-center justify-center text-[11px] text-muted-foreground"
+                    aria-hidden
+                  >
+                    …
+                  </span>
+                ),
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                disabled={currentPage === totalPages}
+                onClick={() =>
+                  setPage((current) => Math.min(totalPages, current + 1))
+                }
+                aria-label={text.nextPage}
+              >
+                <ChevronRight aria-hidden />
+              </Button>
+            </nav>
+          ) : null}
+        </div>
       </div>
     </section>
   );
