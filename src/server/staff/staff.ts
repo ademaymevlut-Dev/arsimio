@@ -137,6 +137,21 @@ export type StaffDirectoryRecord = {
   teacherTitle: string | null;
 };
 
+export type TeacherDirectoryRecord = {
+  id: string;
+  employmentId: string;
+  staffNumber: string;
+  fullName: string;
+  photoUrl: string | null;
+  title: string;
+  category: "CLASSROOM" | "BRANCH";
+  status: "ACTIVE" | "INACTIVE";
+  employmentStatus: EmploymentStatus;
+  department: string;
+  position: string;
+  subjects: string[];
+};
+
 export type StaffCatalogItem = {
   id: string;
   code: string;
@@ -564,7 +579,10 @@ export async function getStaffDetail(
   };
 }
 
-export async function getTeacherDirectory(schoolId: string, locale: string) {
+export async function getTeacherDirectory(
+  schoolId: string,
+  locale: string,
+): Promise<TeacherDirectoryRecord[]> {
   const profiles = await getPrisma().teacherProfile.findMany({
     where: { schoolId, archivedAt: null },
     orderBy: [{ status: "asc" }, { title: "asc" }],
@@ -589,6 +607,7 @@ export async function getTeacherDirectory(schoolId: string, locale: string) {
     employmentId: profile.employmentId,
     staffNumber: profile.employment.staffNumber,
     fullName: fullName(profile.employment.person),
+    photoUrl: profile.employment.person.photoUrl,
     title: translatedTitle(profile),
     category: profile.category,
     status: profile.status,

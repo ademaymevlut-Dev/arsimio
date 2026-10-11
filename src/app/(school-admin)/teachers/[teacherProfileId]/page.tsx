@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/admin/page-header";
 import { TeacherDetailTabs } from "@/components/school-admin/teacher-detail-tabs";
 import {
   dateOnlyInTimeZone,
@@ -14,12 +13,15 @@ export const dynamic = "force-dynamic";
 
 export default async function TeacherDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ teacherProfileId: string }>;
+  searchParams: Promise<{ tab?: string | string[] }>;
 }) {
-  const [{ tenant, membership, permissions }, route] = await Promise.all([
+  const [{ tenant, membership, permissions }, route, query] = await Promise.all([
     requireSchoolPermission("teachers.read"),
     params,
+    searchParams,
   ]);
   if (!validSchoolId(route.teacherProfileId)) notFound();
   const locale = await getSchoolLocale(
@@ -32,22 +34,19 @@ export default async function TeacherDetailPage({
   ]);
   if (!teacher) notFound();
 
+  const today = dateOnlyValue(
+    dateOnlyInTimeZone(new Date(), tenant.school.timezone),
+  );
+
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow={dictionary.staff.teacherDetailEyebrow}
-        title={teacher.fullName}
-        description={dictionary.staff.teacherDetailDescription}
-      />
-      <TeacherDetailTabs
-        teacher={teacher}
-        canManageAssignments={permissions.includes("teaching.assignments.manage")}
-        canManageAccounts={permissions.includes("accounts.manage")}
-        defaultEffectiveOn={dateOnlyValue(
-          dateOnlyInTimeZone(new Date(), tenant.school.timezone),
-        )}
-        messages={dictionary.staff}
-      />
-    </div>
+    <TeacherDetailTabs
+      teacher={teacher}
+      canManageAssignments={permissions.includes("teaching.assignments.manage")}
+      canManageAccounts={permissions.includes("accounts.manage")}
+      initialTab={Array.isArray(query.tab) ? query.tab[0] : query.tab}
+      defaultEffectiveOn={today}
+      locale={locale}
+      messages={{ common: dictionary.common, staff: dictionary.staff }}
+    />
   );
 }

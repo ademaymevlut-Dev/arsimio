@@ -369,6 +369,7 @@ export async function getTeacherDetail(
     personId: profile.employment.personId,
     staffNumber: profile.employment.staffNumber,
     fullName: fullName(profile.employment.person),
+    photoUrl: profile.employment.person.photoUrl,
     title: translatedTitle(profile),
     category: profile.category,
     status: profile.status,
